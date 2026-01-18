@@ -1,0 +1,141 @@
+/*
+ * Admin reservations management stylesheet (light/default theme).
+ *
+ * Responsibilities:
+ * - Style the reservations table/list (confirmed bookings).
+ * - Provide filters, status chips and action button appearance.
+ * - Define consistent spacing and typography for reservation rows.
+ *
+ * Used by:
+ * - manage_reservations.js reservations view.
+ *
+ * Notes:
+ * - Dark theme overrides live in manage_reservations.dark.css.
+ */
+
+
+.mr-toolbar{display:flex;gap:.5rem;align-items:center;padding:.5rem;border-bottom:1px solid #eee;background:#fafafa}
+.mr-toolbar select,.mr-toolbar input[type="month"],.mr-toolbar input[type="search"]{padding:.35rem .5rem;border:1px solid #ddd;border-radius:.5rem}
+.mr-toolbar .mr-btn{padding:.4rem .8rem;border:0;border-radius:.5rem;background:#111;color:#fff;cursor:pointer}
+.mr-toolbar .mr-check{display:flex;align-items:center;gap:.35rem}
+
+.mr-list{padding:1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.75rem}
+.mr-card{background:#fff;border:1px solid #eee;border-radius:.75rem;padding:.75rem;box-shadow:0 4px 14px rgba(0,0,0,.03)}
+.mr-header{display:flex;justify-content:space-between;gap:.5rem;margin-bottom:.25rem}
+.mr-title{display:flex;align-items:center;gap:.4rem}
+.mr-dates{color:#555}
+.mr-guest{color:#333;margin:.25rem 0}
+.mr-meta{color:#666;font-size:.9em;margin:.25rem 0}
+.mr-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.mr-btn{padding:.35rem .6rem;border-radius:.5rem;border:1px solid #ddd;background:#f7f7f7;cursor:pointer}
+.mr-btn:hover{background:#f0f0f0}
+.mr-btn.danger{background:#b00020;color:#fff;border-color:#b00020}
+.mr-badge{display:inline-block;padding:.15rem .4rem;border-radius:.4rem;font-size:.75em;border:1px solid #ddd;background:#f3f3f3}
+.mr-badge.hard{background:#e6f7ef;border-color:#b6e5c8}
+.mr-badge.cancelled{background:#ffecec;border-color:#ffc2c2}
+.mr-badge.soft{background:#fff6e5;border-color:#ffd48a}
+.mr-badge.ics{background:#e5f0ff;border-color:#c5dcff}
+.mr-badge.direct{background:#f0f7ff;border-color:#d4e7ff}
+/* Detail panel layout (Reservations) */
+.mr-layout{
+  display:flex;
+  align-items:flex-start;
+  gap:1rem;
+  padding:0 1rem 1rem;
+}
+
+/* leva stran: kartice, normalno scroll */
+.mr-left{
+  flex:2;
+  min-width:0;
+}
+
+/* desni info panel: sticky pod vrhom okna */
+.mr-detail{
+  flex:1;
+  min-width:260px;
+  position:sticky;
+  top:4.5rem;      /* po potrebi malo prilagodi (višina admin headerja + toolbarja) */
+  align-self:flex-start;
+}
+
+.mr-detail-card{
+  background:#ffffff;
+  border:1px solid #ddd;
+  border-radius:.75rem;
+  padding:.75rem .9rem;
+  box-shadow:0 6px 18px rgba(0,0,0,.04);
+  font-size:.9rem;
+}
+.mr-detail-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:.5rem;
+  margin-bottom:.5rem;
+}
+.mr-detail-main{
+  display:flex;
+  flex-direction:column;
+  gap:.15rem;
+}
+.mr-detail-id{
+  font-weight:600;
+}
+.mr-detail-badge{
+  font-size:.85em;
+}
+.mr-detail-unit{
+  font-weight:500;
+}
+.mr-detail-body{
+  display:flex;
+  flex-direction:column;
+  gap:.35rem;
+}
+.mr-detail-row{
+  display:flex;
+  align-items:flex-start;
+  gap:.4rem;
+}
+.mr-detail-label{
+  min-width:80px;
+  font-weight:500;
+  font-size:.85em;
+  color:#555;
+}
+.mr-detail-raw{
+  margin-top:.6rem;
+}
+.mr-raw{
+  margin-top:.3rem;
+  max-height:260px;
+  overflow:auto;
+  font-family:monospace;
+  font-size:.78em;
+  background:#111;
+  color:#f5f5f5;
+  padding:.5rem .6rem;
+  border-radius:.5rem;
+}
+.mr-btn-raw{
+  font-size:.78rem;
+}
+
+/* označena kartica v seznamu */
+.mr-card.selected{
+  border-color:#007bff;
+  box-shadow:0 0 0 1px #007bff;
+}
+
+@media (max-width: 900px){
+  .mr-layout{
+    flex-direction:column;
+  }
+  .mr-detail{
+    width:100%;
+    position:static; /* na mobilnih naj ne bo sticky */
+    top:auto;
+  }
+}
+

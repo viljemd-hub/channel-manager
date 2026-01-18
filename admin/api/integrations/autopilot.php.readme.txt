@@ -1,0 +1,348 @@
+Evo še zadnji za danes, v angleščini.
+Tole daj v:
+`/var/www/html/app/common/lib/autopilot.php.readme.txt`
+
+---
+
+**File:** `common/lib/autopilot.php`
+**Type:** Shared library (Autopilot engine)
+
+---
+
+## Purpose
+
+This library implements the **Autopilot engine (Phase 1 + conflict-care)** for inquiries.
+
+It provides all the common logic to:
+
+* read Autopilot settings (global + per-unit),
+* compute the **precheck** for an inquiry (filters + calendar),
+* write `autopilot.precheck` back into the pending JSON,
+* optionally **auto-accept** a pending inquiry (as if admin clicked “Confirm”),
+* integrate with an internal worker / cron job.
+
+It does *not* depend on the admin JSON helper (`json_io`); it has its own minimal JSON reader.
+
+---
+
+## Settings Source
+
+Autopilot settings are loaded from:
+
+* Global:
+
+  * `/common/data/json/units/site_settings.json`
+* Per-unit:
+
+  * `/common/data/json/units/<UNIT>/site_settings.json`
+
+From these files it reads the `autopilot` section and merges:
+
+```json
+"autopilot": {
+  "enabled": true,
+  "mode": "auto_confirm_on_accept",
+  "min_days_before_arrival": 2,
+  "max_nights": 14,
+  "allowed_sources": ["direct", "website", "public"],
+  "check_ics_on_accept": false,
+  "check_ics_on_guest_confirm": false,
+  "timezone": "Europe/Ljubljana"
+}
+```
+
+Defaults are applied if any fields are missing.
+
+Key fields:
+
+* `enabled` – master switch per unit.
+* `mode` – current mode is:
+
+  * `auto_confirm_on_accept` (planned extension later).
+* `min_days_before_arrival` – do not auto-confirm if arrival is “too soon”.
+* `max_nights` – do not auto-confirm very long stays.
+* `allowed_sources` – only run Autopilot for specific `meta.source` values.
+* `check_ics_on_accept`, `check_ics_on_guest_confirm` – reserved flags for Phase 2 (ICS-aware autopilot).
+* `timezone` – used for calculating “now” and date differences.
+
+---
+
+## Data Sources
+
+Autopilot reads data from:
+
+1. **Pending inquiries**
+
+   * Path (by ID):
+     `/common/data/json/inquiries/YYYY/MM/pending/<ID>.json`
+   * The inquiry JSON is treated as the canonical input.
+   * `meta.source` is used for `allowed_sources` filtering (e.g. `"public"` from public submit).
+
+2. **Merged occupancy**
+
+   * For availability checks:
+
+     * `/common/data/json/units/<UNIT>/occupancy_merged.json`
+   * This file already merges:
+
+     * `occupancy.json`
+     * `local_bookings.json`
+     * `ics_import.json` (if present)
+
+---
+
+## Key Functions
+
+### 1. `cm_autopilot_read_json(string $path): array`
+
+Minimal JSON reader used only by Autopilot:
+
+* Returns `[]` if file does not exist or cannot be decoded.
+* Returns associative array on success.
+
+Used internally by all other helpers.
+
+---
+
+### 2. `cm_autopilot_load_settings(string $unit): array`
+
+Loads **effective Autopilot settings** for a specific unit:
+
+1. Reads:
+
+   * global `site_settings.json`
+   * unit-specific `site_settings.json`
+2. Merges:
+
+   * hard-coded defaults
+   * global `autopilot`
+   * unit `autopilot`
+3. Normalizes:
+
+   * `enabled` → bool
+   * `min_days_before_arrival`, `max_nights` → int
+   * `allowed_sources` → non-empty array (default: `['direct','website','public']`)
+
+Returns a **flattened configuration array** ready to be used by filters.
+
+---
+
+### 3. `cm_autopilot_filters_ok(array $inquiry, array $settings, DateTimeImmutable $now): array`
+
+Evaluates logical filters for an inquiry:
+
+* Checks:
+
+  * `enabled`
+  * `meta.source` ∈ `allowed_sources`
+  * `min_days_before_arrival` (arrival date vs `$now`)
+  * `max_nights` (length of stay)
+* Returns a structured result, e.g.:
+
+```php
+[
+  'ok'          => true/false,
+  'source'      => 'public',
+  'min_days_ok' => true,
+  'max_nights_ok'=> true,
+  'reason'      => 'ok' | 'source_not_allowed' | 'too_soon' | 'too_long' | ...
+]
+```
+
+This is used inside the precheck and later logged in `autopilot.precheck.filters`.
+
+---
+
+### 4. `cm_autopilot_is_range_free(string $unit, string $from, string $to): bool|null`
+
+Checks if the stay range `[from, to)` is free for the given unit.
+
+* Reads:
+
+  * `/common/data/json/units/<UNIT>/occupancy_merged.json`
+* Returns:
+
+  * `true` if no conflicting segments are found,
+  * `false` if there is any conflict (booked, hard lock, cleaning block, etc.),
+  * `null` if the merged file cannot be read.
+
+This function is the *calendar brain* for the Autopilot precheck.
+
+---
+
+### 5. `cm_autopilot_precheck(array $inquiry): array`
+
+Computes a full **precheck** for an in-memory inquiry array.
+
+Steps:
+
+1. Extract:
+
+   * `unit`, `from`, `to`, `nights`, `meta.source`
+2. Load effective settings via `cm_autopilot_load_settings($unit)`.
+3. Create canonical “now” in the Autopilot timezone:
+
+   * default: `Europe/Ljubljana`
+4. Run filters via `cm_autopilot_filters_ok()`.
+5. If filters are OK:
+
+   * call `cm_autopilot_is_range_free()` to check calendar.
+6. Build and return:
+
+```php
+[
+  'enabled'    => bool,
+  'attempted'  => bool,
+  'filters'    => [...],
+  'range_free' => true/false/null,
+  'unit'       => $unit,
+  'from'       => $from,
+  'to'         => $to,
+  'nights'     => $nights,
+  'ts'         => $now->format(DATE_ATOM),
+  'reason'     => 'ok' | 'range_not_free' | 'filters_failed' | ...
+]
+```
+
+This function does **not** read or write any files by itself; it just works on the given $inquiry.
+
+---
+
+### 6. `cm_autopilot_apply_precheck_for_inquiry_id(string $inquiryId): array`
+
+High-level helper that:
+
+1. Resolves the pending JSON file for a given inquiry ID:
+
+   * `/common/data/json/inquiries/YYYY/MM/pending/<ID>.json`
+2. Reads the pending JSON.
+3. Builds an inquiry-like array (ensures `meta.source` exists).
+4. Calls `cm_autopilot_precheck($inquiry)`.
+5. Writes the result into the same pending JSON under:
+
+```json
+"autopilot": {
+  "precheck": { ... }
+}
+```
+
+6. Returns an array summarizing the operation (success, file path, precheck data).
+
+This creates and updates the `autopilot.precheck` block directly in the inquiry file.
+
+---
+
+### 7. `cm_autopilot_call_accept_inquiry(string $inquiryId): array`
+
+Internal helper that performs an HTTP POST to:
+
+```text
+/app/admin/api/accept_inquiry.php
+```
+
+With JSON payload:
+
+```json
+{ "id": "<INQUIRY_ID>" }
+```
+
+* Sends standard headers (`Content-Type: application/json`, `Accept: application/json`).
+* Parses the HTTP response and returns:
+
+```php
+[
+  'ok'          => true/false,
+  'http_status' => 200,
+  'data'        => [...],   // decoded JSON, if any
+  'raw'         => '...',   // raw response body
+  'error'       => '...'    // error string if not ok
+]
+```
+
+This simulates an **admin Confirm click** from the Autopilot’s perspective.
+
+---
+
+### 8. `cm_autopilot_run_for_inquiry_id(string $inquiryId): array`
+
+Main **Autopilot orchestration function** for a single inquiry.
+
+Steps:
+
+1. Call `cm_autopilot_apply_precheck_for_inquiry_id($inquiryId)`:
+
+   * ensures `autopilot.precheck` is up to date in the pending JSON.
+2. Inspect precheck result:
+
+   * If Autopilot is disabled → return:
+
+     * `stage = 'disabled'`
+   * If filters or calendar are not green:
+
+     * `stage = 'precheck_not_green'`
+3. If:
+
+   * `enabled = true`
+   * `success = true`
+   * `range_free = true`
+   * `reason = 'ok'`
+     → call `cm_autopilot_call_accept_inquiry($inquiryId)`.
+4. Return a combined result:
+
+```php
+[
+  'ok'       => bool,
+  'stage'    => 'precheck_failed' | 'disabled' | 'precheck_not_green' | 'auto_accepted' | 'accept_failed',
+  'id'       => $inquiryId,
+  'precheck' => [...],
+  'accept'   => [...],   // result from cm_autopilot_call_accept_inquiry
+  'precheck_result' => [...], // raw from apply_precheck helper
+]
+```
+
+This is the **core entry point** used by:
+
+* `public/thankyou.php` (immediate Autopilot right after inquiry submission),
+* potential background workers (CLI / cron),
+* future “retry Autopilot” actions.
+
+---
+
+## Used By
+
+* `public/thankyou.php`
+
+  * After sending emails, it calls:
+
+    ```php
+    cm_autopilot_run_for_inquiry_id($inquiryId);
+    ```
+  * Writes precheck into pending JSON and may auto-accept. 
+
+* `admin/api/autopilot_get.php`
+
+  * For reading current Autopilot settings (global + per-unit). 
+
+* `scripts/autopilot_run_pending.php` (legacy worker, optional)
+
+  * Uses the same logic to auto-accept selected pending inquiries in batch.
+
+---
+
+## Notes / Caveats
+
+* Currently implemented as **Phase 1** – conflict-care and filters without live ICS re-check on each run.
+* Calendar checks depend entirely on `occupancy_merged.json` being up to date.
+* `check_ics_on_accept` and `check_ics_on_guest_confirm` are reserved for **Phase 2**, where Autopilot will:
+
+  * optionally trigger an ICS pull + merge before checking availability.
+* If anything fails, Autopilot **falls back safely**:
+
+  * the inquiry remains pending,
+  * admin can still manually accept in the Inquiries UI.
+
+---
+
+To je to – s tem imaš za danes pokrit cel **Autopilot trio**:
+`pull_now.php`, `apply_booking_now.php` in `autopilot.php` z jasnimi README-ji.
+Ko se naslednjič lotiva nadaljevanja, boš lahko samo kliknil “copy link” in imel vse v glavi v dveh minutah. 😄

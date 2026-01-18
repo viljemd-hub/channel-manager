@@ -1,0 +1,7 @@
+# Onemogoči directory listing za celoten /app
+Options -Indexes
+
+<IfModule mod_autoindex.c>
+  # Za vsak slučaj – če bi bil autoindex vseeno aktiven, ne kaže nič
+  IndexIgnore *
+</IfModule>

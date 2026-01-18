@@ -1,0 +1,135 @@
+/*
+ * Admin reservations management dark theme overrides.
+ *
+ * Responsibilities:
+ * - Override colors and background styles from manage_reservations.css
+ *   to provide a dark-themed variant.
+ * - Keep structure and layout identical; only visual tokens change.
+ *
+ * Used by:
+ * - manage_reservations.js when dark mode is enabled or when the admin
+ *   shell loads the dark theme variant.
+ *
+ * Notes:
+ * - This file should only contain overrides; structural CSS belongs in
+ *   manage_reservations.css.
+ */
+
+
+/* Dark override for Manage Reservations (loads AFTER base manage_reservations.css) */
+:root {
+  --mr-bg: #0e131a;
+  --mr-card: #131a22;
+  --mr-border: #233041;
+  --mr-muted: #9bb0c3;
+  --mr-text: #e6f0f8;
+  --mr-accent: #facc15;
+  --mr-danger: #b00020;
+}
+/* Osnovno dark ozadje za standalone stran Manage Reservations */
+body.theme-dark,
+body.adm-shell.theme-dark {
+  background: var(--mr-bg);
+  color: var(--mr-text);
+}
+
+/* malo paddinga okoli root panela */
+#manage-reservations-root {
+  padding: 16px;
+}
+
+.mr-toolbar{
+  background: var(--mr-bg) !important;
+  border-bottom: 1px solid var(--mr-border) !important;
+}
+.mr-toolbar select,
+.mr-toolbar input[type="month"],
+.mr-toolbar input[type="search"]{
+  background: #0d1218 !important;
+  color: var(--mr-text) !important;
+  border: 1px solid var(--mr-border) !important;
+}
+.mr-toolbar .mr-btn{
+  background: #1e2937 !important;
+  color: var(--mr-text) !important;
+}
+.mr-toolbar .mr-btn:hover{ background:#263244 !important; }
+
+.mr-list{ background: transparent; }
+.mr-card{
+  background: var(--mr-card) !important;
+  border: 1px solid var(--mr-border) !important;
+  color: var(--mr-text) !important;
+  box-shadow: 0 8px 26px rgba(0,0,0,.35);
+}
+.mr-header{ color: var(--mr-text); }
+.mr-dates{ color: var(--mr-muted) !important; }
+.mr-guest{ color: var(--mr-text) !important; }
+.mr-meta{ color: var(--mr-muted) !important; }
+
+.mr-actions .mr-btn{
+  background:#17202b !important;
+  border:1px solid var(--mr-border) !important;
+  color:var(--mr-text) !important;
+}
+.mr-actions .mr-btn:hover{ background:#1a2432 !important; }
+.mr-actions .mr-btn.danger{
+  background: var(--mr-danger) !important; border-color: var(--mr-danger) !important;
+}
+
+/* Badgesi */
+.mr-badge{ border:1px solid var(--mr-border) !important; color:var(--mr-text); }
+.mr-badge.hard{ background:#0e2a1d !important; border-color:#1f5a3f !important; }
+.mr-badge.soft{ background:#2a240e !important; border-color:#6b5b17 !important; }
+.mr-badge.cancelled{ background:#2b1316 !important; border-color:#7a2b35 !important; }
+.mr-badge.ics{ background:#0e2038 !important; border-color:#274b7a !important; }
+.mr-badge.direct{ background:#0e1b2a !important; border-color:#2a517d !important; }
+
+/* Integrations panel (ICS) – če je prisoten v strani */
+#integrations .card{ background: var(--mr-card); border:1px solid var(--mr-border); }
+#integrations code{
+  display:block; padding:.4rem .5rem; border:1px dashed var(--mr-border);
+  background:#0b1016; color:#b7c8da; border-radius:.4rem; user-select:all;
+}
+#integrations .btn{ background:#17202b; color:var(--mr-text); border:1px solid var(--mr-border); }
+#integrations .btn:hover{ background:#1a2432; }
+/* Manage Reservations – BLOCK/LOCAL badge v outline varianti */
+
+#manage-reservations .mr-badge.block,
+#manage-reservations .mr-badge.local {
+  background-color: transparent !important;   /* brez polnega ozadja */
+  border: 1px solid #f5c542 !important;       /* tvoja sončno rumena */
+                   /* color: #f5c542 !important;   tekst tudi rumen */
+}
+
+/* Ikona koledarja pri mesečnem filtru */
+
+#manage-reservations #mr-filter-ym::-webkit-calendar-picker-indicator {
+  filter: invert(1);                /* naredi jo svetlo / belo */
+  cursor: pointer;
+}
+
+/* Če jo hočeš bolj "sončno" rumeno, poskusi tak filter: */
+#manage-reservations #mr-filter-ym::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(1) saturate(5) hue-rotate(10deg);
+  cursor: pointer;
+}
+/* Detail panel – dark theme overrides */
+.mr-detail-card{
+  background:#141824;
+  border:1px solid #2a3142;
+  color:#f5f7ff;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+.mr-detail-label{
+  color:#9ca7c5;
+}
+.mr-card.selected{
+  border-color:#4dabf7;
+  box-shadow:0 0 0 1px #4dabf7;
+}
+.mr-raw{
+  background:#05070f;
+  color:#e9edf7;
+  border:1px solid #2b3242;
+}

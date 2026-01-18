@@ -1,0 +1,288 @@
+Super, tu je README za `datetime_fmt.php` v istem stilu kot prej.
+Datoteka: `/var/www/html/app/common/lib/datetime_fmt.php.readme.txt`
+
+---
+
+**File:** `common/lib/datetime_fmt.php`
+**Type:** Shared library (dates, formatting, occupancy helpers)
+
+---
+
+## Purpose
+
+This library provides **centralized datetime utilities** and **occupancy helpers** for the Channel Manager:
+
+1. Loading global datetime settings (timezone, formats) from `site_settings.json`
+2. Converting ISO strings (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS`) into formatted strings for guests / UI
+3. Automatically injecting `*_fmt` fields into payloads (e.g. `from_fmt`, `created_fmt`)
+4. Managing occupancy data:
+
+   * removing occupancy entries by reservation ID
+   * regenerating `occupancy_merged.json` from its source layers
+
+It is the **single source of truth** for:
+
+* date/time formatting rules
+* merged occupancy generation
+
+---
+
+## Settings Source
+
+All datetime-related settings are read from:
+
+```text
+/common/data/json/units/site_settings.json
+```
+
+Specifically, the `datetime` section:
+
+```json
+"datetime": {
+  "timezone": "Europe/Ljubljana",
+  "locale": "sl-SI",
+  "date_format": "DD.MM.YYYY",
+  "datetime_format": "DD.MM.YYYY HH:mm",
+  "output_mode": "both"
+}
+```
+
+Defaults are applied if some keys are missing.
+
+---
+
+## Key Functions
+
+### 1. `cm_load_settings(): array`
+
+* Reads `/common/data/json/units/site_settings.json`
+* Returns the decoded JSON as an associative array
+* On error or missing file, returns an empty array
+
+Used by many parts of the system that need global configuration.
+
+---
+
+### 2. `cm_datetime_cfg(): array`
+
+Returns an array with normalized datetime config:
+
+```php
+[
+  'timezone'        => 'Europe/Ljubljana',
+  'locale'          => 'sl-SI',
+  'date_format'     => 'DD.MM.YYYY',
+  'datetime_format' => 'DD.MM.YYYY HH:mm',
+  'output_mode'     => 'both',
+]
+```
+
+* Merges `cm_load_settings()['datetime']` with hard-coded defaults
+* This is the **canonical datetime configuration** used across the app.
+
+---
+
+### 3. `cm_format_from_iso(string $iso, string $pattern, string $tz): ?string`
+
+Generic formatter for ISO datetime strings.
+
+**Input:**
+
+* `$iso`:
+
+  * `YYYY-MM-DD`
+  * `YYYY-MM-DDTHH:MM:SS`
+* `$pattern`:
+
+  * tokens: `DD`, `D`, `MM`, `M`, `YYYY`, `YY`, `HH`, `H`, `mm`, `m`
+* `$tz`:
+
+  * PHP timezone ID (e.g. `Europe/Ljubljana`)
+
+**Behavior:**
+
+* Attempts to create a `DateTimeImmutable` from `$iso`
+* If that fails, tries `$iso . 'T00:00:00'` (date-only fallback)
+* Applies timezone `$tz`
+* Maps tokens to the correct values and replaces them in `$pattern` in a safe order (longest tokens first)
+* Returns the formatted string, or `null` on invalid input
+
+Example:
+
+```php
+$cfg = cm_datetime_cfg();
+cm_format_from_iso('2025-12-01', $cfg['date_format'], $cfg['timezone']);   // "01.12.2025"
+cm_format_from_iso('2025-12-01T21:04:00', $cfg['datetime_format'], $cfg['timezone']); // "01.12.2025 22:04" (depending on TZ)
+```
+
+---
+
+### 4. `cm_add_formatted_fields(array &$payload, array $fieldMap, array $cfg): void`
+
+Adds `*_fmt` fields to an existing array based on a mapping:
+
+* `$payload`:
+
+  * associative array with ISO date/datetime fields
+* `$fieldMap`:
+
+  * e.g. `['from' => 'date', 'to' => 'date', 'created' => 'datetime']`
+* `$cfg`:
+
+  * output of `cm_datetime_cfg()`
+
+For each entry in `$fieldMap`:
+
+* Reads `$payload[$field]` as ISO string
+* Uses either `date_format` or `datetime_format` from `$cfg`
+* Writes a new key: `{$field}_fmt`
+
+Example:
+
+```php
+$cfg = cm_datetime_cfg();
+cm_add_formatted_fields($reservation, [
+  'from'        => 'date',
+  'to'          => 'date',
+  'created'     => 'datetime',
+  'confirmed_at'=> 'datetime',
+], $cfg);
+
+// Result: from_fmt, to_fmt, created_fmt, confirmed_at_fmt
+```
+
+This function is heavily used in:
+
+* email templates
+* guest-facing JSON responses
+* admin UI, where both ISO and human-readable formats are needed.
+
+---
+
+### 5. `cm_remove_occupancy_by_id(string $unitsRoot, string $unit, string $reservationId): bool`
+
+Removes a reservation entry from a unit’s `occupancy.json` based on its `id`.
+
+* `$unitsRoot`:
+
+  * usually: `'/var/www/html/app/common/data/json/units'`
+* `$unit`:
+
+  * e.g. `A1`, `A2`, `S1`
+* `$reservationId`:
+
+  * reservation `id` used as `occupancy` entry `id`
+
+Behavior:
+
+1. Reads `occupancy.json` for the unit.
+2. Filters out any rows where `'id' === $reservationId`.
+3. Writes the filtered array back to `occupancy.json` **only if** something changed.
+4. Returns:
+
+   * `true` if an entry was removed and written
+   * `false` if no matching entry was found or input invalid
+
+This is used when:
+
+* A reservation is cancelled or removed
+* The corresponding occupancy block needs to be cleaned up.
+
+---
+
+### 6. `cm_regen_merged_for_unit(string $unitsRoot, string $unit): bool`
+
+Rebuilds `occupancy_merged.json` for a single unit by merging:
+
+1. `local_bookings.json`
+2. `occupancy.json`
+3. `ics_import.json` (if present)
+
+**Paths:**
+
+```php
+$unitDir    = rtrim($unitsRoot,'/') . "/{$unit}";
+$mergedPath = "{$unitDir}/occupancy_merged.json";
+$localPath  = "{$unitDir}/local_bookings.json";
+$occPath    = "{$unitDir}/occupancy.json";
+$icsPath    = "{$unitDir}/ics_import.json";
+```
+
+Behavior:
+
+1. Initializes `$merged = []`
+2. For each of the three files:
+
+   * Reads JSON via `cm_json_read($path)`
+   * If it’s an array, appends all rows to `$merged`
+3. Writes `$merged` to `occupancy_merged.json` using `cm_json_write($mergedPath, $merged)`
+4. Returns:
+
+   * `true` on success
+   * `false` on write failure
+
+This is a **critical function** for:
+
+* Autopilot (always reads `occupancy_merged.json`)
+* Admin calendars
+* Public calendars
+
+It is called from various places, including:
+
+* `accept_inquiry.php` (after confirming a reservation)
+* `tools/make_dummy_res.php`
+* ICS endpoints (`pull_now.php`, `apply_booking_now.php`)
+* Dev utility `scripts/regen_merged_all.php`
+
+---
+
+## Typical Usage Patterns
+
+### Getting datetime config
+
+```php
+$cfg = cm_datetime_cfg();
+$tz  = $cfg['timezone'];
+$df  = $cfg['date_format'];
+$dtf = $cfg['datetime_format'];
+```
+
+### Formatting a reservation for output
+
+```php
+$cfg = cm_datetime_cfg();
+
+cm_add_formatted_fields($reservation, [
+  'from'        => 'date',
+  'to'          => 'date',
+  'created'     => 'datetime',
+  'confirmed_at'=> 'datetime',
+], $cfg);
+
+// $reservation now has from_fmt, to_fmt, created_fmt, confirmed_at_fmt
+```
+
+### Updating merged occupancy after changes
+
+```php
+$APP_ROOT  = '/var/www/html/app';
+$UNITS_ROOT= $APP_ROOT . '/common/data/json/units';
+
+cm_regen_merged_for_unit($UNITS_ROOT, 'A1');
+```
+
+---
+
+## Notes / Caveats
+
+* Timezone and formats are **config-driven**, so changing `site_settings.json` affects the entire app.
+* All date formatting assumes valid ISO input; invalid strings return `null`.
+* `cm_regen_merged_for_unit()` does a **simple concatenation** of arrays; if needed, higher-level logic (e.g. deduplication or conflict resolution) should be added before or after this step.
+* The library assumes the existence of `cm_json_read()` and `cm_json_write()` helpers elsewhere in the codebase.
+
+---
+
+Če želiš, nadaljujeva v istem ritmu z:
+
+* `autopilot.php.readme.txt`
+* ali kakšnim drugim core helperjem, ki ga želiš imeti lepo opisanega.

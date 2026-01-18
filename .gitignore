@@ -1,0 +1,26 @@
+# Runtime data and caches
+common/data/
+common/data.json.example/
+common/data.query.example/
+logs/
+*.log
+*.ndjson
+*/cache/
+mail/logs/
+
+# Editor/OS
+.DS_Store
+.vscode/
+thumbs.db
+
+# Node/Python build artefacts (če relevantno)
+node_modules/
+dist/
+.env
+*.env
+
+# ZIPs or build artifacts (optionally)
+app.zip
+
+# Git meta
+.git/

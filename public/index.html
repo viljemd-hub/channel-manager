@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <title>Razpoložljivost & cene</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/app/public/calendar_pro.css" rel="stylesheet">
+</head>
+<body class="cm-app">
+  <header class="cm-header">
+    <h1>Razpoložljivost & cene</h1>
+  </header>
+
+  <main class="cm-main">
+    <div class="legend">
+      <span class="chip free">Prosto</span>
+      <span class="chip busy">Zasedeno</span>      <span class="chip depart">Odhod</span>
+      <span class="chip today">Danes</span>
+<!-- Prekliči → index.html s hard reset signalom -->
+<a class="chip busy" href="/app/public/pubcal.php?reset=1">Koledar zasedenosti</a>
+    </div>
+   </div>
+  </main>
+<script>
+(function(){
+  function cmHardReset() {
+    try {
+      // počisti vse, kar lahko vpliva na restore/izbor
+      const keysToNuke = new Set([
+        'cm_restore', 'cm_restore_payload',
+        // dodaj svoje ključe, če jih uporablja tvoj persist():
+        'pubcal_selection', 'pubcal_unit', 'pubcal_start', 'pubcal_end'
+      ]);
+
+      // izbriši vse ključe s prefiksom cm_ ali pubcal_
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const k = sessionStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith('cm_') || k.startsWith('pubcal_') || keysToNuke.has(k)) {
+          sessionStorage.removeItem(k);
+        }
+      }
+    } catch(e) { /* ignore */ }
+  }
+
+  // 1) Avtomatski reset, če pridemo z ?reset=1 (npr. iz "Prekliči")
+  const usp = new URLSearchParams(location.search);
+  if (usp.get('reset') === '1') {
+    cmHardReset();
+    // očisti URL (da ne ostane ?reset=1)
+    try { history.replaceState({}, '', location.pathname); } catch(e) {}
+  }
+
+  // 2) Exponiraj helper globalno (za onclick gumba)
+  window.__cmHardReset = cmHardReset;
+})();
+</script>
+
+</body>
+</html>
+
+

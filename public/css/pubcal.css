@@ -1,0 +1,692 @@
+/* ========== GLOBAL LAYOUT ========== */
+
+:root {
+  --bg-page: #0f1317;
+  --bg-card: #1a1f26;
+  --bg-day-free: #07321f;
+  --bg-day-free-border: #1b5038;
+  --bg-day-selected: rgba(180,140,80,0.28);   /* toplejši highlight */
+  --bg-day-solid: rgba(180,140,80,0.16);
+  --bg-today-outline: #c9a646;
+
+  --txt-main: #e8f8ee;
+  --txt-dim: #8fa99a;
+  --txt-price: #cfeacf;
+  --txt-no-price: #888;
+
+  --radius-card: 12px;
+  --radius-day: 8px;
+
+  --header-h: 56px; /* fallback; JS bo prepisal */
+  --info-max-w: 340px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.cm-app {
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--txt-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  padding-top: var(--header-h);
+}
+
+/* ========== HEADER / TOP BAR ========== */
+
+.cm-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+
+  background-color: #161a1f;
+  border-bottom: 1px solid #2a2f36;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+
+  padding: 8px 12px;
+  z-index: 10000;
+}
+
+.cm-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.brand-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.nav-btn {
+  background: #2a2f36;
+  color: #fff;
+  border: 1px solid #444c57;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.nav-btn:active {
+  background:#3a414e;
+}
+
+.cm-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.unit-select {
+  background: #2a2f36;
+  color: #fff;
+  border: 1px solid #444c57;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.clear-btn {
+  background:#2a2f36;
+  color:#fff;
+  border:1px solid #444c57;
+  border-radius:6px;
+  padding:6px 8px;
+  font-size:0.8rem;
+  cursor:pointer;
+}
+.clear-btn:active {
+  background:#3a414e;
+}
+
+.confirm-btn-header {
+  background:#2e7d32;
+  color:#fff;
+  border:1px solid #4caf50;
+  border-radius:6px;
+  padding:6px 10px;
+  font-size:0.8rem;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,0.6);
+}
+.confirm-btn-header:active {
+  background:#256528;
+}
+
+
+.lang-switch{
+  display:flex;
+  align-items:center;
+  gap:0.25rem;
+  margin-left:0.75rem;
+}
+
+.lang-switch .lang-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:2rem;
+  height:2rem;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(0,0,0,0.4);
+  font-size:1.1rem;
+  line-height:1;
+  cursor:pointer;
+  padding:0;
+  color:#fff;
+  transition:background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+
+.lang-switch .lang-btn:hover{
+  transform:translateY(-1px);
+  background:rgba(255,255,255,0.08);
+}
+
+.lang-switch .lang-btn.is-active{
+  border-color:#4ade80; /* svetlo zelena, da se ujema z confirm gumbom */
+  background:rgba(22,163,74,0.35);
+}
+
+/* ========== FLOATING INFO BOX (SELECTION SUMMARY) ========== */
+
+#cm-info {
+  position: fixed;
+  top: calc(var(--header-h) + 8px);
+  left: 12px;
+  z-index: 9999;
+
+  min-width: 240px;
+  max-width: var(--info-max-w);
+
+  background-color: rgba(20,20,15,0.95);
+  border: 2px solid #c9a646; /* zlata */
+  border-radius: 12px;
+  box-shadow: 0 16px 32px rgba(0,0,0,0.7);
+
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: #fff;
+
+  padding: 12px 14px 14px 14px;
+
+  display: none;
+}
+.cm-info[hidden]{ display:none; }
+#cm-info.show {
+  display:block;
+}
+
+
+#cm-info .info-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+#cm-info .info-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: fit-content;
+}
+
+
+#cm-info .info-dates {
+  display: grid;
+  row-gap: 4px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+#cm-info .info-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff8d0; /* topla */
+}
+
+#cm-info .info-actions {
+  margin-top: 6px;
+}
+
+#cm-info .confirm-btn {
+  display: inline-block;
+  background-color: #2e7d32;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #4caf50;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  white-space: nowrap;
+}
+
+#cm-info .info-sub {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 8px;
+
+  display: flex;
+  flex-direction: column;
+  row-gap: 6px;
+
+  font-size: 0.8rem;
+  color: #ccc;
+}
+#cm-info .info-sub span strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+#cm-info .swap-btn {
+  appearance:none;
+  background:#333;
+  color:#fff;
+  border:1px solid #555;
+  border-radius:6px;
+  padding:6px 8px;
+  font-size:0.8rem;
+  line-height:1.2;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:0 2px 4px rgba(0,0,0,0.5);
+  width:100%;
+  white-space:nowrap;
+}
+
+#cm-info strong {
+  color: #fff8d0;
+  font-weight: 600;
+}
+/* ročaj na vrhu infoboxa */
+.cm-info__handle{
+  display:flex; align-items:center; gap:.3rem;
+  height:28px; margin:-6px -6px 8px -6px; padding:4px 8px;
+  border-bottom:1px solid #3a2f12;
+  background: linear-gradient(180deg, rgba(201,166,70,.12), rgba(0,0,0,0));
+  border-top-left-radius:8px; border-top-right-radius:8px;
+  cursor: grab; user-select: none;
+  color:#e7dfc5; font-weight:600; letter-spacing:.2px;
+}
+.cm-info__handle:focus{ outline:2px solid rgba(201,166,70,.55); outline-offset:2px }
+.cm-info__dots{ font-size:1rem; opacity:.7 }
+.cm-info--dragging{ cursor:grabbing; opacity:.98; box-shadow:0 22px 44px rgba(0,0,0,.75) }
+
+/* ========== CALENDAR ========== */
+
+.calendar-wrapper {
+  padding: 12px;
+  padding-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* month card */
+.month-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.7);
+  padding: 12px;
+  min-width: 260px;
+  max-width: 260px;
+  flex: 0 0 auto;
+  color: var(--txt-main);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.month-head {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  text-transform: lowercase;
+  margin-bottom: 8px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: auto;
+  gap: 6px;
+  position: relative;
+  background: transparent;
+  padding: 4px 0 8px 0;
+  border-radius: var(--radius-card);
+}
+
+.minnights-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:0.5rem;
+  padding:0.2rem 0.7rem;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.22);
+  background:rgba(0,0,0,0.35);
+  font-size:0.8rem;
+  font-weight:500;
+  color:var(--muted, #ddd);
+  white-space:nowrap;
+}
+
+/* weekday headers */
+.weekday {
+  font-size: 0.7rem;
+  color: var(--txt-dim);
+  text-align: center;
+  padding: 2px 0;
+}
+
+/* empty pad for month alignment */
+.pad {
+  height: 0.8rem;
+}
+
+/* each day cell */
+.day {
+  background-color: var(--bg-day-free);
+  border: 1px solid var(--bg-day-free-border);
+  border-radius: var(--radius-day);
+  padding: 4px 4px 6px;
+  min-height: 44px;
+  cursor: pointer;
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.55rem;
+  line-height: 1.2;
+  color: var(--txt-main);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+}
+
+/* special offers: light green frame, samo na prostih dnevih */
+.day.has-special-offer {
+  border-width: 2px;
+  border-color: #2f9b5c; /* 2–3 odtenke svetlejše od base border */
+}
+
+
+/* "d-num" = datum */
+.day .d-num {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+/* "d-sub" = cena ali ZASEDENO */
+.day .d-sub {
+  font-size: 0.5rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--txt-price);
+  overflow: hidden;
+  margin-top: 2px;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+.day .no-price {
+  color: var(--txt-no-price);
+}
+.day.busy .d-sub {
+  color: #c77f7f;
+}
+.day.busy .d-sub::after {
+  content: "";
+}
+.day.busy {
+  background:#3a2a2a;
+  border:1px solid #a05555;
+  color:#fff;
+  cursor: not-allowed;
+}
+.day.depart {
+  outline:2px dashed #a05555;
+  outline-offset:-2px;
+}
+/* highlight za današnji dan */
+.day.today {
+  box-shadow: 0 0 0 2px var(--bg-today-outline), 0 8px 16px rgba(0,0,0,0.8);
+}
+
+/* pretekli dnevi – vidni, a nedostopni */
+.day.past {
+  opacity: 0.45;
+  cursor: default;
+}
+.day.past .d-sub {
+  color: var(--txt-no-price);
+}
+.day.past.sel,
+.day.past.sel-start,
+.day.past.sel-mid,
+.day.past.sel-end,
+.day.past.sel-checkout {
+  /* za vsak slučaj odstrani selection highlight, če bi se kdaj zalomilo */
+  background-image: none;
+}
+
+
+
+/* RANGE SELECTION */
+/* ko uporabnik izbira termin, označimo od prvega do dneva pred odhodom */
+.day.sel {
+  background-color: rgba(25, 25, 20, 0.8); /* temno, da okvir pride ven */
+  border: 2px solid #d2aa6e;               /* zlata obroba */
+  border-radius: 8px;
+  box-shadow:
+    0 0 10px rgba(210,170,110,0.4),
+    0 12px 24px rgba(0,0,0,0.8);
+  position: relative;
+  z-index: 2;
+  transition: background-color .25s ease,
+              box-shadow .25s ease,
+              border-color .25s ease;
+}
+}
+.day.sel-start {
+  box-shadow: 0 0 0 2px #fff8d0, 0 8px 20px rgba(0,0,0,0.8);
+}
+.day.sel-end {
+  box-shadow: 0 0 0 2px #fff8d0, 0 8px 20px rgba(0,0,0,0.8);
+}
+
+.day.sel.sel-solid {
+  background-color: rgba(210,170,110,0.22); /* medeno zlato prosojno */
+  border: 2px solid #d2aa6e;
+  box-shadow:
+    0 0 16px rgba(210,170,110,0.7),
+    0 16px 32px rgba(0,0,0,0.9);
+}
+
+
+/* po ~1s zalijemo mesec */
+.calendar-grid.cm-solid .day.sel {
+  background-color: var(--bg-day-solid);
+}
+
+/* FOOTER */
+.cm-footer {
+  color: #666;
+  font-size: 0.7rem;
+  text-align: center;
+  padding: 24px 0 48px;
+}
+.cm-footer small {
+  color:#666;
+}
+
+/* === V5 additions === */
+
+/* checkout dan (exclusive end) - svetlejša rjava */
+.day.sel-checkout {
+  background-color: inherit;               /* ne polnimo z zlatim */
+  border: 2px dashed #d2aa6e;              /* črtkano zlato */
+  border-radius: 8px;
+  box-shadow:
+    0 0 8px rgba(210,170,110,0.4),
+    0 8px 20px rgba(0,0,0,0.8);
+  position: relative;
+  z-index: 2;
+}
+
+.day.sel-checkout .d-num::after {
+  content: "↗";
+  font-size: 0.7rem;
+  margin-left: 4px;
+  color: #d2aa6e;
+  font-weight: 600;
+}
+
+
+#cm-info {
+  max-width: 360px; /* prej 260px */
+  font-size: 0.9rem;
+}
+
+#cm-info .alt-offer {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+#cm-info .alt-offer.alt-na {
+  opacity: 0.6;
+}
+
+#cm-info .alt-offer .swap-btn {
+  margin-left: 8px;
+  background:#333;
+  color:#fff;
+  border:1px solid #555;
+  border-radius:6px;
+  padding:4px 6px;
+  font-size:0.75rem;
+  line-height:1.2;
+  cursor:pointer;
+  box-shadow:0 2px 4px rgba(0,0,0,0.5);
+  white-space:nowrap;
+}
+/* === BLUE DOT – DAY USE INDICATOR === */
+
+/* Header gumb "Potrdi izbiro" – lahko ga zatemnimo namesto da izgine */
+.confirm-btn-header.dimmed {
+  opacity: 0.4;
+  pointer-events: none;   /* za vsak slučaj; disabled bi moral zadostovati */
+  filter: grayscale(60%);
+  cursor: default;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.has-dayuse {
+    position: relative;
+}
+.has-dayuse .dot-dayuse {
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 7px;
+    height: 7px;
+    background: #4da3ff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(77,163,255,0.8);
+    pointer-events: none;
+}
+
+/* legend under header (day-use & special offers) */
+.cm-legend {
+  max-width: 960px;
+  margin: 4px auto 0;
+  padding: 0 12px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--txt-dim);
+}
+
+.cm-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.cm-legend .legend-dot,
+.cm-legend .legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+
+/* reuse približen stil kot dot-dayuse */
+.cm-legend .legend-dot.legend-dayuse {
+  border-radius: 50%;
+  background: #4da3ff;
+  box-shadow: 0 0 4px rgba(77,163,255,0.8);
+}
+
+/* kvadratek z zelenim okvirjem za special offer */
+.cm-legend .legend-swatch.legend-offer {
+  border-radius: 3px;
+  border: 2px solid #2f9b5c;
+}
+
+/* na telefonih naj se potisne levo in lomi v vrstice */
+@media (max-width: 600px) {
+  .cm-legend {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  /* infobox kot "bottom sheet" – vedno spodaj, čez skoraj cel ekran */
+  #cm-info {
+    top: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 10px !important;
+    transform: translateX(-50%);
+    width: calc(100% - 20px);
+    max-width: 480px;
+    min-width: 0;
+    padding: 10px 12px 12px 12px;
+  }
+
+  /* da ga koledar ne prekrije: malo več prostora spodaj */
+  .calendar-wrapper {
+    padding-bottom: 90px;
+  }
+
+  /* rahlo kompaktnejša vsebina na mobitelu */
+  #cm-info .info-main {
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  #cm-info .info-dates {
+    font-size: 0.85rem;
+  }
+
+  #cm-info .info-price {
+    font-size: 0.95rem;
+  }
+
+  #cm-info .confirm-btn {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+
+  #cm-info .info-sub {
+    font-size: 0.78rem;
+  }
+  /* skrijemo drag-handle (Premakni) na telefonu */
+  #cm-info .cm-info__handle {
+    display: none !important;
+  }
+
+.cm-footer-note {
+  font-size: 1.05rem;   /* ali 1rem, 1.05rem po občutku */
+  margin: 0;
+}
+
+
+}
+

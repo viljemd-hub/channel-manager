@@ -1,0 +1,120 @@
+/*
+ * Individual day cell styling for the admin calendar.
+ *
+ * Responsibilities:
+ * - Define base appearance of each day cell: padding, typography, icons.
+ * - Style the "today" highlight, weekend styles, and empty/disabled days.
+ * - Provide visual feedback for hover and selected states (border, background).
+ *
+ * Used by:
+ * - Admin calendar grid rendered by admin_calendar.js.
+ *
+ * Notes:
+ * - Do not hard-code layer colors here (booked, pending, blocked, etc.);
+ *   those are handled in layers.css.
+ */
+
+
+/* /app/admin/ui/css/day.css */
+.day{
+  position:relative; box-sizing:border-box;
+  border:1px solid #1b2736; min-height:44px; padding:4px 6px;
+  border-radius:10px; background:#0f1520;
+}
+.day .num{font-weight:600;opacity:.9}
+.day .price{position:absolute;right:6px;bottom:4px;font-size:12px;opacity:.85}
+.day.today{outline:1px solid #3b82f6}
+.day.empty{background:transparent;border:none}
+
+
+
+/* --- Vidnost/obarvanost je vezana na layer klase na <body> --- */
+
+/* CENE */
+body.layer-prices-on .day.available{
+  background:#0f2a1f; border-color:#1e4d2b; color:#d7f0e2;
+}
+body.layer-prices-on .day.available .price{opacity:.95}
+
+/* ZASEDENOST (rezervirano / blokirano / busy) */
+body.layer-occupancy-on .day.reserved{
+  background:#3a0f18; border-color:#7a2a38; color:#ffdbe1;
+}
+body.layer-occupancy-on .day.blocked{
+  background:#2a0f14; border-color:#5b1e27; color:#e9c7cd;
+}
+body.layer-occupancy-on .day.busy{
+  background:#1b1f28; border-color:#2b3648; color:#9fb0c9;
+  text-decoration:line-through;
+}
+
+
+/* Selection overlays imajo prednost */
+.day.sel{
+  background:rgba(250,204,21,.10);
+  border-color:rgba(250,204,21,.45);
+  box-shadow: inset 0 0 0 1px rgba(250,204,21,.35);
+}
+
+/* UX: ne izbiraj besedila in ne lovi eventov na overlayih */
+.calendar,.day,.day *{user-select:none}
+.day .num,.day .price{pointer-events:none}
+
+/* ==== Admin V4 add-on: temp selection + block outline ==== */
+.day.day--temp {
+  outline: 2px solid rgba(255, 215, 0, .6);
+  outline-offset: -3px;
+  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,.04), rgba(255,255,255,0));
+}
+.day.day--block-outline {
+  box-shadow: inset 0 0 0 2px rgba(255, 140, 0, .7);
+}
+
+/* Focused hard-lock range (clicked reservation block) */
+#calendar .day.focus-range {
+  position: relative;
+  z-index: 8; /* above normal occupancy coloring, below selection start/end */
+}
+
+#calendar .day.focus-range::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+
+  /* soft cyan veil, similar to selected-range */
+  background: rgba(56, 189, 248, 0.16);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.7);
+}
+
+
+
+/* === Disable text selection na koledarju, da drag dela gladko === */
+/* Disable text selection on the calendar so drag feels smooth */
+#admin-calendar,
+#admin-calendar .day,
+#calendar,
+#calendar .day {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+ position: relative;
+}
+
+#admin-calendar .day,
+#calendar .day {
+  cursor: cell; /* or pointer, if you prefer */
+}
+
+
+/* Admin V4: disable text selection + primeren cursor za drag */
+#admin-calendar,
+#admin-calendar .day {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+#admin-calendar .day { cursor: cell; }

@@ -1,0 +1,67 @@
+<?php
+/**
+ * CM Free / CM Plus – Channel Manager
+ * File: common/lib/email.php
+ * Author: Viljem Dvojmoč
+ * Assistant: GPT
+ * Copyright (c) 2026 Viljem Dvojmoč. All rights reserved.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Pošlje e-mail preko msmtp.
+ * Zahteva: msmtp konfiguriran z account "default".
+ */
+function cm_send_email_msmtp(
+  string $toEmail,
+  string $subject,
+  string $htmlBody,
+  string $textBody,
+  string $fromEmail,
+  string $fromName = ''
+): array {
+  $fromName = $fromName !== '' ? $fromName : $fromEmail;
+
+  // Sestavi MIME (simple alternative)
+  $boundary = 'b_' . bin2hex(random_bytes(8));
+  $headers =
+    "From: {$fromName} <{$fromEmail}>\r\n" .
+    "To: <{$toEmail}>\r\n" .
+    "Subject: {$subject}\r\n" .
+    "MIME-Version: 1.0\r\n" .
+    "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+
+  $body =
+    "--{$boundary}\r\n" .
+    "Content-Type: text/plain; charset=UTF-8\r\n\r\n" .
+    $textBody . "\r\n" .
+    "--{$boundary}\r\n" .
+    "Content-Type: text/html; charset=UTF-8\r\n\r\n" .
+    $htmlBody . "\r\n" .
+    "--{$boundary}--\r\n";
+
+  // Pošlji preko msmtp (stdin)
+  $cmd = 'msmtp -a default -- ' . escapeshellarg($toEmail);
+  $descriptorspec = [
+    0 => ["pipe", "r"], // stdin
+    1 => ["pipe", "w"], // stdout
+    2 => ["pipe", "w"], // stderr
+  ];
+  $process = proc_open($cmd, $descriptorspec, $pipes);
+  if (!is_resource($process)) {
+    return ['ok'=>false, 'error'=>'proc_open_failed'];
+  }
+
+  fwrite($pipes[0], $headers . "\r\n" . $body);
+  fclose($pipes[0]);
+
+  $stdout = stream_get_contents($pipes[1]); fclose($pipes[1]);
+  $stderr = stream_get_contents($pipes[2]); fclose($pipes[2]);
+
+  $code = proc_close($process);
+  if ($code !== 0) {
+    return ['ok'=>false, 'error'=>'msmtp_failed', 'code'=>$code, 'stderr'=>$stderr, 'stdout'=>$stdout];
+  }
+  return ['ok'=>true, 'stdout'=>$stdout];
+}

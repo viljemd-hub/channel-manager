@@ -1,0 +1,239 @@
+/*
+ * Admin pending inquiries list stylesheet.
+ *
+ * Responsibilities:
+ * - Style the table/list of pending inquiries: rows, columns, headers.
+ * - Define highlight/selection for the currently focused inquiry.
+ * - Style status chips, icons and action buttons within the list.
+ *
+ * Used by:
+ * - Pending / inbox view in the admin shell.
+ *
+ * Notes:
+ * - The calendar highlighting for pending ranges is handled by layers.css;
+ *   this file focuses on the list/table side.
+ */
+
+
+/* ===== Povpraševanja: layout ===== */
+#tab-inquiries .inq-wrap{
+  display:grid;
+  grid-template-columns: 1.4fr 1fr; /* seznam | detajl */
+  gap:12px;
+  min-height:420px;
+}
+
+/* ===== Seznam ===== */
+#inqList{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:6px;
+}
+
+/* (neobvezno) glava tabele */
+.inq-header{
+  display:grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr;
+  gap:10px;
+  padding:6px 10px;
+  font-size:.9rem;
+  opacity:.75;
+}
+
+/* vrstica */
+.inq-row{
+  display:grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr; /* ID | datumi | gost */
+  gap:10px;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;
+  background:rgba(255,255,255,.03);
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.inq-row:hover{ background:rgba(255,255,255,.06); }
+.inq-row.selected{
+  border-color:rgba(240,180,0,.45);
+  box-shadow:0 0 0 1px rgba(240,180,0,.25) inset;
+}
+
+/* stolpci */
+.inq-col.inq-id{
+  font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size:.92rem;
+  opacity:.9;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+}
+.inq-col.inq-dates{ font-weight:600; }
+.inq-col.inq-guest{ opacity:.9; }
+
+/* ===== Detajl ===== */
+#inqDetail{ min-height:240px; }
+.inq-card{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:12px 14px;
+  background:rgba(255,255,255,.03);
+  min-height:220px;
+}
+.inq-card-row{
+  display:flex; gap:.6rem; margin:6px 0; align-items:baseline;
+}
+.inq-card-row>span{ min-width:8.5rem; opacity:.75; }
+
+/* akcije */
+.inq-card-actions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+.btn-sm{
+  font-size:.9rem; padding:6px 10px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);
+  border-radius:8px; cursor:pointer;
+}
+.btn-sm:hover{ background:rgba(255,255,255,.12); }
+
+/* preverjanje (statusi) */
+#inqCheck{ margin-top:10px; font-size:.92rem; line-height:1.35; }
+#inqCheck .ok{ color:#33c27f; }
+#inqCheck .warn{ color:#ffb84d; }
+#inqCheck .bad{ color:#ff6b6b; }
+
+/* ===== Responsivnost ===== */
+@media (max-width: 1100px){
+  #tab-inquiries .inq-wrap{ grid-template-columns: 1fr; }
+  .inq-card{ margin-top:8px; }
+}
+/* layout */
+#tab-inquiries .inq-wrap{
+  display:grid;
+  grid-template-columns: 1.5fr 1fr; /* levo seznam | desno kartica */
+  gap:12px;
+  align-items:start;               /* pomembno za sticky */
+  min-height:420px;
+}
+
+/* seznam naj se scrola, kartica ostane sticky */
+#inqList{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:6px;
+  max-height: calc(100vh - 140px); /* prilagodi po potrebi */
+  overflow:auto;
+  padding-right: 6px;
+}
+
+/* sticky kartica desno */
+#inqDetail{
+  position: sticky;
+  top: 72px;            /* prilagodi višini headerja/tabs */
+  align-self: start;    /* da sticky prime */
+  min-height: 220px;
+}
+
+/* vrste & kartica – kot prej */
+.inq-row{
+  display:grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr;
+  gap:10px;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;
+  background:rgba(255,255,255,.03);
+  cursor:pointer;
+}
+.inq-row:hover{ background:rgba(255,255,255,.06); }
+.inq-row.selected{
+  border-color:rgba(240,180,0,.45);
+  box-shadow:0 0 0 1px rgba(240,180,0,.25) inset;
+}
+.inq-col.inq-id{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.92rem; opacity:.9; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.inq-col.inq-dates{ font-weight:600; }
+.inq-col.inq-guest{ opacity:.9; }
+
+.inq-card{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:12px 14px;
+  background:rgba(255,255,255,.03);
+}
+.inq-card-row{ display:flex; gap:.6rem; margin:6px 0; align-items:baseline; }
+.inq-card-row>span{ min-width:8.5rem; opacity:.75; }
+
+.inq-card-actions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+.btn-sm{
+  font-size:.9rem; padding:6px 10px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);
+  border-radius:8px; cursor:pointer;
+}
+.btn-sm:hover{ background:rgba(255,255,255,.12); }
+
+#inqCheck{ margin-top:10px; font-size:.92rem; line-height:1.35; }
+#inqCheck .ok{ color:#33c27f; }
+#inqCheck .warn{ color:#ffb84d; }
+#inqCheck .bad{ color:#ff6b6b; }
+
+@media (max-width: 1100px){
+  #tab-inquiries .inq-wrap{ grid-template-columns: 1fr; }
+  #inqDetail{ position: static; top:auto; }
+}
+.mark-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: gold;
+  display: inline-block;
+  margin-left: .5rem;
+  box-shadow: 0 0 0 2px rgba(218,165,32,.45);
+  vertical-align: middle;
+}
+.inq-row .inq-col.inq-id {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.inq-row .inq-id-text { white-space: nowrap; }
+.inq-row .mark-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: gold;
+  box-shadow: 0 0 0 2px rgba(218,165,32,.35);
+  display: inline-block;
+}
+.inq-row.active { background: rgba(0,0,0,.04); } /* opcijsko */
+/* skrij mark-dot v detail kartici na desni */
+.inq-card .mark-dot { display: none !important; }
+.inq-row .inq-col.inq-id { display:flex; align-items:center; gap:.5rem; }
+.inq-row .inq-id-text { white-space:nowrap; }
+
+.inq-row .mark-dot {
+  /* privzeto skrito */
+  display:none;
+  width:8px; height:8px; border-radius:50%;
+  background: gold;
+  box-shadow: 0 0 0 2px rgba(218,165,32,.35);
+}
+
+/* ko je vrstica označena (marked), pokaži piko */
+.inq-row.is-marked .mark-dot { display:inline-block; }
+
+/* opcijsko: da “active” (izbrana) vrstica ne skrije pike */
+.inq-row.active .mark-dot { /* nič posebnega, le ne spreminjaj displayja */ }
+.inq-row .inq-col.inq-dates {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.nights-badge {
+  min-width: 1.8em;
+  padding: 2px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.25);
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
+}
+.inq-row.is-marked .nights-badge {
+  border-color: gold;
+}
+

@@ -1,0 +1,340 @@
+/*
+ * /app/admin/ui/css/calendar.css
+ *
+ * Admin calendar layout + header + month grid.
+ * Markup (admin_calendar.js):
+ *
+ * <div id="calendar" class="calendar">
+ *   <section class="month-card">
+ *     <header class="month-title">december 2025</header>
+ *     <div class="calendar-grid">
+ *       <div class="day" data-date="2025-12-01">…</div>
+ *       ...
+ *     </div>
+ *   </section>
+ *   …
+ * </div>
+ */
+
+:root {
+  --card-min: 220px;       /* minimal month card width */
+  --card-max: 360px;       /* maximal useful month card width */
+}
+
+/* page background / text for admin calendar */
+body.calendar-page.theme-dark {
+  background: #0e131a;
+  color: #e6edf3;
+}
+
+body:not(.layer-pending-on) .day .dot-pending {
+    display: none;
+}
+
+
+/* a bit of breathing room around the whole view */
+#admin-calendar-root {
+  padding: 16px;
+}
+
+/* header – unit selector + navigation */
+.hdr-unit-select {
+  margin-left: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hdr-unit-select span {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.hdr-cal-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 16px;
+  margin-bottom: 8px;
+}
+
+.cal-current-range {
+  margin-left: 8px;
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+/* command bar (selection info + actions) */
+.cal-command-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 8px 0 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 0.9rem;
+}
+
+.cal-selection-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-selection-meta {
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.cal-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* layer toggles row */
+.cal-layer-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: 0.85rem;
+}
+
+.cal-layer-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* calendar shell container */
+.calendar-shell {
+  margin-top: 4px;
+}
+
+/* ===== MONTH GRID (outer) ===================================== */
+
+.calendar {
+  display: grid;
+  /* cards flow in rows; width is flexible */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(clamp(var(--card-min), 25vw, var(--card-max)), 1fr)
+  );
+  gap: 12px;
+  align-items: flex-start;
+}
+
+/* single month card */
+.month-card {
+  display: flex;
+  flex-direction: column;
+  background: #020617;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.7);
+  overflow: hidden;
+  padding: 6px;
+  min-width: 0;
+}
+
+/* month title */
+.month-title {
+  font-weight: 600;
+  margin: 4px 6px 6px;
+  opacity: 0.9;
+  text-transform: capitalize;
+}
+
+/* inner day grid (7 columns) */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* Header: dnevi v tednu (P T S Č P S N) */
+.calendar-grid .dow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.25rem 0;
+  opacity: 0.85;
+}
+
+
+/* original solid selection (kept for backwards compatibility) */
+.calendar-grid.cm-solid .day.sel {
+  background: rgba(250, 204, 21, 0.18);
+}
+
+/* mark dot helper (if used inside day cell) */
+.mark-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: gold;
+  display: inline-block;
+  margin-left: 0.5rem;
+  box-shadow: 0 0 0 2px rgba(218, 165, 32, 0.45);
+  vertical-align: middle;
+}
+
+/* pending layer markers (used by pending/inquiries view) */
+.day.pending {
+  outline: 1px dashed rgba(218, 165, 32, 0.45);
+}
+.day.pending-marked {
+  outline: 2px solid gold !important;
+  box-shadow: inset 0 0 0 2px gold;
+  position: relative;
+  z-index: 2;
+}
+
+/* ===== Selection overlay for range_select_admin (Admin V4) ===== */
+
+/* main selection range */
+.day.selected-range {
+  position: relative;
+}
+
+/* start / end cells */
+.day.selected-start,
+.day.selected-end {
+  position: relative;
+}
+
+/* give selection higher priority inside admin calendar */
+.calendar-grid .day.selected-range,
+.calendar-grid .day.selected-start,
+.calendar-grid .day.selected-end {
+  position: relative;
+}
+
+/* base overlay across the cell */
+.day.selected-range::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(34, 197, 235, 0.28); /* light cyan veil */
+  border: 2px solid #22d3ee;
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.8);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* start & end a bit more highlighted (yellow-ish) */
+.day.selected-start::after,
+.day.selected-end::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(250, 204, 21, 0.35);
+  border: 2px solid #facc15;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.9);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 6;
+}
+.hdr-clean-switches {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 16px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.hdr-clean-switches label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* --- Weekday labels above each month grid --- */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin: 2px 2px 4px;
+  font-size: 0.72rem;
+  opacity: 0.75;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.calendar-weekdays span {
+  padding: 1px 0;
+}
+/* === Pending Inquiry DOT (yellow, bottom-left) === */
+.day .dot-pending {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    width: 7px;
+    height: 7px;
+    background: gold;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* === Day-use DOT (sky blue, top-right) === */
+.day .dot-dayuse {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    background: #4fc3f7; /* light sky blue */
+    border-radius: 50%;
+    pointer-events: none;
+}
+/* ===========================================
+ * Layer: Local admin blocks vs occupancy
+ * ===========================================
+ *
+ * .hardlock + data-local-block="admin_block" označuje lokalne blokade
+ * (soft-lock), ki jih riše admin_calendar.js.
+ *
+ * Privzeto ne nastavljamo ozadja, da ostane occupancy sloj viden;
+ * lokalni sloj doda samo izrazit rob, ki ga lahko vklopimo/izklopimo
+ * z "Local blocks" checkboxom (layer-local-on razred na <body>).
+ */
+
+/* Najprej nevtraliziramo morebitne stare stile za .hardlock */
+#calendar .day.hardlock[data-local-block="admin_block"] {
+  background: inherit;
+  color: inherit;
+}
+
+/* Ko je lokalni sloj vklopljen → pokažemo wine-red okvir */
+body.layer-local-on #calendar .day.hardlock[data-local-block="admin_block"] {
+  outline: 2px solid #8b0000;
+  outline-offset: -2px;
+}
+
+/* Ko je lokalni sloj izklopljen → skrijemo samo overlay okvir;
+   occupancy (.reserved/.blocked/...) ostane viden. */
+body:not(.layer-local-on) #calendar .day.hardlock[data-local-block="admin_block"] {
+  outline: none;
+}
+/* Zlat okvir za ročno označene (marked) povpraševanja */
+body.layer-pending-on #calendar .day.marked-inquiry {
+  outline: 2px solid gold;
+  outline-offset: -2px;
+}
+.cards-grid { grid-auto-flow: row dense; }
+
+/* wine-red overlay za admin block */
+.day.has-local-block.hardlock {
+  /* background/border naj ima prednost pred .busy/.blocked/.reserved */
+  background: rgba(129, 14, 29, 0.9) !important;
+  border: 1px solid rgba(140, 40, 60, 0.9) !important;
+}

@@ -1,0 +1,40 @@
+/*
+ * Visual layer styles for admin calendar day cells.
+ *
+ * Responsibilities:
+ * - Define color schemes and indicators for:
+ *   - confirmed bookings,
+ *   - pending inquiries,
+ *   - blocked days,
+ *   - hard locks / local bookings,
+ *   - external (ICS) occupancy,
+ *   - helper markers (selection, "mark" layer, etc.).
+ * - Provide consistent visual language for different layer types.
+ *
+ * Used by:
+ * - admin_calendar.js when applying CSS classes for each layer.
+ *
+ * Notes:
+ * - Keep color tokens and layer classnames stable; JS relies on them
+ *   to render multiple layers in a predictable way.
+ */
+
+
+/* /app/admin/ui/css/layers.css */
+/* Toggle slojev preko razredov na <body> */
+body.layer-prices-on .day .price { display:block; }
+body:not(.layer-prices-on) .day .price { display:none; }
+/* Ostale sloje bomo kasneje vizualno dopolnili (badges/overlays). *//* === SPECIAL OFFER (green frame) ============================= */
+
+/* Ko je kljukica "Offers" vklopljena */
+body.layer-offers-on .day.has-special-offer {
+    outline: 2px solid #22c55e;         /* zelena */
+    outline-offset: -3px;
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.55);
+}
+
+/* Ko je layer izklopljen */
+body:not(.layer-offers-on) .day.has-special-offer {
+    outline: none;
+    box-shadow: none;
+}

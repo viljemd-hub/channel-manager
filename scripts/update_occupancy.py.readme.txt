@@ -1,0 +1,7 @@
+✅ update_occupancy.py (glavni ICS → occupancy pipeline)
+
+– absolutno obdrži
+– to je hrbtenica ICS integracije
+
+
+

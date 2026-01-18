@@ -1,0 +1,246 @@
+admin/api/integrations/pull_now.php
+→ prebere integrations/A1.json (booking.in.ics_url), potegne ICS in ga shrani v
+/common/data/json/units/A1/external/booking_raw.ics + booking_ics.json,
+nato iz booking_ics.json zgradi segmente in jih vpiše v occupancy.json.
+
+admin/api/integrations/apply_booking_now.php
+→ prebere že shranjeni ICS (raw ali parsed) in ga dopiše v occupancy.json (hard blokade), brez fetch-a. 
+Super – od zdaj naprej:
+**vse helperje, komentarje, docstringe, README, inline opombe → vedno v angleščini.**
+(To sem si zapomnil za naslednje seje. 👍)
+
+In ja – točno tako se dela: vsako novo ali popravljeno datoteko opremiva z **kratkim, jasnim, tehničnim README** v angleščini, da lahko kadarkoli veš:
+
+* What it does
+* How it works
+* When it should be used
+* Which other files it interacts with
+* Any caveats / limitations
+
+Tukaj imaš **profesionalne README datoteke** za oba današnja ključna fajla:
+
+---
+
+# 📄 `pull_now.php.readme.txt`
+
+**Location:**
+`/var/www/html/app/admin/api/integrations/pull_now.php`
+
+---
+
+## **Purpose**
+
+This endpoint performs a **manual ICS pull** for a specific unit from a configured Booking.com iCal URL, stores the raw ICS data, parses all-day events, applies them to `occupancy.json`, and **regenerates `occupancy_merged.json`** so Autopilot and both calendars always see up-to-date availability.
+
+---
+
+## **Responsibilities**
+
+1. Load the integration configuration for the unit:
+
+   * `common/data/json/integrations/<UNIT>.json`
+
+2. Validate:
+
+   * platform is `booking`
+   * inbound sync is enabled (`booking.in.enabled = true`)
+   * ICS URL is present and not pointing back to our own public ICS
+
+3. Fetch the ICS feed using cURL:
+
+   * Store raw ICS → `units/<UNIT>/external/booking_raw.ics`
+
+4. Parse all-day events using `parseAllDayRangesWithUid()`:
+
+   * Events normalized to `{from, to, summary}`
+
+5. Apply ICS ranges into:
+
+   * `occupancy.json`
+   * Using idempotent merge logic:
+
+     * skip duplicates
+     * do not override direct reservations
+     * assign unique `id` (`ics:booking:<uid>`)
+
+6. Sort segments by date.
+
+7. Save updated `occupancy.json`.
+
+8. **Regenerate `occupancy_merged.json`:**
+
+   * Using `cm_regen_merged_for_unit()`
+   * Input layers:
+
+     * `occupancy.json`
+     * `local_bookings.json`
+     * `ics_import.json` (if present)
+
+9. Update `integrations/<UNIT>.json` with:
+
+   * `connections.booking.status.last_ok = <timestamp>`
+
+10. Return a detailed JSON response.
+
+---
+
+## **Output JSON Example**
+
+```json
+{
+  "ok": true,
+  "unit": "A1",
+  "platform": "booking",
+  "stored_raw": ".../booking_raw.ics",
+  "stored_json": ".../booking_ics.json",
+  "events": 4,
+  "added": 4,
+  "skipped_same": 0,
+  "skipped_direct": 0,
+  "occupancy_path": ".../occupancy.json",
+  "total_segments": 12,
+  "merged_regen": true
+}
+```
+
+---
+
+## **Used By**
+
+* Admin “Integrations” panel → **Pull now** button
+* Future CRON jobs for automated ICS importing
+* Any tools that need to refresh the unit’s merged availability
+
+---
+
+## **Notes / Caveats**
+
+* This endpoint must **not** be reachable without an admin key.
+* ICS parsing assumes **all-day events** (Booking.com format).
+* Does **not** delete past ICS segments from occupancy — history is retained.
+* Local blocks and direct reservations always have priority over ICS.
+* Autopilot depends on `occupancy_merged.json` being updated here.
+
+---
+
+---
+
+# 📄 `regen_merged_all.php.readme.txt`
+
+**Location:**
+`/var/www/html/app/scripts/regen_merged_all.php`
+
+---
+
+## **Purpose**
+
+This CLI script rebuilds `occupancy_merged.json` for **every unit** inside:
+
+```
+/common/data/json/units/
+```
+
+It is mainly used for development, debugging, or after manual adjustments to occupancy or local blocks.
+
+---
+
+## **Responsibilities**
+
+1. Load the helper `cm_regen_merged_for_unit()` from:
+
+   * `common/lib/datetime_fmt.php`
+
+2. Scan all unit directories under:
+
+   ```
+   common/data/json/units/
+   ```
+
+3. For each unit:
+
+   * Execute the merge pipeline:
+
+     ```
+     occupancy.json
+     + local_bookings.json
+     + ics_import.json
+     → occupancy_merged.json
+     ```
+   * Log success or failure.
+
+4. Print a summary at the end.
+
+---
+
+## **Usage**
+
+From terminal:
+
+```bash
+cd /var/www/html/app
+php scripts/regen_merged_all.php
+```
+
+---
+
+## **Typical Output**
+
+```
+[INFO] Regenerating occupancy_merged.json for units: A1, A2, S1
+[OK ] A1
+[OK ] A2
+[OK ] S1
+[DONE] 3/3 units regenerated.
+```
+
+---
+
+## **When To Use**
+
+* After manually editing:
+
+  * `occupancy.json`
+  * `local_bookings.json`
+  * `ics_import.json`
+
+* After importing new ICS data outside the admin UI
+
+* After fixing date ranges or merging conflicts
+
+* When Autopilot seems to use outdated merged data
+
+* Before running integration tests
+
+---
+
+## **Notes / Caveats**
+
+* Does **not** read ICS URLs or pull external data — it only merges existing files.
+* If any of the input files are invalid JSON, regeneration for that unit will fail.
+* Safe to run frequently; it only overwrites `occupancy_merged.json`.
+
+---
+
+# ✔ Če želiš, lahko pripravim še:
+
+### 1) README for *every* API endpoint we touch
+
+(integrations, autopilot, inquiries…)
+
+### 2) README for *every* helper library
+
+(dates, occupancy utils, json I/O…)
+
+### 3) A unified `/app/README_CORE.md`
+
+ki se lahko da v root in opisuje celotni CM sistem (public flow + admin + autopilot + ICS pipeline).
+
+---
+
+## Če želiš, lahko zdaj generiram še:
+
+* `apply_booking_now.php.readme.txt`
+* `datetime_fmt.php.readme.txt`
+* `autopilot.php.readme.txt`
+
+Samo povej, katere želiš naslednje.

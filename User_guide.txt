@@ -1,0 +1,295 @@
+Here’s the English version of that document, ready to paste into a `MANUAL_admin_en.txt` or similar. 
+
+---
+
+## ADMIN GUIDE
+
+**CM Free V1.0 – Apartma Matevž**
+
+---
+
+### 1. What is CM Free and what does it do?
+
+CM Free is a simple system for managing occupancy and reservations for Apartma Matevž.
+It helps you with:
+
+* displaying the **occupancy calendar** (who arrives, who departs, when it’s free),
+* handling **inquiries** (coming from the public website),
+* managing **reservations** (confirmed, cancelled, blocked dates),
+* **syncing with other calendars** (e.g. Booking.com, Google Calendar – if enabled).
+
+You **don’t need programming knowledge** to use the system. It’s enough that you can:
+
+* open a web page in your browser,
+* read the basic reservation information,
+* decide whether an inquiry should be **accepted, rejected, or rescheduled**.
+
+---
+
+### 2. Basic concepts (so we speak the same language)
+
+* **Unit** – in your case this is “Apartma Matevž” (in the future there might be more: A1, A2, S1…).
+* **Inquiry** – the guest selects dates on the public page and submits a form. This is *not yet a reservation*.
+* **Reservation** – a confirmed stay for selected dates.
+* **Occupancy (calendar)** – a color-coded view of when the apartment is occupied, free or blocked.
+* **Block / admin block** – a manually occupied date; reservations are not allowed then (e.g. cleaning, maintenance, owner’s holiday).
+* **Autopilot** (if enabled) – logic that assists you when confirming: it checks if the dates are free and whether basic rules are met. The final decision is still yours.
+
+For the admin, the most important flow is:
+**Inquiry → (review) → Confirmation → Reservation → Occupancy in the calendar.**
+
+---
+
+### 3. Logging into the admin area
+
+1. Open your browser (Chrome, Firefox …).
+2. In the address bar enter the admin URL (e.g. `http://your-server/app/admin/`).
+3. Enter:
+
+   * username
+   * password
+4. Click **Login**.
+
+> If login fails, double-check the password for typos, or ask the person who set up the system for you.
+
+---
+
+### 4. Quick start: first use step by step
+
+Once logged in, you usually see these main menus:
+
+* **Calendar** – occupancy overview.
+* **Inquiries** – new and old guest inquiries.
+* **Reservations** – confirmed reservations.
+* **Integrations** (if in use) – connections to Booking, Google Calendar, ICS…
+* **Unit settings** – description, prices, minimum nights, rules…
+
+Minimal daily workflow:
+
+1. **Open Inquiries.**
+
+2. Review new inquiries (status: “new” or “awaiting decision”).
+
+3. Also open the **Calendar** to see if the requested dates are free.
+
+4. Decide:
+
+   * **Confirm** – a reservation is created and the calendar marks those dates as occupied.
+   * **Reject** – the guest receives an email; the dates remain free.
+   * optionally, before confirming or rejecting, communicate with the guest via email or phone.
+
+5. Once the inquiry has been confirmed, you will find it in the **Reservations** menu.
+
+---
+
+### 5. Occupancy calendar
+
+The calendar is your main board. Here you can see when the apartment is free or occupied.
+
+Typical markers / colors (adapt to your actual CM configuration):
+
+* **Empty cell** – the date is free.
+* **Colored cell with guest name** – a confirmed reservation.
+* **Dots or special color** – inquiry or “soft hold” (dates temporarily held until something is resolved).
+* **Grey or another color** – admin block (cleaning, maintenance, “not renting”).
+
+Basic actions in the calendar:
+
+1. **View details**
+
+   * Click on an occupied slot → a window pops up with guest name, dates, and a link to the reservation.
+2. **Manual block**
+
+   * Select a date range (click arrival day → click departure day).
+   * Choose **Block** (e.g. “Admin block” or “Cleaning”).
+   * Saved! The dates are marked as occupied/blocked.
+3. **Unblock**
+
+   * Click on a blocked slot → choose **Remove block**.
+   * The calendar refreshes and the dates become free again.
+
+> Recommendation: after you finish manual changes (blocks, unblocks), always verify that the calendar matches the reservations and your real-world situation.
+
+---
+
+### 6. Working with inquiries
+
+Open the **Inquiries** menu.
+
+Here you will see a list:
+
+* **New / Awaiting decision** – inquiry has not yet been processed.
+* **Confirmed** – the inquiry has been turned into a reservation.
+* **Rejected** – the guest has received a rejection.
+* (optionally) **Cancelled** – the guest cancelled or you cancelled the reservation later.
+
+**Processing a new inquiry:**
+
+1. Click on the inquiry row.
+
+2. Check:
+
+   * guest’s name and contact (email, phone),
+   * requested dates (arrival – departure),
+   * number of guests,
+   * any message from the guest.
+
+3. Open the **Calendar** (if not already open) and check:
+
+   * whether the dates are free,
+   * whether there is any block, cleaning or another reservation.
+
+4. Decision:
+
+   * If everything is fine → click **Confirm**.
+   * If the dates don’t work or the offer is not suitable → click **Reject**
+     (optionally, agree on alternative dates with the guest first).
+
+The system will then automatically:
+
+* on **confirmation**:
+
+  * create a reservation,
+  * mark the dates as occupied in the calendar,
+  * send a confirmation email to the guest (if email sending is enabled),
+
+* on **rejection**:
+
+  * record the rejection,
+  * send a polite rejection email to the guest.
+
+---
+
+### 7. Reservations (overview and basic changes)
+
+In the **Reservations** menu you can see all confirmed reservations.
+
+Typically you can:
+
+* open a reservation and view details (contact, dates, price, notes),
+* add an **internal note** (visible only to you / admins),
+* in some cases:
+
+  * change the status (e.g. mark as “paid on arrival”),
+  * manually **cancel a reservation** (if the guest cancels).
+
+When cancelling:
+
+1. Check the cancellation rules (per your agreement with the guest).
+2. In the reservation, choose **Cancel** (or similarly named button).
+3. The system will:
+
+   * free the occupied dates in the calendar,
+   * mark the reservation as cancelled,
+   * optionally send a cancellation email to the guest (depending on settings).
+
+---
+
+### 8. Emails and PDFs for the guest
+
+When a guest sends an inquiry or a reservation is confirmed, the system can send emails. Typically:
+
+* **Inquiry confirmation** – the guest gets an offer or an inquiry summary (if configured).
+* **Reservation confirmation** – the guest receives:
+
+  * stay dates,
+  * number of guests,
+  * price (without tourist tax, if the municipality collects it separately),
+  * basic house rules,
+  * possible **PDF attachments** (reservation summary).
+
+As admin, you should check:
+
+* that email addresses in unit settings **work** (do a test inquiry and look at your inbox),
+* that the content is understandable to the guest (no “technical jargon”).
+
+---
+
+### 9. Unit settings
+
+In the **Unit settings** (or similarly named) menu you manage the main configuration for Apartma Matevž:
+
+* **Unit description** – text displayed to the guest.
+* **Price list** – base price per night, long-stay discounts (e.g. 7+ nights).
+* **Minimum nights** – e.g. minimum 2 nights.
+* **Max number of guests** – how many people can sleep in the apartment.
+* **Tourist tax** – informational display; typically not included in price and collected separately by the municipality.
+* **Additional services** – e.g. baby cot, keycard, cleaning.
+
+Recommendation:
+
+* make changes calmly and step by step,
+* after any larger change (price, rules) always submit a **test inquiry** to see what the guest sees.
+
+---
+
+### 10. Integrations (if you use them)
+
+If your CM is connected to other platforms:
+
+* **Booking.com / Airbnb** – calendar sync to avoid double bookings.
+* **Google Calendar / ICS** – external calendar for viewing occupancy.
+
+As admin you typically need to:
+
+1. In the **Integrations** menu, check whether a platform is connected (status: active).
+2. After bigger changes (many blocks/unblocks) optionally:
+
+   * trigger a **manual refresh** (pull/push), if the UI supports it, or
+   * at least verify that the occupancy in the other platform matches the main one (CM Free).
+
+The technical side (ICS links, API keys, advanced filters) is usually handled by the person who set up the system – normally the admin does not need to touch it.
+
+---
+
+### 11. Daily admin routine (summary)
+
+Every day or at least several times per week:
+
+1. Open **Inquiries**:
+
+   * process new inquiries,
+   * confirm or reject them.
+
+2. Check the **Calendar**:
+
+   * see if new reservations are correctly displayed,
+   * see if any days need a **block** (e.g. cleaning).
+
+3. Optionally open **Reservations**:
+
+   * check upcoming arrivals (name, arrival time),
+   * record payments or notes.
+
+From time to time:
+
+1. Review **Unit settings** (price list, min nights, description).
+2. Check **Integrations** if you use them (connection status, updates).
+
+---
+
+### 12. When you need a “computer person”
+
+In most cases the admin can handle:
+
+* processing inquiries,
+* working with reservations,
+* blocks and unblocks,
+* basic settings (price, description, min nights).
+
+Help from a developer / advanced user makes sense when:
+
+* integrations with Booking/Airbnb or ICS **don’t work**,
+* you see “500 Internal Server Error” or similar,
+* you want to change **advanced rules** (e.g. automatic confirmations, special discounts, specific tax logic),
+* you want to **upgrade to the Plus version** (e.g. online payments, advanced autopilot).
+
+---
+
+If you want, we can later prepare a short **technical appendix** (for your guru friend) that explains:
+
+* where JSON files live,
+* how inquiries/reservations/occupancy are stored,
+* where logs are,
+* and how backups should be done.
+ 

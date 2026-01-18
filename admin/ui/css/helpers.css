@@ -1,0 +1,78 @@
+/*
+ * Small reusable helper classes for the admin UI.
+ *
+ * Responsibilities:
+ * - Provide utility classes for spacing, alignment, text-muted, badges,
+ *   chips, etc.
+ * - Avoid duplication of tiny style patterns across other CSS files.
+ *
+ * Used by:
+ * - All admin pages/modules where quick utility classes are helpful.
+ *
+ * Notes:
+ * - Keep this file focused on simple, generic helpers.
+ *   Component-specific helpers belong to the component's own CSS file.
+ */
+
+
+/* /app/admin/ui/css/helpers.css */
+* { box-sizing: border-box; }
+:focus { outline: 2px solid #3b82f6; outline-offset: 1px; }
+/* ========== Toasts (global) ========== */
+.toast-container {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: none; /* da ne blokira klikov na UI spodaj */
+}
+.toast {
+  pointer-events: auto; /* toast sam je kliken (npr. zapri) */
+  min-width: 220px;
+  max-width: 420px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  box-shadow: 0 6px 22px rgba(0,0,0,.20);
+  background: #1f2937;  /* dark */
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.3;
+  opacity: 0.98;
+}
+.toast.ok     { background: #065f46; } /* zelena */
+.toast.info   { background: #1f2937; } /* dark */
+.toast.warn   { background: #92400e; } /* rjava/amber */
+.toast.error  { background: #7f1d1d; } /* rdeča */
+.toast .x {
+  float: right;
+  margin-left: 8px;
+  cursor: pointer;
+  opacity: .9;
+}
+/* Manage reservations – badge styling */
+.mr-card {
+  /* da se badge lepo zlijejo – če že imaš, pusti kot je */
+  background-color: #1d252f; /* ali tvoja obstoječa barva kartice */
+}
+
+.mr-badge {
+  background-color: transparent;       /* brez polnega ozadja */
+  border: 1px solid #f5c542;           /* tvoj "sončno rumen" rob – po želji zamenjaj */
+  color: #f5c542;                      /* tekst tudi rumen; da izstopa */
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+
+/* Če želiš, da so samo BLOCK/LOCAL taki, ostali (SOFT/HARD/ICS/DIRECT) pa ostanejo kot so bili prej: */
+/*
+.mr-badge.block,
+.mr-badge.local {
+  background-color: transparent;
+  border: 1px solid #f5c542;
+  color: #f5c542;
+}
+*/
+

@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Admin V4 – Developer Handbook</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #111827;
+      --bg-alt: #020617;
+      --panel: #0f172a;
+      --border: #1f2937;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56,189,248,0.12);
+      --accent-strong: #0ea5e9;
+      --text: #e5e7eb;
+      --text-soft: #9ca3af;
+      --text-softer: #6b7280;
+      --danger: #f97373;
+      --muted-panel: #020617;
+      --code-bg: #020617;
+      --tag-bg: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #020617 100%);
+      color: var(--text);
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid rgba(148,163,184,0.35);
+      background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.98));
+      box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+    }
+
+    header .inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px 20px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #f9fafb;
+    }
+
+    header .subtitle {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    header .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--text-soft);
+      background: rgba(15,23,42,0.9);
+      white-space: nowrap;
+    }
+
+    .badge.badge-accent {
+      border-color: rgba(56,189,248,0.8);
+      color: var(--accent);
+      background: rgba(15,23,42,0.95);
+    }
+
+    .layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 18px 36px;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    nav {
+      position: sticky;
+      top: 70px;
+      align-self: flex-start;
+      padding: 14px 14px 16px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top left, rgba(15,23,42,0.95), rgba(15,23,42,0.96));
+      border: 1px solid rgba(31,41,55,0.9);
+      box-shadow:
+        0 12px 32px rgba(15,23,42,0.7),
+        0 0 0 1px rgba(15,23,42,0.9);
+    }
+
+    nav h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-soft);
+    }
+
+    nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    nav li {
+      margin: 2px 0;
+    }
+
+    nav a {
+      display: block;
+      padding: 4px 7px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-soft);
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+    }
+
+    nav a span.section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-softer);
+    }
+
+    nav a:hover {
+      background: rgba(15,23,42,0.95);
+      color: var(--accent);
+      transform: translateX(1px);
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    section {
+      padding: 14px 16px 16px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.98), rgba(15,23,42,0.98));
+      border: 1px solid rgba(31,41,55,0.9);
+      box-shadow:
+        0 18px 45px rgba(15,23,42,0.9),
+        0 0 0 1px rgba(15,23,42,0.9);
+    }
+
+    section h2 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 18px;
+      letter-spacing: 0.03em;
+      color: #f9fafb;
+    }
+
+    section h3 {
+      margin-top: 14px;
+      margin-bottom: 6px;
+      font-size: 15px;
+      color: var(--accent-strong);
+    }
+
+    section h4 {
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    p {
+      margin: 4px 0 6px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-soft);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .card {
+      border-radius: 12px;
+      background: linear-gradient(145deg, #020617, #020617);
+      border: 1px solid rgba(31,41,55,0.9);
+      padding: 9px 10px 9px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 4px;
+      font-size: 14px;
+      color: #f9fafb;
+    }
+
+    .card p {
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: var(--tag-bg);
+      font-size: 10px;
+      color: var(--text-softer);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .tag.tag-mod {
+      border-color: rgba(56,189,248,0.9);
+      color: var(--accent);
+    }
+
+    .tag.tag-json {
+      border-color: rgba(52,211,153,0.9);
+      color: #6ee7b7;
+    }
+
+    .tag.tag-api {
+      border-color: rgba(248,250,252,0.7);
+      color: #e5e7eb;
+    }
+
+ul.file-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 4px 0 2px;
+  max-height: 230px;        /* če jih je zelo veliko, se pojavi scroll */
+  overflow-y: auto;
+}
+
+/* vsak entry */
+ul.file-list li {
+  margin: 1px 0;
+  font-size: 12px;
+  white-space: normal;      /* dovoli prelom vrstice */
+}
+
+/* sam link (dolgi path-i brez presledkov) */
+ul.file-list a {
+  color: var(--accent);
+  text-decoration: none;
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-all;    /* lomi tudi brez presledkov */
+  overflow-wrap: anywhere;  /* dodatna varnost za moderne browserje */
+}
+
+ul.file-list a:hover {
+  text-decoration: underline;
+}
+
+/* Appendix – raw index linki naj bodo enake barve kot ostali dev linki */
+#appendix ul {
+  list-style: disc;
+  padding-left: 18px;
+  margin: 6px 0;
+  max-height: 260px;      /* če je ogromen seznam: scroll */
+  overflow-y: auto;
+}
+
+#appendix li {
+  font-size: 12px;
+  margin: 1px 0;
+}
+
+#appendix a {
+  color: var(--accent);   /* ista modra kot zgoraj */
+  text-decoration: none;
+}
+
+#appendix a:hover {
+  text-decoration: underline;
+}
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: var(--code-bg);
+      border: 1px solid rgba(31,41,55,0.85);
+      color: #e5e7eb;
+    }
+
+    .muted {
+      color: var(--text-softer);
+      font-size: 12px;
+    }
+
+    .muted-strong {
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .todo-list {
+      padding-left: 17px;
+      margin: 5px 0 3px;
+    }
+
+    .todo-list li {
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .todo-kinda-done {
+      color: #6ee7b7;
+    }
+
+    footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 18px 20px;
+      font-size: 11px;
+      color: var(--text-softer);
+    }
+
+    footer p {
+      margin: 4px 0;
+    }
+
+    @media (max-width: 880px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      nav {
+        position: static;
+      }
+    }
+  
+    /* --- Billboard UX additions --- */
+    .quick-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:14px;
+    }
+    .qa-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      text-decoration:none;
+      color: var(--text);
+      font-weight:600;
+      transition: transform .06s ease, background .12s ease, border-color .12s ease;
+    }
+    .qa-btn:hover{ background: rgba(255,255,255,0.06); border-color: rgba(148,163,184,0.35); transform: translateY(-1px); }
+    .qa-btn:active{ transform: translateY(0px); }
+    .qa-primary{ background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.35); }
+    .file-controls{
+      margin: 14px 0 16px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      border-radius: 14px;
+    }
+    .file-controls-row{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    #fileFilterInput{
+      flex:1;
+      min-width: 220px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(2,6,23,0.55);
+      color: var(--text);
+    }
+    .file-count{
+      font-size: 12px;
+      color: rgba(226,232,240,0.8);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      white-space: nowrap;
+    }
+    .file-chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 12px;
+    }
+    .chip{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      color: rgba(226,232,240,0.92);
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chip:hover{ background: rgba(255,255,255,0.05); }
+    .chip.active{ background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.38); }
+    .chip-ghost{ opacity: 0.9; }
+    .chip-sep{ width: 10px; }
+    .small{ font-size: 12px; }
+    .to-top{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 50;
+      display:none;
+    }
+    .to-top a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.72);
+      color: var(--text);
+      text-decoration:none;
+      font-weight:900;
+    }
+    .to-top a:hover{ background: rgba(15,23,42,0.92); }
+
+</style>
+</head>
+<body>
+<a id="top"></a>
+<header>
+  <div class="inner">
+    <div>
+      <h1>Admin V4 · Developer Handbook</h1>
+      <p class="subtitle">
+        Channel Manager / Booking engine · internal documentation for <code>/var/www/html/app</code>
+      </p>
+    </div>
+    <div class="badges">
+      <span class="badge badge-accent">Admin V4</span>
+      <span class="badge">Calendar · Inquiries · Integrations · ICS</span>
+      <span class="badge">Docs synced via <code>project_docsync.py</code></span>
+    </div>
+
+    <div class="quick-actions" aria-label="Quick actions">
+      <a class="qa-btn qa-primary" href="admin_calendar.php">Open calendar</a>
+      <a class="qa-btn" href="integrations.php">Integrations</a>
+      <a class="qa-btn" href="inquiries_admin.php">Inquiries</a>
+      <a class="qa-btn" href="manage_reservations.php">Manage reservations</a>
+      <a class="qa-btn" href="index_admin.html#appendix">File index</a>
+    </div>
+
+  </div>
+</header>
+
+<div class="layout">
+  <nav>
+    <h2>Table of contents</h2>
+    <ul>
+      <li><a href="#overview"><span class="section-label">Overview</span></a></li>
+      <li><a href="#modules"><span class="section-label">Modules</span></a></li>
+      <li><a href="#data-model"><span class="section-label">Data &amp; JSON</span></a></li>
+      <li><a href="#apis"><span class="section-label">APIs &amp; Scripts</span></a></li>
+      <li><a href="#open-tasks"><span class="section-label">Open tasks</span></a></li>
+      <li><a href="#appendix"><span class="section-label">Appendix · Raw index</span></a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <!-- OVERVIEW -->
+    <section id="overview">
+      <h2>1. Overview</h2>
+      <p>
+        Ta stran je interni “dev index” za Admin V4 Channel Managerja. Cilj je, da lahko
+        tudi čez nekaj mesecev hitro razumeš, kje v kodi se kaj dogaja, ter da imaš vse
+        skripte in JSON modele dostopne kot <code>.md</code> datoteke za branje kjerkoli.
+      </p>
+      <p>
+        <span class="muted-strong">Glavne komponente:</span>
+      </p>
+      <ul class="todo-list">
+        <li><strong>Admin calendar V4</strong> – večslojni koledar (local blocks, ICS, reservations, pending).</li>
+        <li><strong>Inquiries &amp; Reservations</strong> – tok od povpraševanja do potrjene rezervacije, vključno z auto-kuponi.</li>
+        <li><strong>Integrations console</strong> – enotno mesto za enote, cene, special offers, promo, ICS &amp; kanale.</li>
+        <li><strong>Public flow</strong> – pubcal, offer.php, thankyou.php, JSON zapis povpraševanj in rezervacij.</li>
+      </ul>
+      <p class="muted">
+        Auto dokumentacijo (vsebina skript in configov) generira <code>scripts/project_docsync.py</code>,
+        ki v <code>docs/source/</code> ustvari po eno <code>.md</code> datoteko za vsako tekstovno datoteko v projektu.
+      </p>
+    </section>
+
+    <!-- MODULES -->
+    <section id="modules">
+      <h2>2. Modules</h2>
+      <p>
+        Spodaj so glavni moduli Admin V4, z osnovno razlago in linki na ključne skripte.
+        Linki kažejo na auto-generirane <code>.md</code> datoteke v <code>docs/source/</code>.
+      </p>
+
+      <div class="grid">
+        <!-- Calendar V4 -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-mod">Module</span>
+            <span class="tag">Calendar</span>
+          </div>
+          <h3>Admin Calendar V4</h3>
+          <p>
+            Glavni koledar za admin uporabo: prikaz zasedenosti, local blocks, pending requests,
+            hard-locki in večslojni overlay (ICS, merged occupancy).
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/admin__admin_calendar.php.md" target="_blank">
+                admin/admin_calendar.php
+              </a>
+              <span class="muted"> · entry point za admin koledar</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__calendar_shell.js.md" target="_blank">
+                admin/ui/js/calendar_shell.js
+              </a>
+              <span class="muted"> · shell, layout, unit selection</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__admin_calendar.js.md" target="_blank">
+                admin/ui/js/admin_calendar.js
+              </a>
+              <span class="muted"> · render koledarja, sloji, painting</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__range_select_admin.js.md" target="_blank">
+                admin/ui/js/range_select_admin.js
+              </a>
+              <span class="muted"> · range selection za admin</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__admin_info_panel.js.md" target="_blank">
+                admin/ui/js/admin_info_panel.js
+              </a>
+              <span class="muted"> · info panel (detajli selectiona)</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__locks_loader.js.md" target="_blank">
+                admin/ui/js/locks_loader.js
+              </a>
+              <span class="muted"> · hard / soft locks, merged occupancy</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__css__calendar.css.md" target="_blank">
+                admin/ui/css/calendar.css
+              </a>
+              <span class="muted"> · osnovni stil koledarja</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__css__layers.css.md" target="_blank">
+                admin/ui/css/layers.css
+              </a>
+              <span class="muted"> · barve / sloji (hard, pending, ICS)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Integrations -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-mod">Module</span>
+            <span class="tag">Integrations</span>
+          </div>
+          <h3>Integrations console</h3>
+          <p>
+            Centralno mesto za enote, cene, special offers, promo kodo, ICS in (v prihodnje)
+            povezave na kanale (Booking, Airbnb, ipd.).
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/admin__integrations.php.md" target="_blank">
+                admin/integrations.php
+              </a>
+              <span class="muted"> · entry point za Integrations UI</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__integrations.js.md" target="_blank">
+                admin/ui/js/integrations.js
+              </a>
+              <span class="muted"> · glavni JS (tabs: Units, Prices, Offers, Promo, ICS, Channel)</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__css__integrations.css.md" target="_blank">
+                admin/ui/css/integrations.css
+              </a>
+              <span class="muted"> · styling kartic in tabs v integrations</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__integrations_get.php.md" target="_blank">
+                admin/api/integrations_get.php
+              </a>
+              <span class="muted"> · preberi integrations config</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__integrations_save.php.md" target="_blank">
+                admin/api/integrations_save.php
+              </a>
+              <span class="muted"> · shrani globalni integrations config</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__pricing__set_prices.php.md" target="_blank">
+                admin/api/pricing/set_prices.php
+              </a>
+              <span class="muted"> · zapis prices.json za enoto</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__offers_get.php.md" target="_blank">
+                admin/api/offers_get.php
+              </a>
+              <span class="muted"> · preberi special_offers za enoto</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__offers_save.php.md" target="_blank">
+                admin/api/offers_save.php
+              </a>
+              <span class="muted"> · shrani special_offers.json</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__promo_get.php.md" target="_blank">
+                admin/api/promo_get.php
+              </a>
+              <span class="muted"> · preberi promo_codes.json</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__promo_save.php.md" target="_blank">
+                admin/api/promo_save.php
+              </a>
+              <span class="muted"> · shrani promo_codes.json</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Inquiries & Reservations -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-mod">Module</span>
+            <span class="tag">Inquiries &amp; Reservations</span>
+          </div>
+          <h3>Inquiries &amp; Manage Reservations</h3>
+          <p>
+            Upravljanje povpraševanj (pending, marked, rejected), generiranje kuponov,
+            in potrjevanje rezervacij (confirm, cancel) z zapisom v reservations JSON.
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/admin__inquiries.php.md" target="_blank">
+                admin/inquiries.php
+              </a>
+              <span class="muted"> · entry za Inquiries UI (seznam povpraševanj)</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__inquiries_admin.php.md" target="_blank">
+                admin/inquiries_admin.php
+              </a>
+              <span class="muted"> · backend/bridge za admin inquiries</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__inquiries_admin.js.md" target="_blank">
+                admin/ui/js/inquiries_admin.js
+              </a>
+              <span class="muted"> · UI logika za seznam + kartico povpraševanj</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__css__inquiries_admin.css.md" target="_blank">
+                admin/ui/css/inquiries_admin.css
+              </a>
+              <span class="muted"> · styling inquiries admin</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__manage_reservations.php.md" target="_blank">
+                admin/manage_reservations.php
+              </a>
+              <span class="muted"> · entry za Manage Reservations</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__ui__js__manage_reservations.js.md" target="_blank">
+                admin/ui/js/manage_reservations.js
+              </a>
+              <span class="muted"> · UI za pregled in upravljanje rezervacij</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__list_inquiries.php.md" target="_blank">
+                admin/api/list_inquiries.php
+              </a>
+              <span class="muted"> · seznam povpraševanj iz JSON mape</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__accept_inquiry.php.md" target="_blank">
+                admin/api/accept_inquiry.php
+              </a>
+              <span class="muted"> · sprejem povpraševanja → pending/accepted rezervacija</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__reject_inquiry.php.md" target="_blank">
+                admin/api/reject_inquiry.php
+              </a>
+              <span class="muted"> · zavrnitev + (po novem) generiranje kupona</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__finalize_reservation.php.md" target="_blank">
+                admin/api/finalize_reservation.php
+              </a>
+              <span class="muted"> · dokončna ustvaritev rezervacije (reservations/*)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pricing & Public Flow -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-mod">Module</span>
+            <span class="tag">Pricing &amp; Public Flow</span>
+          </div>
+          <h3>Pricing &amp; public booking flow</h3>
+          <p>
+            Public del od koledarja do thankyou: izračun cene, special offers, promo,
+            day-use, TT in generiranje e-mailov za gosta in admina.
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/public__pubcal.php.md" target="_blank">
+                public/pubcal.php
+              </a>
+              <span class="muted"> · public koledar (guest view)</span>
+            </li>
+            <li>
+              <a href="../docs/source/public__offer.php.md" target="_blank">
+                public/offer.php
+              </a>
+              <span class="muted"> · izračun in prikaz ponudbe (nights, popusti, day-use)</span>
+            </li>
+            <li>
+              <a href="../docs/source/public__thankyou.php.md" target="_blank">
+                public/thankyou.php
+              </a>
+              <span class="muted"> · zaključna stran + zapis pending JSON + PDF</span>
+            </li>
+            <li>
+              <a href="../docs/source/lib__pricing.php.md" target="_blank">
+                lib/pricing.php
+              </a>
+              <span class="muted"> · jedro pricing logike (base, offers, promo, discounts)</span>
+            </li>
+            <li>
+              <a href="../docs/source/mail__sendmail_guest.php.md" target="_blank">
+                mail/sendmail_guest.php
+              </a>
+              <span class="muted"> · e-mail gostu (offer/confirm)</span>
+            </li>
+            <li>
+              <a href="../docs/source/mail__sendmail_admin.php.md" target="_blank">
+                mail/sendmail_admin.php
+              </a>
+              <span class="muted"> · e-mail adminu (povpraševanje, soft hold, itd.)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- ICS & Scripts -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-mod">Module</span>
+            <span class="tag">ICS &amp; scripts</span>
+          </div>
+          <h3>ICS integracija &amp; cron skripte</h3>
+          <p>
+            Uvoz in izvoz ICS feedov, merge v occupancy, ter cron primjeri za avtomatsko
+            osveževanje zasedenosti iz Booking.com / drugih virov.
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/common__data__ICS_kanli_readme.txt.md" target="_blank">
+                common/data/ICS_kanli_readme.txt
+              </a>
+              <span class="muted"> · opombe za ICS mapping/teste</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__integrations__ics.php.md" target="_blank">
+                admin/api/integrations/ics.php
+              </a>
+              <span class="muted"> · ICS endpoints (export)</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__integrations__apply_booking_now.php.md" target="_blank">
+                admin/api/integrations/apply_booking_now.php
+              </a>
+              <span class="muted"> · ročni apply ICS → occupancy</span>
+            </li>
+            <li>
+              <a href="../docs/source/admin__api__integrations__pull_now.php.md" target="_blank">
+                admin/api/integrations/pull_now.php
+              </a>
+              <span class="muted"> · ročni pull ICS (test)</span>
+            </li>
+            <li>
+              <a href="../docs/source/scripts__ingest_external_ics.php.md" target="_blank">
+                scripts/ingest_external_ics.php
+              </a>
+              <span class="muted"> · uvoz ICS v lokalne json-e</span>
+            </li>
+            <li>
+              <a href="../docs/source/scripts__merge_external_into_occupancy.php.md" target="_blank">
+                scripts/merge_external_into_occupancy.php
+              </a>
+              <span class="muted"> · merge ICS → occupancy.json</span>
+            </li>
+            <li>
+              <a href="../docs/source/scripts__update_occupancy.py.md" target="_blank">
+                scripts/update_occupancy.py
+              </a>
+              <span class="muted"> · Python helper za occupancy update</span>
+            </li>
+            <li>
+              <a href="../docs/source/scripts__CRON_EXAMPLES.txt.md" target="_blank">
+                scripts/CRON_EXAMPLES.txt
+              </a>
+              <span class="muted"> · primeri cron nalog za ICS &amp; merge</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- DATA / JSON MODEL -->
+    <section id="data-model">
+      <h2>3. Data &amp; JSON model</h2>
+      <p>
+        JSON datoteke so srce sistema – od manifestov enot, preko occupancy, do inquiries in
+        reservations. Spodaj so najpomembnejši JSON-i z linki na auto-generirane <code>.md</code> poglede.
+      </p>
+
+      <div class="grid">
+        <!-- Units & manifest -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-json">JSON</span>
+            <span class="tag">Units</span>
+          </div>
+          <h3>Units &amp; manifest</h3>
+          <p>
+            Manifest vseh enot in osnovne per-unit nastavitve (ime, barva, auto-block, day-use, itd.).
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/common__data__json__units__manifest.json.md" target="_blank">
+                common/data/json/units/manifest.json
+              </a>
+              <span class="muted"> · seznam enot (A1, A2, S1, ...)</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__site_settings.json.md" target="_blank">
+                common/data/json/units/site_settings.json
+              </a>
+              <span class="muted"> · globalne nastavitve (TT, email, keycard, ...)</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__site_settings.json.md" target="_blank">
+                common/data/json/units/A1/site_settings.json
+              </a>
+              <span class="muted"> · per-unit override za A1 (min_nights, day-use, cleaning_fee, ...)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Prices, offers, promo -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-json">JSON</span>
+            <span class="tag">Pricing</span>
+          </div>
+          <h3>Prices, special offers &amp; promo codes</h3>
+          <p>
+            Cenik po dnevih, specialne akcije in promo kode – vse, kar vpliva na končno ceno v offer.php.
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__prices.json.md" target="_blank">
+                common/data/json/units/A1/prices.json
+              </a>
+              <span class="muted"> · cene po dnevih za A1</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__special_offers.json.md" target="_blank">
+                common/data/json/units/A1/special_offers.json
+              </a>
+              <span class="muted"> · special offers za A1 (periods, discount, conditions)</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__promo_codes.json.md" target="_blank">
+                common/data/json/units/promo_codes.json
+              </a>
+              <span class="muted"> · promo kode (RETRY-xxxxx, datumske omejitve, usage_limit)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Occupancy -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-json">JSON</span>
+            <span class="tag">Occupancy</span>
+          </div>
+          <h3>Occupancy (local, ICS, merged)</h3>
+          <p>
+            Zasedenost za vsako enoto: lokalne blokade, ICS importi in merged pogled, ki ga uporablja koledar.
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__occupancy.json.md" target="_blank">
+                common/data/json/units/A1/occupancy.json
+              </a>
+              <span class="muted"> · zasedenost (merged) za A1</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__occupancy_merged.json.md" target="_blank">
+                common/data/json/units/A1/occupancy_merged.json
+              </a>
+              <span class="muted"> · (legacy/alias) merged occupancy</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__local_bookings.json.md" target="_blank">
+                common/data/json/units/A1/local_bookings.json
+              </a>
+              <span class="muted"> · lokalne blokade (hard-locki)</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__units__A1__external__booking_ics.json.md" target="_blank">
+                common/data/json/units/A1/external/booking_ics.json
+              </a>
+              <span class="muted"> · ICS events iz Booking.com (raw → processed)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Inquiries & reservations JSON -->
+        <div class="card">
+          <div class="tags">
+            <span class="tag tag-json">JSON</span>
+            <span class="tag">Inquiries &amp; reservations</span>
+          </div>
+          <h3>Inquiries &amp; reservations JSON</h3>
+          <p>
+            Povpraševanja in rezervacije po letih/mesecih, ločeno na pending/accepted/confirmed/rejected.
+          </p>
+          <ul class="file-list">
+            <li>
+              <a href="../docs/source/common__data__json__inquiries__2025__12__pending__20251201201002-f2d8-A1.json.md" target="_blank">
+                common/data/json/inquiries/2025/12/pending/20251201201002-f2d8-A1.json
+              </a>
+              <span class="muted"> · primer pending povpraševanja</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251202190328-ffda-A2.json.md" target="_blank">
+                common/data/json/inquiries/2025/12/confirmed/20251202190328-ffda-A2.json
+              </a>
+              <span class="muted"> · primer confirmed rezervacije</span>
+            </li>
+            <li>
+              <a href="../docs/source/common__data__json__reservations__2026__A2__20251202190328-ffda-A2.json.txt.md" target="_blank">
+                common/data/json/reservations/2026/A2/20251202190328-ffda-A2.json
+              </a>
+              <span class="muted"> · rezervacija (končni zapis)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- APIs & SCRIPTS -->
+    <section id="apis">
+      <h2>4. APIs &amp; scripts</h2>
+      <p>
+        Admin API endpointi in helper skripte. Detajli implementacije in parametrov so vidni v
+        auto-generiranih <code>.md</code> datotekah.
+      </p>
+
+      <h3>Admin API core</h3>
+      <ul class="file-list">
+        <li>
+          <a href="../docs/source/admin__api__list_reservations.php.md" target="_blank">
+            admin/api/list_reservations.php
+          </a>
+          <span class="muted"> · seznam rezervacij za Manage Reservations</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__get_inquiry.php.md" target="_blank">
+            admin/api/get_inquiry.php
+          </a>
+          <span class="muted"> · preberi eno povpraševanje (id)</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__find_reservation_by_range.php.md" target="_blank">
+            admin/api/find_reservation_by_range.php
+          </a>
+          <span class="muted"> · iskanje rezervacij po datumu in enoti</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__local_block_add.php.md" target="_blank">
+            admin/api/local_block_add.php
+          </a>
+          <span class="muted"> · dodaj lokalno blokado (hard/soft lock)</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__local_block_remove.php.md" target="_blank">
+            admin/api/local_block_remove.php
+          </a>
+          <span class="muted"> · odstrani lokalno blokado</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__admin_reserve.php.md" target="_blank">
+            admin/api/admin_reserve.php
+          </a>
+          <span class="muted"> · ročna rezervacija iz admin koledarja</span>
+        </li>
+      </ul>
+
+      <h3>Unit settings &amp; add/remove unit</h3>
+      <ul class="file-list">
+        <li>
+          <a href="../docs/source/admin__api__unit_settings_get.php.md" target="_blank">
+            admin/api/unit_settings_get.php
+          </a>
+          <span class="muted"> · preberi per-unit nastavitve</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__unit_settings_update.php.md" target="_blank">
+            admin/api/unit_settings_update.php
+          </a>
+          <span class="muted"> · posodobitev obstoječih nastavitev</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__unit_settings_save.php.md" target="_blank">
+            admin/api/unit_settings_save.php
+          </a>
+          <span class="muted"> · kreacija ali kompletni zapis settings</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__add_unit.php.md" target="_blank">
+            admin/api/add_unit.php
+          </a>
+          <span class="muted"> · dodaj novo enoto (manifest + json struktura)</span>
+        </li>
+        <li>
+          <a href="../docs/source/admin__api__delete_unit.php.md" target="_blank">
+            admin/api/delete_unit.php
+          </a>
+          <span class="muted"> · odstrani enoto (pazljivo!)</span>
+        </li>
+      </ul>
+
+      <h3>Helper scripts &amp; tools</h3>
+      <ul class="file-list">
+        <li>
+          <a href="../docs/source/scripts__project_inventory.py.txt.md" target="_blank">
+            scripts/project_inventory.py
+          </a>
+          <span class="muted"> · inventory poročilo (tree, meta, JSON lint)</span>
+        </li>
+        <li>
+          <a href="../docs/source/scripts__project_docsync.py.md" target="_blank">
+            scripts/project_docsync.py
+          </a>
+          <span class="muted"> · ta skripta · auto MD docs + index_admin.html update</span>
+        </li>
+        <li>
+          <a href="../docs/source/scripts__check_brackets_v2.sh.md" target="_blank">
+            scripts/check_brackets_v2.sh
+          </a>
+          <span class="muted"> · helper za preverjanje { } v JS/PHP</span>
+        </li>
+        <li>
+          <a href="../docs/source/_reports__project_inventory_20251203_211350.txt.md" target="_blank">
+            _reports/project_inventory_20251203_211350.txt
+          </a>
+          <span class="muted"> · snapshot projekta (inventar)</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- OPEN TASKS -->
+    <section id="open-tasks">
+      <h2>5. Open tasks / roadmap (Admin V4)</h2>
+      <p>
+        Aktivni TODO-ji, ki so ostali po glavni implementaciji Admin V4. Ko so opravljeni, jih
+        lahko prečrtaš ali preneseš v changelog.
+      </p>
+      <ul class="todo-list">
+        <li>
+          <strong>EU date formats (public &amp; emails)</strong><br>
+          <span class="muted">
+            Vsi “guest-facing” datumi (public strani in e-maile) naj bodo v obliki
+            <code>dd.mm.yyyy</code>, medtem ko JSON ostane na <code>YYYY-MM-DD</code>.
+          </span>
+        </li>
+        <li>
+          <strong>Integrations · ICS tab</strong><br>
+          <span class="muted">
+            Dokončati ICS kartico za realno uporabo v povezavah: jasen opis
+            outgoing feedov (booked vs booked+blocked), incoming ICS URL per-unit,
+            ročni pull/apply gumbe in povezavo z admin koledarjem.
+          </span>
+        </li>
+        <li>
+          <strong>Integrations · Channel tab</strong><br>
+          <span class="muted">
+            Implementirati UI za povezovanje enot s platformami (Booking.com,
+            Airbnb, drugi ICS viri): mapping enote ↔ kanal, status povezave, base URL,
+            dokumentacija za ročno nastavitev na platformi.
+          </span>
+        </li>
+        <li>
+          <strong>UI polishing (calendar + integrations)</strong><br>
+          <span class="muted">
+            Lepotičenje (mikro layout, barve, ikonice, tooltips) je namerno odloženo
+            na samostojno fazo, ko bo integrations poglavje popolnoma zaprto.
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- APPENDIX -->
+    <section id="appendix">
+      <h2>6. Appendix · Raw file index (auto-generated)</h2>
+      <p class="muted">
+        Spodnji blok popolnoma upravlja skripta <code>scripts/project_docsync.py</code>:
+        pri vsakem zagonu posodobi seznam vseh datotek v projektu in linke na njihove
+        <code>.md</code> poglede v <code>docs/source/</code>. Ročno ne urejaj ničesar
+        med označenima komentarjema.
+      </p>
+
+      <div class="file-controls" id="fileIndexControls">
+        <div class="file-controls-row">
+          <input id="fileFilterInput" type="search" placeholder="Filter files (type to search)…" autocomplete="off">
+          <span class="file-count" id="fileCountLabel">—</span>
+        </div>
+        <div class="file-chips" aria-label="Quick filters">
+          <button type="button" class="chip" data-chip="ext:php">.php</button>
+          <button type="button" class="chip" data-chip="ext:js">.js</button>
+          <button type="button" class="chip" data-chip="ext:css">.css</button>
+          <button type="button" class="chip" data-chip="ext:json">.json</button>
+          <span class="chip-sep"></span>
+          <button type="button" class="chip" data-chip="path:/admin/">/admin/</button>
+          <button type="button" class="chip" data-chip="path:/common/">/common/</button>
+          <button type="button" class="chip" data-chip="path:/scripts/">/scripts/</button>
+          <button type="button" class="chip" data-chip="path:/docs/">/docs/</button>
+          <span class="chip-sep"></span>
+          <button type="button" class="chip chip-ghost" id="chipClear">Clear</button>
+        </div>
+        <p class="muted small" style="margin-top:10px">
+          Tip: click chips to toggle filters. Search matches file path + title. This does not modify the auto-generated list.
+        </p>
+      </div>
+
+<!-- File preview modal (does not affect DOCSYNC block) -->
+<div id="cmPreview" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:99999;">
+  <div style="position:absolute; inset:24px; background:#0f1522; border:1px solid rgba(255,255,255,.12); border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
+    <div style="padding:10px 12px; background:#121826; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div id="cmPreviewTitle" style="font-weight:700; font-size:13px; color:rgba(233,238,245,.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+      <div style="display:flex; gap:8px;">
+        <a id="cmPreviewOpen" href="#" target="_blank" style="padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.08); color:#e9eef5; text-decoration:none; font-weight:600; font-size:12px;">Open raw</a>
+        <button id="cmPreviewClose" type="button" style="padding:8px 10px; border-radius:10px; border:0; background:#3b82f6; color:#081018; font-weight:800; cursor:pointer;">Close</button>
+      </div>
+    </div>
+
+    <pre id="cmPreviewBody" style="margin:0; padding:12px; overflow:auto; color:#e9eef5; font-size:12px; line-height:1.35; white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;"></pre>
+  </div>
+</div>
+
+
+
+      <!-- DOCSYNC:FILES-START -->
+
+  <section id="dev-file-index">
+    <h2>Developer file index (auto-generated)</h2>
+    <p>Generated: 2025-12-27 21:18:32</p>
+    <ul>
+      <li><a href="../docs/source/.htaccess.md" target="_blank">.htaccess</a></li>
+      <li><a href="../docs/source/20251202190328-ffda-A2.json.txt.md" target="_blank">20251202190328-ffda-A2.json.txt</a></li>
+      <li><a href="../docs/source/Deploy_readme.txt.md" target="_blank">Deploy_readme.txt</a></li>
+      <li><a href="../docs/source/REVIZIJA_CM_gpt_sessions_new_admin_calendar.txt.md" target="_blank">REVIZIJA_CM_gpt_sessions_new_admin_calendar.txt</a></li>
+      <li><a href="../docs/source/Testitanja.txt.md" target="_blank">Testitanja.txt</a></li>
+      <li><a href="../docs/source/_reports__project_inventory_20251227_205707.txt.md" target="_blank">_reports/project_inventory_20251227_205707.txt</a></li>
+      <li><a href="../docs/source/admin___common.php.md" target="_blank">admin/_common.php</a></li>
+      <li><a href="../docs/source/admin___common.php.txt.md" target="_blank">admin/_common.php.txt</a></li>
+      <li><a href="../docs/source/admin__admin_calendar.php.md" target="_blank">admin/admin_calendar.php</a></li>
+      <li><a href="../docs/source/admin__api___lib__json_io.php.md" target="_blank">admin/api/_lib/json_io.php</a></li>
+      <li><a href="../docs/source/admin__api___lib__paths.php.md" target="_blank">admin/api/_lib/paths.php</a></li>
+      <li><a href="../docs/source/admin__api__accept_inquiry.php.md" target="_blank">admin/api/accept_inquiry.php</a></li>
+      <li><a href="../docs/source/admin__api__accept_inquiry.php.txt.md" target="_blank">admin/api/accept_inquiry.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__add_unit.php.md" target="_blank">admin/api/add_unit.php</a></li>
+      <li><a href="../docs/source/admin__api__admin_reserve.php.md" target="_blank">admin/api/admin_reserve.php</a></li>
+      <li><a href="../docs/source/admin__api__admin_reserve.php.txt.md" target="_blank">admin/api/admin_reserve.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__admin_reserve_soft.php.md" target="_blank">admin/api/admin_reserve_soft.php</a></li>
+      <li><a href="../docs/source/admin__api__admin_reserve_soft.php.txt.md" target="_blank">admin/api/admin_reserve_soft.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__admin_reserve_soft_preveden_v_ang.php.txt.md" target="_blank">admin/api/admin_reserve_soft_preveden_v_ang.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__autopilot_get.php.md" target="_blank">admin/api/autopilot_get.php</a></li>
+      <li><a href="../docs/source/admin__api__autopilot_precheck.php.md" target="_blank">admin/api/autopilot_precheck.php</a></li>
+      <li><a href="../docs/source/admin__api__autopilot_save.php.md" target="_blank">admin/api/autopilot_save.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__accept_inquiry.php.txt.md" target="_blank">admin/api/bin/accept_inquiry.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__add_unit.php.txt.md" target="_blank">admin/api/bin/add_unit.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__admin_api.js.txt.md" target="_blank">admin/api/bin/admin_api.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__admin_calendar.js.txt.md" target="_blank">admin/api/bin/admin_calendar.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__admin_calendar.php.txt.md" target="_blank">admin/api/bin/admin_calendar.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__admin_reserve.php.txt.md" target="_blank">admin/api/bin/admin_reserve.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__admin_reserve_patched.php.md" target="_blank">admin/api/bin/admin_reserve_patched.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__admin_reserve_soft.php.txt.md" target="_blank">admin/api/bin/admin_reserve_soft.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__apply_bookings_now.php.txt.md" target="_blank">admin/api/bin/apply_bookings_now.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__autopilot precheck stari.txt.md" target="_blank">admin/api/bin/autopilot precheck stari.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__autopilot.php.txt.md" target="_blank">admin/api/bin/autopilot.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__autopilot_get.php.txt.md" target="_blank">admin/api/bin/autopilot_get.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__autopilot_precheck.php.txt.md" target="_blank">admin/api/bin/autopilot_precheck.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__autopilot_save.php.txt.md" target="_blank">admin/api/bin/autopilot_save.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__calendar.css.txt.md" target="_blank">admin/api/bin/calendar.css.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__calendar_shell.js.txt.md" target="_blank">admin/api/bin/calendar_shell.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__calendar_to_offer.js.txt.md" target="_blank">admin/api/bin/calendar_to_offer.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__cancel_reservation.php.popravljana_neuspesno.php.md" target="_blank">admin/api/bin/cancel_reservation.php.popravljana_neuspesno.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__cancel_reservation.php.txt.md" target="_blank">admin/api/bin/cancel_reservation.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__confirm_pending.php.txt.md" target="_blank">admin/api/bin/confirm_pending.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__confirm_reservation.php.txt.md" target="_blank">admin/api/bin/confirm_reservation.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__datetime_fmt.php.txt.md" target="_blank">admin/api/bin/datetime_fmt.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__datetime_fmt.txt.md" target="_blank">admin/api/bin/datetime_fmt.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__day.css.txt.md" target="_blank">admin/api/bin/day.css.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__expire_soft_holds.txt.md" target="_blank">admin/api/bin/expire_soft_holds.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__expire_soft_holds_x.php.md" target="_blank">admin/api/bin/expire_soft_holds_x.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__expire_soft_holds_x.php.txt.md" target="_blank">admin/api/bin/expire_soft_holds_x.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__finalize_core.php.txt.md" target="_blank">admin/api/bin/finalize_core.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__finalize_reservation.php.txt.md" target="_blank">admin/api/bin/finalize_reservation.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__ics.php.txt.md" target="_blank">admin/api/bin/ics.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__ics_pull_unit.php.txt.md" target="_blank">admin/api/bin/ics_pull_unit.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__ics_pull_unit.readme.txt.md" target="_blank">admin/api/bin/ics_pull_unit.readme.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__inquiries.php.txt.md" target="_blank">admin/api/bin/inquiries.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__inquiries_admin.js.txt.md" target="_blank">admin/api/bin/inquiries_admin.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__inquiries_admin.php.txt.md" target="_blank">admin/api/bin/inquiries_admin.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations.css.txt.md" target="_blank">admin/api/bin/integrations.css.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations.js.txt.md" target="_blank">admin/api/bin/integrations.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations.php.txt.md" target="_blank">admin/api/bin/integrations.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_.js.txt.md" target="_blank">admin/api/bin/integrations_.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_autopilot.js.txt.md" target="_blank">admin/api/bin/integrations_autopilot.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_channels.js.txt.md" target="_blank">admin/api/bin/integrations_channels.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_core.js.txt.md" target="_blank">admin/api/bin/integrations_core.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_editor.js.txt.md" target="_blank">admin/api/bin/integrations_editor.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_units.js.txt.md" target="_blank">admin/api/bin/integrations_units.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__integrations_units_x.js.txt.md" target="_blank">admin/api/bin/integrations_units_x.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__inventory_jsons_20251217134739.txt.md" target="_blank">admin/api/bin/inventory_jsons_20251217134739.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__inventory_jsons_20251217222601.txt.md" target="_blank">admin/api/bin/inventory_jsons_20251217222601.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__json_io.php.txt.md" target="_blank">admin/api/bin/json_io.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__list_inquiries.php.txt.md" target="_blank">admin/api/bin/list_inquiries.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__list_reservations.php.txt.md" target="_blank">admin/api/bin/list_reservations.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__local_block_add.php.txt.md" target="_blank">admin/api/bin/local_block_add.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__local_block_remove.php.txt.md" target="_blank">admin/api/bin/local_block_remove.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__locks_loader.js.txt.md" target="_blank">admin/api/bin/locks_loader.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__manage_reservations.css.txt.md" target="_blank">admin/api/bin/manage_reservations.css.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__manage_reservations.dark.css.txt.md" target="_blank">admin/api/bin/manage_reservations.dark.css.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__manage_reservations.js.txt.md" target="_blank">admin/api/bin/manage_reservations.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__manage_reservations.php.txt.md" target="_blank">admin/api/bin/manage_reservations.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__offer.php.txt.md" target="_blank">admin/api/bin/offer.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__offer_in_thankyou.php.txt.md" target="_blank">admin/api/bin/offer_in_thankyou.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__offers_save.php.txt.md" target="_blank">admin/api/bin/offers_save.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__pending_mark_toggle.php.txt.md" target="_blank">admin/api/bin/pending_mark_toggle.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__project_inventory.py.txt.md" target="_blank">admin/api/bin/project_inventory.py.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__project_inventory_20251217_153548.txt.md" target="_blank">admin/api/bin/project_inventory_20251217_153548.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__project_inventory_20251217_222655.txt.md" target="_blank">admin/api/bin/project_inventory_20251217_222655.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__project_inventory_20251217_222758.txt.md" target="_blank">admin/api/bin/project_inventory_20251217_222758.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__pubcal.css.txt.md" target="_blank">admin/api/bin/pubcal.css.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__pubcal.php.txt.md" target="_blank">admin/api/bin/pubcal.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__pull_now.php.txt.md" target="_blank">admin/api/bin/pull_now.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__range_select_admin.js.txt.md" target="_blank">admin/api/bin/range_select_admin.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__range_selection_v2.8.6.js.txt.md" target="_blank">admin/api/bin/range_selection_v2.8.6.js.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__regen_merged_all.php.txt.md" target="_blank">admin/api/bin/regen_merged_all.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__reject_inquiry.php.txt.md" target="_blank">admin/api/bin/reject_inquiry.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__reject_pending_conflicts.php.txt.md" target="_blank">admin/api/bin/reject_pending_conflicts.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__resend_accept_email.php.txt.md" target="_blank">admin/api/bin/resend_accept_email.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__save_unit_meta.php.txt.md" target="_blank">admin/api/bin/save_unit_meta.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__send_accept_link.php.txt.md" target="_blank">admin/api/bin/send_accept_link.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__send_rejected.php.txt.md" target="_blank">admin/api/bin/send_rejected.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__sendmail_admin02.php.md" target="_blank">admin/api/bin/sendmail_admin02.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__sendmail_guest01.php.md" target="_blank">admin/api/bin/sendmail_guest01.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__set_in_url.php.txt.md" target="_blank">admin/api/bin/set_in_url.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__set_prices.php.txt.md" target="_blank">admin/api/bin/set_prices.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__site_settings.php.txt.md" target="_blank">admin/api/bin/site_settings.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__submit_inquiry.php.txt.md" target="_blank">admin/api/bin/submit_inquiry.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__sync_pending_requests.php.txt.md" target="_blank">admin/api/bin/sync_pending_requests.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__unit_settings_get.php.txt.md" target="_blank">admin/api/bin/unit_settings_get.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__unit_settings_save.php.txt.md" target="_blank">admin/api/bin/unit_settings_save.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__unit_settings_update.php.txt.md" target="_blank">admin/api/bin/unit_settings_update.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__update_occupancy.py.txt.md" target="_blank">admin/api/bin/update_occupancy.py.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__work__accept_inquiry.php.md" target="_blank">admin/api/bin/work/accept_inquiry.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__work__accept_inquiry_rewind.php.txt.md" target="_blank">admin/api/bin/work/accept_inquiry_rewind.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__bin__work__pubcal.js.md" target="_blank">admin/api/bin/work/pubcal.js</a></li>
+      <li><a href="../docs/source/admin__api__bin__work__pubcal_.js.md" target="_blank">admin/api/bin/work/pubcal_.js</a></li>
+      <li><a href="../docs/source/admin__api__bin__work__thankyou.php.md" target="_blank">admin/api/bin/work/thankyou.php</a></li>
+      <li><a href="../docs/source/admin__api__bin__work__thankyou_rewind.php.txt.md" target="_blank">admin/api/bin/work/thankyou_rewind.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__cancel_reservation.php.md" target="_blank">admin/api/cancel_reservation.php</a></li>
+      <li><a href="../docs/source/admin__api__channels_get.php.md" target="_blank">admin/api/channels_get.php</a></li>
+      <li><a href="../docs/source/admin__api__channels_save.php.md" target="_blank">admin/api/channels_save.php</a></li>
+      <li><a href="../docs/source/admin__api__confirm_pending.php.md" target="_blank">admin/api/confirm_pending.php</a></li>
+      <li><a href="../docs/source/admin__api__delete_unit.php.md" target="_blank">admin/api/delete_unit.php</a></li>
+      <li><a href="../docs/source/admin__api__finalize_core.php.md" target="_blank">admin/api/finalize_core.php</a></li>
+      <li><a href="../docs/source/admin__api__finalize_reservation.php.md" target="_blank">admin/api/finalize_reservation.php</a></li>
+      <li><a href="../docs/source/admin__api__finalize_reservation.php.txt.md" target="_blank">admin/api/finalize_reservation.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__find_reservation_by_range.php.md" target="_blank">admin/api/find_reservation_by_range.php</a></li>
+      <li><a href="../docs/source/admin__api__first_use_init.php.md" target="_blank">admin/api/first_use_init.php</a></li>
+      <li><a href="../docs/source/admin__api__get_inquiry.php.md" target="_blank">admin/api/get_inquiry.php</a></li>
+      <li><a href="../docs/source/admin__api__ics_pull_unit.php.md" target="_blank">admin/api/ics_pull_unit.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__add__unit.php.md" target="_blank">admin/api/integrations/add__unit.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__apply_booking_now.php.md" target="_blank">admin/api/integrations/apply_booking_now.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__apply_bookings_now.php.readme.txt.md" target="_blank">admin/api/integrations/apply_bookings_now.php.readme.txt</a></li>
+      <li><a href="../docs/source/admin__api__integrations__autopilot.php.readme.txt.md" target="_blank">admin/api/integrations/autopilot.php.readme.txt</a></li>
+      <li><a href="../docs/source/admin__api__integrations__ics.php.md" target="_blank">admin/api/integrations/ics.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__ics.php.txt.md" target="_blank">admin/api/integrations/ics.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__integrations__ics_bak.php.md" target="_blank">admin/api/integrations/ics_bak.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__ics_preview.php.md" target="_blank">admin/api/integrations/ics_preview.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__pull_now.php.md" target="_blank">admin/api/integrations/pull_now.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__pull_now.php_readme.txt.md" target="_blank">admin/api/integrations/pull_now.php_readme.txt</a></li>
+      <li><a href="../docs/source/admin__api__integrations__regen_merged_all.php.md" target="_blank">admin/api/integrations/regen_merged_all.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__remove_platform.php.md" target="_blank">admin/api/integrations/remove_platform.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__save_unit_meta.php.md" target="_blank">admin/api/integrations/save_unit_meta.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__set_in_url.php.md" target="_blank">admin/api/integrations/set_in_url.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations__test_pull_booking.sh.md" target="_blank">admin/api/integrations/test_pull_booking.sh</a></li>
+      <li><a href="../docs/source/admin__api__integrations_get.php.md" target="_blank">admin/api/integrations_get.php</a></li>
+      <li><a href="../docs/source/admin__api__integrations_save.php.md" target="_blank">admin/api/integrations_save.php</a></li>
+      <li><a href="../docs/source/admin__api__list_inquiries.php.md" target="_blank">admin/api/list_inquiries.php</a></li>
+      <li><a href="../docs/source/admin__api__list_reservations.php.md" target="_blank">admin/api/list_reservations.php</a></li>
+      <li><a href="../docs/source/admin__api__local_block_add.php.md" target="_blank">admin/api/local_block_add.php</a></li>
+      <li><a href="../docs/source/admin__api__local_block_add.php.txt.md" target="_blank">admin/api/local_block_add.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__local_block_remove.php.md" target="_blank">admin/api/local_block_remove.php</a></li>
+      <li><a href="../docs/source/admin__api__local_block_remove.php.txt.md" target="_blank">admin/api/local_block_remove.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__offers_get.php.md" target="_blank">admin/api/offers_get.php</a></li>
+      <li><a href="../docs/source/admin__api__offers_save.php.md" target="_blank">admin/api/offers_save.php</a></li>
+      <li><a href="../docs/source/admin__api__pending_mark_toggle.php.md" target="_blank">admin/api/pending_mark_toggle.php</a></li>
+      <li><a href="../docs/source/admin__api__pricing__set_prices.php.md" target="_blank">admin/api/pricing/set_prices.php</a></li>
+      <li><a href="../docs/source/admin__api__promo_get.php.md" target="_blank">admin/api/promo_get.php</a></li>
+      <li><a href="../docs/source/admin__api__promo_get.php.txt.md" target="_blank">admin/api/promo_get.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__promo_save.php.md" target="_blank">admin/api/promo_save.php</a></li>
+      <li><a href="../docs/source/admin__api__reject_inquiry.php.md" target="_blank">admin/api/reject_inquiry.php</a></li>
+      <li><a href="../docs/source/admin__api__reject_pending_conflicts.php.md" target="_blank">admin/api/reject_pending_conflicts.php</a></li>
+      <li><a href="../docs/source/admin__api__resend_accept_email.php.md" target="_blank">admin/api/resend_accept_email.php</a></li>
+      <li><a href="../docs/source/admin__api__save_promo_codes_za _izbris.php.md" target="_blank">admin/api/save_promo_codes_za _izbris.php</a></li>
+      <li><a href="../docs/source/admin__api__save_special_offers.php.md" target="_blank">admin/api/save_special_offers.php</a></li>
+      <li><a href="../docs/source/admin__api__send_accept_link.php.md" target="_blank">admin/api/send_accept_link.php</a></li>
+      <li><a href="../docs/source/admin__api__send_accept_link.php.txt.md" target="_blank">admin/api/send_accept_link.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__send_rejected.php.md" target="_blank">admin/api/send_rejected.php</a></li>
+      <li><a href="../docs/source/admin__api__sync_pending_requests.php.md" target="_blank">admin/api/sync_pending_requests.php</a></li>
+      <li><a href="../docs/source/admin__api__test_fetch_ics.php.md" target="_blank">admin/api/test_fetch_ics.php</a></li>
+      <li><a href="../docs/source/admin__api__unit_settings_get.php.md" target="_blank">admin/api/unit_settings_get.php</a></li>
+      <li><a href="../docs/source/admin__api__unit_settings_get.php.txt.md" target="_blank">admin/api/unit_settings_get.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__unit_settings_save.php.md" target="_blank">admin/api/unit_settings_save.php</a></li>
+      <li><a href="../docs/source/admin__api__unit_settings_update.php.md" target="_blank">admin/api/unit_settings_update.php</a></li>
+      <li><a href="../docs/source/admin__api__unit_settings_update.php.txt.md" target="_blank">admin/api/unit_settings_update.php.txt</a></li>
+      <li><a href="../docs/source/admin__api__units_list.php.md" target="_blank">admin/api/units_list.php</a></li>
+      <li><a href="../docs/source/admin__index.php.md" target="_blank">admin/index.php</a></li>
+      <li><a href="../docs/source/admin__index.php.txt.md" target="_blank">admin/index.php.txt</a></li>
+      <li><a href="../docs/source/admin__index_admin.html.md" target="_blank">admin/index_admin.html</a></li>
+      <li><a href="../docs/source/admin__index_admin_old.html.md" target="_blank">admin/index_admin_old.html</a></li>
+      <li><a href="../docs/source/admin__index_router.php.md" target="_blank">admin/index_router.php</a></li>
+      <li><a href="../docs/source/admin__inquiries.php.md" target="_blank">admin/inquiries.php</a></li>
+      <li><a href="../docs/source/admin__inquiries_admin.php.md" target="_blank">admin/inquiries_admin.php</a></li>
+      <li><a href="../docs/source/admin__inquiry_action.php.md" target="_blank">admin/inquiry_action.php</a></li>
+      <li><a href="../docs/source/admin__integrations.php.md" target="_blank">admin/integrations.php</a></li>
+      <li><a href="../docs/source/admin__manage_reservations.php.md" target="_blank">admin/manage_reservations.php</a></li>
+      <li><a href="../docs/source/admin__mobile.php.md" target="_blank">admin/mobile.php</a></li>
+      <li><a href="../docs/source/admin__mobile.php.txt.md" target="_blank">admin/mobile.php.txt</a></li>
+      <li><a href="../docs/source/admin__mobile_calendar.php.md" target="_blank">admin/mobile_calendar.php</a></li>
+      <li><a href="../docs/source/admin__mobile_calendar.php.txt.md" target="_blank">admin/mobile_calendar.php.txt</a></li>
+      <li><a href="../docs/source/admin__opening_wizard.php.md" target="_blank">admin/opening_wizard.php</a></li>
+      <li><a href="../docs/source/admin__ui__css__calendar.css.md" target="_blank">admin/ui/css/calendar.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__day.css.md" target="_blank">admin/ui/css/day.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__header.css.md" target="_blank">admin/ui/css/header.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__helpers.css.md" target="_blank">admin/ui/css/helpers.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__info_panel.css.md" target="_blank">admin/ui/css/info_panel.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__inquiries.css.md" target="_blank">admin/ui/css/inquiries.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__inquiries_admin.css.md" target="_blank">admin/ui/css/inquiries_admin.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__integrations.css.md" target="_blank">admin/ui/css/integrations.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__layers.css.md" target="_blank">admin/ui/css/layers.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__layers.css.txt.md" target="_blank">admin/ui/css/layers.css.txt</a></li>
+      <li><a href="../docs/source/admin__ui__css__layout.css.md" target="_blank">admin/ui/css/layout.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__manage_reservations.css.md" target="_blank">admin/ui/css/manage_reservations.css</a></li>
+      <li><a href="../docs/source/admin__ui__css__manage_reservations.dark.css.md" target="_blank">admin/ui/css/manage_reservations.dark.css</a></li>
+      <li><a href="../docs/source/admin__ui__js__admin_api.js.md" target="_blank">admin/ui/js/admin_api.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__admin_calendar.js.md" target="_blank">admin/ui/js/admin_calendar.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__admin_calendar.js.txt.md" target="_blank">admin/ui/js/admin_calendar.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__admin_info_panel.js.md" target="_blank">admin/ui/js/admin_info_panel.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__admin_info_panel.js.txt.md" target="_blank">admin/ui/js/admin_info_panel.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__calendar_shell.js.md" target="_blank">admin/ui/js/calendar_shell.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__calendar_shell.js.txt.md" target="_blank">admin/ui/js/calendar_shell.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__helpers.js.md" target="_blank">admin/ui/js/helpers.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__inquiries_admin.js.md" target="_blank">admin/ui/js/inquiries_admin.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_autopilot.js.md" target="_blank">admin/ui/js/integrations_autopilot.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_channels.js.md" target="_blank">admin/ui/js/integrations_channels.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_core.js.md" target="_blank">admin/ui/js/integrations_core.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_core.js.txt.md" target="_blank">admin/ui/js/integrations_core.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_diag.js.md" target="_blank">admin/ui/js/integrations_diag.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_diagnostics.js.md" target="_blank">admin/ui/js/integrations_diagnostics.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_editor.js.md" target="_blank">admin/ui/js/integrations_editor.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_json_editor.js.md" target="_blank">admin/ui/js/integrations_json_editor.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_json_editor.js.txt.md" target="_blank">admin/ui/js/integrations_json_editor.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_legacy.js.md" target="_blank">admin/ui/js/integrations_legacy.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_legacy.js.txt.md" target="_blank">admin/ui/js/integrations_legacy.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_offers.js.md" target="_blank">admin/ui/js/integrations_offers.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_promo.js.md" target="_blank">admin/ui/js/integrations_promo.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_units.js.md" target="_blank">admin/ui/js/integrations_units.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__integrations_units.js.txt.md" target="_blank">admin/ui/js/integrations_units.js.txt</a></li>
+      <li><a href="../docs/source/admin__ui__js__locks_loader.js.md" target="_blank">admin/ui/js/locks_loader.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__manage_reservations.js.md" target="_blank">admin/ui/js/manage_reservations.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__range_select_admin.js.md" target="_blank">admin/ui/js/range_select_admin.js</a></li>
+      <li><a href="../docs/source/admin__ui__js__test.txt.md" target="_blank">admin/ui/js/test.txt</a></li>
+      <li><a href="../docs/source/admin__view.php.md" target="_blank">admin/view.php</a></li>
+      <li><a href="../docs/source/common__data__ICS_kanli_readme.txt.md" target="_blank">common/data/ICS_kanli_readme.txt</a></li>
+      <li><a href="../docs/source/common__data__admin_key.txt.md" target="_blank">common/data/admin_key.txt</a></li>
+      <li><a href="../docs/source/common__data__i18n__strings_en.json.md" target="_blank">common/data/i18n/strings_en.json</a></li>
+      <li><a href="../docs/source/common__data__i18n__strings_sl.json.md" target="_blank">common/data/i18n/strings_sl.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A1__20251216235127-259f-A1.json.md" target="_blank">common/data/json/cancellations/2026/A1/20251216235127-259f-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A1__20251217001839-0ac4-A1.json.md" target="_blank">common/data/json/cancellations/2026/A1/20251217001839-0ac4-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A1__20251219182218-ba27-A1.json.md" target="_blank">common/data/json/cancellations/2026/A1/20251219182218-ba27-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A1__20251226172105-3a4a-A1.json.md" target="_blank">common/data/json/cancellations/2026/A1/20251226172105-3a4a-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A2__20251218135300-a0d2-A2.json.md" target="_blank">common/data/json/cancellations/2026/A2/20251218135300-a0d2-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A2__20251218135437-02fb-A2.json.md" target="_blank">common/data/json/cancellations/2026/A2/20251218135437-02fb-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__A2__20251218162505-38ad-A2.json.md" target="_blank">common/data/json/cancellations/2026/A2/20251218162505-38ad-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251217155918-98e6-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251217155918-98e6-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251218164127-ac7c-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251218164127-ac7c-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251218164423-8f60-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251218164423-8f60-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251218164712-c020-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251218164712-c020-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251218164932-5850-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251218164932-5850-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251219171454-33f6-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251219171454-33f6-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__cancellations__2026__S1__20251223182224-55a8-S1.json.md" target="_blank">common/data/json/cancellations/2026/S1/20251223182224-55a8-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__accepted__20251216120022-1b77-A2.json.md" target="_blank">common/data/json/inquiries/2025/12/accepted/20251216120022-1b77-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__accepted__20251217095006-789f-S1.json.txt.md" target="_blank">common/data/json/inquiries/2025/12/accepted/20251217095006-789f-S1.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__accepted__20251223200240-88ba-A1.json.md" target="_blank">common/data/json/inquiries/2025/12/accepted/20251223200240-88ba-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__accepted__20251225162710-ae7a-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/accepted/20251225162710-ae7a-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__accepted__20251225165433-aa63-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/accepted/20251225165433-aa63-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__accepted__20251227184656-5548-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/accepted/20251227184656-5548-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251216235127-259f-A1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251216235127-259f-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251217155918-98e6-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251217155918-98e6-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218135300-a0d2-A2.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218135300-a0d2-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218135437-02fb-A2.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218135437-02fb-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218162505-38ad-A2.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218162505-38ad-A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218164127-ac7c-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218164127-ac7c-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218164423-8f60-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218164423-8f60-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218164712-c020-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218164712-c020-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251218164932-5850-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251218164932-5850-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251219171454-33f6-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251219171454-33f6-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251219182218-ba27-A1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251219182218-ba27-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251223182224-55a8-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251223182224-55a8-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__confirmed__20251226172105-3a4a-A1.json.md" target="_blank">common/data/json/inquiries/2025/12/confirmed/20251226172105-3a4a-A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__rejected__20251217095006-789f-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/rejected/20251217095006-789f-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__inquiries__2025__12__rejected__20251217151101-6f63-S1.json.md" target="_blank">common/data/json/inquiries/2025/12/rejected/20251217151101-6f63-S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__instance.json.md" target="_blank">common/data/json/instance.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__A1.json.md" target="_blank">common/data/json/integrations/A1.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__A1.json.txt.md" target="_blank">common/data/json/integrations/A1.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__A2.json.md" target="_blank">common/data/json/integrations/A2.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__A2.json.txt.md" target="_blank">common/data/json/integrations/A2.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__S1.json.md" target="_blank">common/data/json/integrations/S1.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__S1.json.txt.md" target="_blank">common/data/json/integrations/S1.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__X1.json.md" target="_blank">common/data/json/integrations/X1.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__config.json.md" target="_blank">common/data/json/integrations/config.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__connections.json.md" target="_blank">common/data/json/integrations/connections.json</a></li>
+      <li><a href="../docs/source/common__data__json__integrations__how_to_make_key.txt.md" target="_blank">common/data/json/integrations/how_to_make_key.txt</a></li>
+      <li><a href="../docs/source/common__data__json__marked_pending.json.md" target="_blank">common/data/json/marked_pending.json</a></li>
+      <li><a href="../docs/source/common__data__json__occupancy.json.md" target="_blank">common/data/json/occupancy.json</a></li>
+      <li><a href="../docs/source/common__data__json__pending_requests.json.md" target="_blank">common/data/json/pending_requests.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__day_use.json.md" target="_blank">common/data/json/units/A1/day_use.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__Besedilna datoteka.txt.md" target="_blank">common/data/json/units/A1/external/Besedilna datoteka.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__ICS_booking.json.md" target="_blank">common/data/json/units/A1/external/ICS_booking.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__ICS_bookings.json.md" target="_blank">common/data/json/units/A1/external/ICS_bookings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__airbnb_ics.json.md" target="_blank">common/data/json/units/A1/external/airbnb_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__booking_ics.json.md" target="_blank">common/data/json/units/A1/external/booking_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__booking_raw.ics.txt.md" target="_blank">common/data/json/units/A1/external/booking_raw.ics.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__inventory_20251109_003453.txt.md" target="_blank">common/data/json/units/A1/external/inventory_20251109_003453.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__project_inventory_20251205_200421.txt.md" target="_blank">common/data/json/units/A1/external/project_inventory_20251205_200421.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__external__project_inventory_20251205_200711.txt.md" target="_blank">common/data/json/units/A1/external/project_inventory_20251205_200711.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__local_bookings.json.md" target="_blank">common/data/json/units/A1/local_bookings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__local_bookings.json.txt.md" target="_blank">common/data/json/units/A1/local_bookings.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__normalize_occupancy_for_public.php.md" target="_blank">common/data/json/units/A1/normalize_occupancy_for_public.php</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__normalize_occupancy_for_public.php_readme.txt.md" target="_blank">common/data/json/units/A1/normalize_occupancy_for_public.php_readme.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy.json.md" target="_blank">common/data/json/units/A1/occupancy.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy.json.txt.md" target="_blank">common/data/json/units/A1/occupancy.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy_data.json.md" target="_blank">common/data/json/units/A1/occupancy_data.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy_external_ics.json.md" target="_blank">common/data/json/units/A1/occupancy_external_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy_merged.json.md" target="_blank">common/data/json/units/A1/occupancy_merged.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy_merged.json.txt.md" target="_blank">common/data/json/units/A1/occupancy_merged.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy_raw__local.json.md" target="_blank">common/data/json/units/A1/occupancy_raw/local.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__occupancy_sources.json.md" target="_blank">common/data/json/units/A1/occupancy_sources.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__prices.json.md" target="_blank">common/data/json/units/A1/prices.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__site_settings.baseline.json.md" target="_blank">common/data/json/units/A1/site_settings.baseline.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__site_settings.json.md" target="_blank">common/data/json/units/A1/site_settings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__site_settings_A1.json.txt.md" target="_blank">common/data/json/units/A1/site_settings_A1.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__special_offers.json.md" target="_blank">common/data/json/units/A1/special_offers.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__special_offers.tmp.json.md" target="_blank">common/data/json/units/A1/special_offers.tmp.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__update_occupancy_from_ics.py.md" target="_blank">common/data/json/units/A1/update_occupancy_from_ics.py</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__update_occupancy_from_ics.py.txt.md" target="_blank">common/data/json/units/A1/update_occupancy_from_ics.py.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A1__update_occupancy_from_ics_readme.txt.md" target="_blank">common/data/json/units/A1/update_occupancy_from_ics_readme.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__day_use.json.md" target="_blank">common/data/json/units/A2/day_use.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__external__booking_ics.json.md" target="_blank">common/data/json/units/A2/external/booking_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__external__lab2_ics.json.md" target="_blank">common/data/json/units/A2/external/lab2_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__local_bookings.json.md" target="_blank">common/data/json/units/A2/local_bookings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__local_bookings.json.txt.md" target="_blank">common/data/json/units/A2/local_bookings.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__local_bookings_A2.json.txt.md" target="_blank">common/data/json/units/A2/local_bookings_A2.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy.json.md" target="_blank">common/data/json/units/A2/occupancy.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy_A2.json.txt.md" target="_blank">common/data/json/units/A2/occupancy_A2.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy_merged.json.md" target="_blank">common/data/json/units/A2/occupancy_merged.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy_merged_A2.json.txt.md" target="_blank">common/data/json/units/A2/occupancy_merged_A2.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy_raw__local.json.md" target="_blank">common/data/json/units/A2/occupancy_raw/local.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy_sources.json.md" target="_blank">common/data/json/units/A2/occupancy_sources.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__occupancy_sources_A2.json.txt.md" target="_blank">common/data/json/units/A2/occupancy_sources_A2.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__prices.json.md" target="_blank">common/data/json/units/A2/prices.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__site_settings.json.md" target="_blank">common/data/json/units/A2/site_settings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__site_settings.json.txt.md" target="_blank">common/data/json/units/A2/site_settings.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__site_settings_A2.json.txt.md" target="_blank">common/data/json/units/A2/site_settings_A2.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__special_offers.json.md" target="_blank">common/data/json/units/A2/special_offers.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__special_offers.json.txt.md" target="_blank">common/data/json/units/A2/special_offers.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__special_offers.tmp.json.md" target="_blank">common/data/json/units/A2/special_offers.tmp.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__update_occupancy_from_ics.py.md" target="_blank">common/data/json/units/A2/update_occupancy_from_ics.py</a></li>
+      <li><a href="../docs/source/common__data__json__units__A2__update_occupancy_from_ics_readme.txt.md" target="_blank">common/data/json/units/A2/update_occupancy_from_ics_readme.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__day_use.json.md" target="_blank">common/data/json/units/S1/day_use.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__external__booking_ics.json.md" target="_blank">common/data/json/units/S1/external/booking_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__local_bookings.json.md" target="_blank">common/data/json/units/S1/local_bookings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__occupancy.json.md" target="_blank">common/data/json/units/S1/occupancy.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__occupancy.json.txt.md" target="_blank">common/data/json/units/S1/occupancy.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__occupancy_external_ics.json.md" target="_blank">common/data/json/units/S1/occupancy_external_ics.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__occupancy_merged.json.md" target="_blank">common/data/json/units/S1/occupancy_merged.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__occupancy_raw__local.json.md" target="_blank">common/data/json/units/S1/occupancy_raw/local.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__occupancy_sources.json.md" target="_blank">common/data/json/units/S1/occupancy_sources.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__prices.json.md" target="_blank">common/data/json/units/S1/prices.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__prices.json.txt.md" target="_blank">common/data/json/units/S1/prices.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__site_settings.json.md" target="_blank">common/data/json/units/S1/site_settings.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__site_settings_S1.json.txt.md" target="_blank">common/data/json/units/S1/site_settings_S1.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__special_offers.json.md" target="_blank">common/data/json/units/S1/special_offers.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__special_offers.json.txt.md" target="_blank">common/data/json/units/S1/special_offers.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__update_occupancy_from_ics.py.md" target="_blank">common/data/json/units/S1/update_occupancy_from_ics.py</a></li>
+      <li><a href="../docs/source/common__data__json__units__S1__update_occupancy_from_ics_readme.txt.md" target="_blank">common/data/json/units/S1/update_occupancy_from_ics_readme.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__manifest.json.md" target="_blank">common/data/json/units/manifest.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__manifest.json.txt.md" target="_blank">common/data/json/units/manifest.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__marked_pending.json.md" target="_blank">common/data/json/units/marked_pending.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__pending_requests.json.md" target="_blank">common/data/json/units/pending_requests.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__promo_codes.json.md" target="_blank">common/data/json/units/promo_codes.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__promo_codes.json.txt.md" target="_blank">common/data/json/units/promo_codes.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__promo_codes.tmp.json.md" target="_blank">common/data/json/units/promo_codes.tmp.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__promo_codes.tmp.json.txt.md" target="_blank">common/data/json/units/promo_codes.tmp.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__promo_codes_bak.json.md" target="_blank">common/data/json/units/promo_codes_bak.json</a></li>
+      <li><a href="../docs/source/common__data__json__units__promo_codes_strar _nacin.json.txt.md" target="_blank">common/data/json/units/promo_codes_strar _nacin.json.txt</a></li>
+      <li><a href="../docs/source/common__data__json__units__site_settings.json.md" target="_blank">common/data/json/units/site_settings.json</a></li>
+      <li><a href="../docs/source/common__lib__autopilot.php.md" target="_blank">common/lib/autopilot.php</a></li>
+      <li><a href="../docs/source/common__lib__datetime_fmt.php.md" target="_blank">common/lib/datetime_fmt.php</a></li>
+      <li><a href="../docs/source/common__lib__datetime_fmt.php.readme.txt.md" target="_blank">common/lib/datetime_fmt.php.readme.txt</a></li>
+      <li><a href="../docs/source/common__lib__datetime_fmt.php.txt.md" target="_blank">common/lib/datetime_fmt.php.txt</a></li>
+      <li><a href="../docs/source/common__lib__email.php.md" target="_blank">common/lib/email.php</a></li>
+      <li><a href="../docs/source/common__lib__ics_builder.php.md" target="_blank">common/lib/ics_builder.php</a></li>
+      <li><a href="../docs/source/common__lib__ics_import.php.md" target="_blank">common/lib/ics_import.php</a></li>
+      <li><a href="../docs/source/common__lib__ics_parse.php.md" target="_blank">common/lib/ics_parse.php</a></li>
+      <li><a href="../docs/source/common__lib__ics_sources.php.md" target="_blank">common/lib/ics_sources.php</a></li>
+      <li><a href="../docs/source/common__lib__ics_utils.php.md" target="_blank">common/lib/ics_utils.php</a></li>
+      <li><a href="../docs/source/common__lib__site_settings.php.md" target="_blank">common/lib/site_settings.php</a></li>
+      <li><a href="../docs/source/common_clean__data__ICS_kanli_readme.txt.md" target="_blank">common_clean/data/ICS_kanli_readme.txt</a></li>
+      <li><a href="../docs/source/common_clean__data__admin_key.txt.md" target="_blank">common_clean/data/admin_key.txt</a></li>
+      <li><a href="../docs/source/common_clean__lib__autopilot.php.md" target="_blank">common_clean/lib/autopilot.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__datetime_fmt.php.md" target="_blank">common_clean/lib/datetime_fmt.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__datetime_fmt.php.readme.txt.md" target="_blank">common_clean/lib/datetime_fmt.php.readme.txt</a></li>
+      <li><a href="../docs/source/common_clean__lib__datetime_fmt.php.txt.md" target="_blank">common_clean/lib/datetime_fmt.php.txt</a></li>
+      <li><a href="../docs/source/common_clean__lib__email.php.md" target="_blank">common_clean/lib/email.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__ics_builder.php.md" target="_blank">common_clean/lib/ics_builder.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__ics_import.php.md" target="_blank">common_clean/lib/ics_import.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__ics_parse.php.md" target="_blank">common_clean/lib/ics_parse.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__ics_sources.php.md" target="_blank">common_clean/lib/ics_sources.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__ics_utils.php.md" target="_blank">common_clean/lib/ics_utils.php</a></li>
+      <li><a href="../docs/source/common_clean__lib__site_settings.php.md" target="_blank">common_clean/lib/site_settings.php</a></li>
+      <li><a href="../docs/source/docs__files_index.md.md" target="_blank">docs/files_index.md</a></li>
+      <li><a href="../docs/source/docs__source__.htaccess.md.md" target="_blank">docs/source/.htaccess.md</a></li>
+      <li><a href="../docs/source/docs__source__20251202190328-ffda-A2.json.txt.md.md" target="_blank">docs/source/20251202190328-ffda-A2.json.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__Deploy_readme.txt.md.md" target="_blank">docs/source/Deploy_readme.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__REVIZIJA_CM_gpt_sessions_new_admin_calendar.txt.md.md" target="_blank">docs/source/REVIZIJA_CM_gpt_sessions_new_admin_calendar.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__Testitanja.txt.md.md" target="_blank">docs/source/Testitanja.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__data__ICS_kanli_readme.txt.md.md" target="_blank">docs/source/common_clean__data__ICS_kanli_readme.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__data__admin_key.txt.md.md" target="_blank">docs/source/common_clean__data__admin_key.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__autopilot.php.md.md" target="_blank">docs/source/common_clean__lib__autopilot.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__datetime_fmt.php.md.md" target="_blank">docs/source/common_clean__lib__datetime_fmt.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__datetime_fmt.php.readme.txt.md.md" target="_blank">docs/source/common_clean__lib__datetime_fmt.php.readme.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__datetime_fmt.php.txt.md.md" target="_blank">docs/source/common_clean__lib__datetime_fmt.php.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__email.php.md.md" target="_blank">docs/source/common_clean__lib__email.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__ics_builder.php.md.md" target="_blank">docs/source/common_clean__lib__ics_builder.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__ics_import.php.md.md" target="_blank">docs/source/common_clean__lib__ics_import.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__ics_parse.php.md.md" target="_blank">docs/source/common_clean__lib__ics_parse.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__ics_sources.php.md.md" target="_blank">docs/source/common_clean__lib__ics_sources.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__ics_utils.php.md.md" target="_blank">docs/source/common_clean__lib__ics_utils.php.md</a></li>
+      <li><a href="../docs/source/docs__source__common_clean__lib__site_settings.php.md.md" target="_blank">docs/source/common_clean__lib__site_settings.php.md</a></li>
+      <li><a href="../docs/source/docs__source__docs__files_index.md.md.md" target="_blank">docs/source/docs__files_index.md.md</a></li>
+      <li><a href="../docs/source/docs__source__izsek.txt.md.md" target="_blank">docs/source/izsek.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__mail__sendmail_admin.php.md.md" target="_blank">docs/source/mail__sendmail_admin.php.md</a></li>
+      <li><a href="../docs/source/docs__source__mail__sendmail_guest.php.md.md" target="_blank">docs/source/mail__sendmail_guest.php.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__CRON_EXAMPLES.txt.md.md" target="_blank">docs/source/scripts__CRON_EXAMPLES.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__README_CRON_SCaffold.txt.md.md" target="_blank">docs/source/scripts__README_CRON_SCaffold.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__SYSTEMD_TIMER_EXAMPLE.txt.md.md" target="_blank">docs/source/scripts__SYSTEMD_TIMER_EXAMPLE.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__autopilot_sweep_pending.php.md.md" target="_blank">docs/source/scripts__autopilot_sweep_pending.php.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__autopilot_sweep_pending_readme.txt.md.md" target="_blank">docs/source/scripts__autopilot_sweep_pending_readme.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__check_brackets.sh.md.md" target="_blank">docs/source/scripts__check_brackets.sh.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__check_brackets_v2.sh.md.md" target="_blank">docs/source/scripts__check_brackets_v2.sh.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__expire_soft_holds.php.md.md" target="_blank">docs/source/scripts__expire_soft_holds.php.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__project_docsync.py.md.md" target="_blank">docs/source/scripts__project_docsync.py.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__project_docsync.py.txt.md.md" target="_blank">docs/source/scripts__project_docsync.py.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__project_docsync.readme.txt.md.md" target="_blank">docs/source/scripts__project_docsync.readme.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__project_docsync.txt.md.md" target="_blank">docs/source/scripts__project_docsync.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__regen_merged_all.php.md.md" target="_blank">docs/source/scripts__regen_merged_all.php.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__update_occupancy.py.md.md" target="_blank">docs/source/scripts__update_occupancy.py.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__update_occupancy.py.readme.txt.md.md" target="_blank">docs/source/scripts__update_occupancy.py.readme.txt.md</a></li>
+      <li><a href="../docs/source/docs__source__scripts__validate_merged_for_ics_out.php.md.md" target="_blank">docs/source/scripts__validate_merged_for_ics_out.php.md</a></li>
+      <li><a href="../docs/source/ics_lab__data__SIM1.json.md" target="_blank">ics_lab/data/SIM1.json</a></li>
+      <li><a href="../docs/source/ics_lab__data__SIM2.json.md" target="_blank">ics_lab/data/SIM2.json</a></li>
+      <li><a href="../docs/source/ics_lab__ics.php.md" target="_blank">ics_lab/ics.php</a></li>
+      <li><a href="../docs/source/ics_lab__ics.php.txt.md" target="_blank">ics_lab/ics.php.txt</a></li>
+      <li><a href="../docs/source/ics_lab__index.php.md" target="_blank">ics_lab/index.php</a></li>
+      <li><a href="../docs/source/ics_lab__index.php.txt.md" target="_blank">ics_lab/index.php.txt</a></li>
+      <li><a href="../docs/source/izsek.txt.md" target="_blank">izsek.txt</a></li>
+      <li><a href="../docs/source/lib__coupon_activate.js.md" target="_blank">lib/coupon_activate.js</a></li>
+      <li><a href="../docs/source/lib__i18n.js.md" target="_blank">lib/i18n.js</a></li>
+      <li><a href="../docs/source/lib__i18n.js.txt.md" target="_blank">lib/i18n.js.txt</a></li>
+      <li><a href="../docs/source/lib__mail.php.md" target="_blank">lib/mail.php</a></li>
+      <li><a href="../docs/source/lib__pricing.php.md" target="_blank">lib/pricing.php</a></li>
+      <li><a href="../docs/source/mail__sendmail_admin.php.md" target="_blank">mail/sendmail_admin.php</a></li>
+      <li><a href="../docs/source/mail__sendmail_guest.php.md" target="_blank">mail/sendmail_guest.php</a></li>
+      <li><a href="../docs/source/public__admin___common.php.md" target="_blank">public/admin/_common.php</a></li>
+      <li><a href="../docs/source/public__admin__inquiries.php.md" target="_blank">public/admin/inquiries.php</a></li>
+      <li><a href="../docs/source/public__admin__inquiry_action.php.md" target="_blank">public/admin/inquiry_action.php</a></li>
+      <li><a href="../docs/source/public__admin__view.php.md" target="_blank">public/admin/view.php</a></li>
+      <li><a href="../docs/source/public__api__junk__ics_legacy.php.md" target="_blank">public/api/junk/ics_legacy.php</a></li>
+      <li><a href="../docs/source/public__api__junk__sendmail_admin.php.md" target="_blank">public/api/junk/sendmail_admin.php</a></li>
+      <li><a href="../docs/source/public__api__junk__sendmail_guest.php.md" target="_blank">public/api/junk/sendmail_guest.php</a></li>
+      <li><a href="../docs/source/public__api__junk__submit_inquiry.php.md" target="_blank">public/api/junk/submit_inquiry.php</a></li>
+      <li><a href="../docs/source/public__api__mail_common.php.md" target="_blank">public/api/mail_common.php</a></li>
+      <li><a href="../docs/source/public__api__mail_common.php.txt.md" target="_blank">public/api/mail_common.php.txt</a></li>
+      <li><a href="../docs/source/public__api__sendmail_admin.php.md" target="_blank">public/api/sendmail_admin.php</a></li>
+      <li><a href="../docs/source/public__api__sendmail_guest.php.md" target="_blank">public/api/sendmail_guest.php</a></li>
+      <li><a href="../docs/source/public__api__sendmail_guest.php.txt.md" target="_blank">public/api/sendmail_guest.php.txt</a></li>
+      <li><a href="../docs/source/public__api__submit_inquiry.php.md" target="_blank">public/api/submit_inquiry.php</a></li>
+      <li><a href="../docs/source/public__api__submit_inquiry.php.txt.md" target="_blank">public/api/submit_inquiry.php.txt</a></li>
+      <li><a href="../docs/source/public__cancel_reservation.php.md" target="_blank">public/cancel_reservation.php</a></li>
+      <li><a href="../docs/source/public__confirm_reservation.php.md" target="_blank">public/confirm_reservation.php</a></li>
+      <li><a href="../docs/source/public__css__pubcal.css.md" target="_blank">public/css/pubcal.css</a></li>
+      <li><a href="../docs/source/public__index.html.md" target="_blank">public/index.html</a></li>
+      <li><a href="../docs/source/public__js__calendar_to_offer.js.md" target="_blank">public/js/calendar_to_offer.js</a></li>
+      <li><a href="../docs/source/public__js__info_drag.js.md" target="_blank">public/js/info_drag.js</a></li>
+      <li><a href="../docs/source/public__js__pubcal.js.md" target="_blank">public/js/pubcal.js</a></li>
+      <li><a href="../docs/source/public__js__pubcal.js.txt.md" target="_blank">public/js/pubcal.js.txt</a></li>
+      <li><a href="../docs/source/public__js__range_selection_v2.8.6.js.md" target="_blank">public/js/range_selection_v2.8.6.js</a></li>
+      <li><a href="../docs/source/public__js__reset_pubcal.js.md" target="_blank">public/js/reset_pubcal.js</a></li>
+      <li><a href="../docs/source/public__lib__coupon_activate.js.md" target="_blank">public/lib/coupon_activate.js</a></li>
+      <li><a href="../docs/source/public__lib__i18n.js.md" target="_blank">public/lib/i18n.js</a></li>
+      <li><a href="../docs/source/public__lib__i18n.js.txt.md" target="_blank">public/lib/i18n.js.txt</a></li>
+      <li><a href="../docs/source/public__lib__mail.php.md" target="_blank">public/lib/mail.php</a></li>
+      <li><a href="../docs/source/public__lib__pricing.php.md" target="_blank">public/lib/pricing.php</a></li>
+      <li><a href="../docs/source/public__offer.php.md" target="_blank">public/offer.php</a></li>
+      <li><a href="../docs/source/public__offer.php.txt.md" target="_blank">public/offer.php.txt</a></li>
+      <li><a href="../docs/source/public__offer_day.php.md" target="_blank">public/offer_day.php</a></li>
+      <li><a href="../docs/source/public__pubcal.php.md" target="_blank">public/pubcal.php</a></li>
+      <li><a href="../docs/source/public__pubcal.php.txt.md" target="_blank">public/pubcal.php.txt</a></li>
+      <li><a href="../docs/source/public__reset_pubcal.js.md" target="_blank">public/reset_pubcal.js</a></li>
+      <li><a href="../docs/source/public__thankyou.php.md" target="_blank">public/thankyou.php</a></li>
+      <li><a href="../docs/source/public__thankyou.php.txt.md" target="_blank">public/thankyou.php.txt</a></li>
+      <li><a href="../docs/source/public__thankyou_x.php.txt.md" target="_blank">public/thankyou_x.php.txt</a></li>
+      <li><a href="../docs/source/scripts__CRON_EXAMPLES.txt.md" target="_blank">scripts/CRON_EXAMPLES.txt</a></li>
+      <li><a href="../docs/source/scripts__README_CRON_SCaffold.txt.md" target="_blank">scripts/README_CRON_SCaffold.txt</a></li>
+      <li><a href="../docs/source/scripts__SYSTEMD_TIMER_EXAMPLE.txt.md" target="_blank">scripts/SYSTEMD_TIMER_EXAMPLE.txt</a></li>
+      <li><a href="../docs/source/scripts__autopilot_sweep_pending.php.md" target="_blank">scripts/autopilot_sweep_pending.php</a></li>
+      <li><a href="../docs/source/scripts__autopilot_sweep_pending_readme.txt.md" target="_blank">scripts/autopilot_sweep_pending_readme.txt</a></li>
+      <li><a href="../docs/source/scripts__check_brackets.sh.md" target="_blank">scripts/check_brackets.sh</a></li>
+      <li><a href="../docs/source/scripts__check_brackets_v2.sh.md" target="_blank">scripts/check_brackets_v2.sh</a></li>
+      <li><a href="../docs/source/scripts__expire_soft_holds.php.md" target="_blank">scripts/expire_soft_holds.php</a></li>
+      <li><a href="../docs/source/scripts__project_docsync.py.md" target="_blank">scripts/project_docsync.py</a></li>
+      <li><a href="../docs/source/scripts__project_docsync.py.txt.md" target="_blank">scripts/project_docsync.py.txt</a></li>
+      <li><a href="../docs/source/scripts__project_docsync.readme.txt.md" target="_blank">scripts/project_docsync.readme.txt</a></li>
+      <li><a href="../docs/source/scripts__project_docsync.txt.md" target="_blank">scripts/project_docsync.txt</a></li>
+      <li><a href="../docs/source/scripts__regen_merged_all.php.md" target="_blank">scripts/regen_merged_all.php</a></li>
+      <li><a href="../docs/source/scripts__update_occupancy.py.md" target="_blank">scripts/update_occupancy.py</a></li>
+      <li><a href="../docs/source/scripts__update_occupancy.py.readme.txt.md" target="_blank">scripts/update_occupancy.py.readme.txt</a></li>
+      <li><a href="../docs/source/scripts__validate_merged_for_ics_out.php.md" target="_blank">scripts/validate_merged_for_ics_out.php</a></li>
+      <li><a href="../docs/source/tools__Project_inventory_readme.txt.md" target="_blank">tools/Project_inventory_readme.txt</a></li>
+      <li><a href="../docs/source/tools__Sudo nastavitve.txt.md" target="_blank">tools/Sudo nastavitve.txt</a></li>
+      <li><a href="../docs/source/tools__cleanup_2025-12-09.sh.md" target="_blank">tools/cleanup_2025-12-09.sh</a></li>
+      <li><a href="../docs/source/tools__cm_fresh_start.sh.md" target="_blank">tools/cm_fresh_start.sh</a></li>
+      <li><a href="../docs/source/tools__cm_fresh_start.sh.readme.txt.md" target="_blank">tools/cm_fresh_start.sh.readme.txt</a></li>
+      <li><a href="../docs/source/tools__hitro generiranje ključev in URL-jev.txt.md" target="_blank">tools/hitro generiranje ključev in URL-jev.txt</a></li>
+      <li><a href="../docs/source/tools__inventory_jsons.py.md" target="_blank">tools/inventory_jsons.py</a></li>
+      <li><a href="../docs/source/tools__inventory_jsons.txt.md" target="_blank">tools/inventory_jsons.txt</a></li>
+      <li><a href="../docs/source/tools__inventory_jsons_readme.txt.md" target="_blank">tools/inventory_jsons_readme.txt</a></li>
+      <li><a href="../docs/source/tools__make_dummy_res.php.md" target="_blank">tools/make_dummy_res.php</a></li>
+      <li><a href="../docs/source/tools__migrate_promo_codes.php.md" target="_blank">tools/migrate_promo_codes.php</a></li>
+      <li><a href="../docs/source/tools__project_inventory.py.md" target="_blank">tools/project_inventory.py</a></li>
+      <li><a href="../docs/source/tools__project_inventory_readme.txt.md" target="_blank">tools/project_inventory_readme.txt</a></li>
+      <li><a href="../docs/source/tools__test_msmtp.sh.md" target="_blank">tools/test_msmtp.sh</a></li>
+    </ul>
+  </section>
+
+<!-- DOCSYNC:FILES-END -->
+    </section>
+  </main>
+</div>
+
+<footer>
+  <p>
+    Developer index za <code>/var/www/html/app</code>. Auto-docs: <code>scripts/project_docsync.py</code>.
+  </p>
+  <p class="muted">
+    Za popolno “zgodovino” projekta narediš klasičen backup celotne mape <code>app/</code>.
+    Ta stran naj vedno odraža trenutno stanje in služi kot “mini knjiga” za Admin V4.
+  </p>
+</footer>
+
+<script>
+(function(){
+  // --- Back to top button ---
+  const toTop = document.createElement('div');
+  toTop.className = 'to-top';
+  toTop.innerHTML = '<a href="#top" title="Back to top">↑</a>';
+  document.body.appendChild(toTop);
+
+  const onScroll = () => {
+    toTop.style.display = (window.scrollY > 700) ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // --- File index filtering (works on the auto-generated list) ---
+  const controls = document.getElementById('fileIndexControls');
+  if (!controls) return;
+
+  const input = document.getElementById('fileFilterInput');
+  const countLabel = document.getElementById('fileCountLabel');
+  const clearBtn = document.getElementById('chipClear');
+
+  // Generated section id is inside docsync block:
+  // <section id="dev-file-index"><ul><li><a ...>...</a></li></ul></section>
+  const listSection = document.getElementById('dev-file-index');
+  if (!listSection) {
+    countLabel.textContent = 'File index not found';
+    return;
+  }
+
+  const lis = Array.from(listSection.querySelectorAll('ul > li'));
+  const links = lis.map(li => li.querySelector('a'));
+  const hay = links.map(a => (a ? ((a.getAttribute('href') || '') + ' ' + (a.textContent || '')).toLowerCase() : ''));
+
+  let q = '';
+  const activeChips = new Set();
+
+  function parseChip(raw){
+    // raw examples: "ext:php", "path:/admin/"
+    const [k, v] = raw.split(':');
+    return {k, v};
+  }
+
+  function matchAll(i){
+    const h = hay[i];
+    if (!h) return false;
+
+    // text query
+    if (q && !h.includes(q)) return false;
+
+    // chip filters: all active must match
+    for (const c of activeChips){
+      const {k, v} = parseChip(c);
+      if (k === 'ext'){
+        if (!h.includes('.' + v)) return false;
+      } else if (k === 'path'){
+        if (!h.includes(v.toLowerCase())) return false;
+      }
+    }
+    return true;
+  }
+
+  function apply(){
+    let shown = 0;
+    for (let i=0;i<lis.length;i++){
+      const ok = matchAll(i);
+      lis[i].style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    }
+    countLabel.textContent = `${shown} / ${lis.length} shown`;
+  }
+
+  function setChipActive(btn, isActive){
+    btn.classList.toggle('active', isActive);
+  }
+
+  // Input
+  input.addEventListener('input', () => {
+    q = (input.value || '').trim().toLowerCase();
+    apply();
+  });
+
+  // Chips
+  controls.querySelectorAll('button.chip[data-chip]').forEach(btn => {
+    const v = btn.getAttribute('data-chip');
+    btn.addEventListener('click', () => {
+      if (!v) return;
+      if (activeChips.has(v)) {
+        activeChips.delete(v);
+        setChipActive(btn, false);
+      } else {
+        activeChips.add(v);
+        setChipActive(btn, true);
+      }
+      apply();
+    });
+  });
+
+  // Clear
+  clearBtn.addEventListener('click', () => {
+    q = '';
+    input.value = '';
+    activeChips.clear();
+    controls.querySelectorAll('button.chip[data-chip]').forEach(btn => setChipActive(btn, false));
+    apply();
+    input.focus();
+  });
+
+  // initial
+  apply();
+})();
+</script>
+<script>
+(function(){
+  const modal = document.getElementById("cmPreview");
+  const title = document.getElementById("cmPreviewTitle");
+  const body  = document.getElementById("cmPreviewBody");
+  const btnClose = document.getElementById("cmPreviewClose");
+  const btnOpen  = document.getElementById("cmPreviewOpen");
+
+  // ✅ GUARD: če modal markup ni prisoten, ne izvajaj viewerja
+  if (!modal || !title || !body || !btnClose || !btnOpen) {
+    console.warn("[cmPreview] modal elements missing – viewer disabled");
+    return;
+  }
+
+  function isPreviewable(href){
+    if (!href) return false;
+
+    // absolute URL -> allow only same-origin
+    try {
+      const u = new URL(href, window.location.href);
+      if (u.origin !== window.location.origin) return false;
+
+      // focus on docs/source and typical text-like extensions
+      const path = u.pathname || "";
+      if (path.includes("/docs/source/")) return true;
+
+      return /\.(txt|md|markdown|json|js|css|php|py|log|ini|yml|yaml)$/i.test(path);
+    } catch(e){
+      return false;
+    }
+  }
+
+  async function openPreview(href){
+    title.textContent = href;
+    body.textContent = "Loading…";
+    btnOpen.href = href;
+
+    modal.style.display = "block";
+
+    try{
+      const res = await fetch(href, { credentials: "same-origin" });
+      const text = await res.text();
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      body.textContent = text || "(empty)";
+    } catch(err){
+      body.textContent = "Preview failed: " + (err && err.message ? err.message : String(err));
+    }
+  }
+
+  btnClose.addEventListener("click", () => { modal.style.display = "none"; });
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.style.display = "none"; });
+
+  // Delegated click handler: works for DOCSYNC-generated links too
+  document.addEventListener("click", (e) => {
+    const a = e.target && e.target.closest ? e.target.closest("a") : null;
+    if (!a) return;
+
+    const href = a.getAttribute("href");
+    if (!isPreviewable(href)) return;
+
+    // allow Ctrl/Meta click to behave normally
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+    e.preventDefault();
+    openPreview(href);
+  }, true);
+})();
+</script>
+
+<!-- File preview modal (does not affect DOCSYNC block) -->
+<div id="cmPreview" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:99999;">
+  <div style="position:absolute; inset:24px; background:#0f1522; border:1px solid rgba(255,255,255,.12); border-radius:14px; overflow:hidden; display:flex; flex-direction:column;">
+    <div style="padding:10px 12px; background:#121826; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div id="cmPreviewTitle" style="font-weight:700; font-size:13px; color:rgba(233,238,245,.9); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+      <div style="display:flex; gap:8px;">
+        <a id="cmPreviewOpen" href="#" target="_blank" style="padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.08); color:#e9eef5; text-decoration:none; font-weight:600; font-size:12px;">Open raw</a>
+        <button id="cmPreviewClose" type="button" style="padding:8px 10px; border-radius:10px; border:0; background:#3b82f6; color:#081018; font-weight:800; cursor:pointer;">Close</button>
+      </div>
+    </div>
+
+    <pre id="cmPreviewBody" style="margin:0; padding:12px; overflow:auto; color:#e9eef5; font-size:12px; line-height:1.35; white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;"></pre>
+  </div>
+</div>
+
+</body>
+</html>

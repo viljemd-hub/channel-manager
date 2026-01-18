@@ -1,0 +1,44 @@
+/*
+ * Admin calendar info panel stylesheet.
+ *
+ * Responsibilities:
+ * - Style the side panel that shows details for the selected range:
+ *   reservations, pending inquiries, pricing snippet, actions.
+ * - Define panel layout (width, positioning) and scroll behavior.
+ * - Style buttons, badges and small summary sections inside the panel.
+ *
+ * Used by:
+ * - Info panel rendered/controlled by admin_info_panel.js.
+ *
+ * Notes:
+ * - Layout-level behavior (e.g. whether the panel is left or right)
+ *   should be coordinated with layout.css.
+ */
+
+
+/* /app/admin/ui/css/info_panel.css */
+.admin-info{
+  position:fixed; /* plava nad koledarjem */
+  top:110px; left:56%;
+  width:360px; max-width:42vw;
+  background:#0f1520;border:1px solid #1f2a3a;border-radius:14px;padding:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  z-index:100;
+}
+.info-head{font-weight:700;margin-bottom:8px;cursor:move;user-select:none}
+.info-body{display:grid;gap:6px;font-size:14px}
+.info-body hr{border:0;border-top:1px solid #1f2a3a;margin:6px 0}
+.info-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+/* --- Gold obroba + glow za info panel --- */
+.admin-info{
+  border-color: #8b6b12; /* topla zlata obroba */
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.35),
+    0 0 0 1px rgba(250,204,21,.45) inset,   /* notranji zlati rob */
+    0 0 18px rgba(250,204,21,.25);          /* zunanji mehak sij */
+}
+.admin-info .info-head{
+  color: #facc15;            /* zlata glava za ročaj */
+  text-shadow: 0 0 8px rgba(250,204,21,.35);
+}

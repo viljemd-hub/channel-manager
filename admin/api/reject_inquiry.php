@@ -1,0 +1,357 @@
+<?php
+/**
+ * CM Free / CM Plus – Channel Manager
+ * File: admin/api/reject_inquiry.php
+ * Author: Viljem Dvojmoč
+ * Assistant: GPT
+ * Copyright (c) 2026 Viljem Dvojmoč. All rights reserved.
+ */
+
+// /app/admin/api/reject_inquiry.php
+declare(strict_types=1);
+
+require __DIR__ . '/_lib/json_io.php'; // read_json, write_json
+require_once __DIR__ . '/send_rejected.php';
+require_once __DIR__ . '/../../common/lib/datetime_fmt.php'; // za timezone cfg
+
+header('Content-Type: application/json; charset=utf-8');
+
+/**
+ * Uporabno: varno preberi zelo majhen raw body za debug.
+ */
+function safe_raw_body_sample(string $raw, int $max = 500): string {
+    if ($raw === '') return '';
+    if (strlen($raw) <= $max) return $raw;
+    return substr($raw, 0, $max) . '...';
+}
+
+/**
+ * Helper: ustvari in zapiše kupon za ROČNO zavrnitev povpraševanja.
+ *
+ * - Bere /common/data/json/units/promo_codes.json
+ * - Poskrbi, da je struktura { settings: {...}, codes: [...] }
+ * - Uporabi nastavitve:
+ *     settings.auto_reject_enabled          (default true)
+ *     settings.auto_reject_discount_percent (default 15)
+ *     settings.auto_reject_valid_days       (default 180)
+ *     settings.auto_reject_code_prefix      (default "RETRY-")
+ * - Ustvari GLOBALNI kupon (unit = "") z source = "manual_reject"
+ * - Doda kupon v codes[] in zapiše datoteko.
+ *
+ * Vrne:
+ *  - array $coupon, če je ustvarjen
+ *  - null, če je auto kupon izklopljen ali pride do napake pri pisanju
+ */
+function cm_create_manual_reject_coupon(string $appRoot, array $inq, string $tz): ?array
+{
+    $promoPath = $appRoot . '/common/data/json/units/promo_codes.json';
+
+    // preberi obstoječi JSON ali pripravi default strukturo
+    $raw = @file_get_contents($promoPath);
+    if ($raw === false) {
+        $data = [
+            'settings' => [],
+            'codes'    => [],
+        ];
+    } else {
+        $data = json_decode($raw, true);
+        if (!is_array($data)) {
+            $data = [];
+        }
+        // migracija iz stare oblike (čisti array kuponov) → nova struktura
+        if (isset($data[0]) && !isset($data['codes'])) {
+            $data = [
+                'settings' => [],
+                'codes'    => $data,
+            ];
+        }
+        if (!isset($data['codes']) || !is_array($data['codes'])) {
+            $data['codes'] = [];
+        }
+        if (!isset($data['settings']) || !is_array($data['settings'])) {
+            $data['settings'] = [];
+        }
+    }
+
+    // --- Nastavitve: lahko so map ali list [{key, value}, ...] -------------
+    $settingsRaw = $data['settings'] ?? [];
+    $settings    = [];
+
+    if (is_array($settingsRaw)) {
+        $keys = array_keys($settingsRaw);
+
+        // Associative objekt: ['auto_reject_discount_percent' => 15, ...]
+        if ($keys !== range(0, count($settingsRaw) - 1)) {
+            $settings = $settingsRaw;
+        } else {
+            // List: pretvori v map preko 'key'
+            foreach ($settingsRaw as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $k = $item['key']   ?? null;
+                $v = $item['value'] ?? null;
+                if (is_string($k) && $k !== '') {
+                    $settings[$k] = $v;
+                }
+            }
+        }
+    }
+
+    // --- Stikalo: auto_reject_enabled --------------------------------------
+    // privzeto ON, da ne zlomimo starih instalacij brez tega ključa
+    $enabled = (bool)($settings['auto_reject_enabled'] ?? true);
+
+    // parametri iz settings (če obstajajo)
+    $discountPercent = isset($settings['auto_reject_discount_percent'])
+        ? (float)$settings['auto_reject_discount_percent']
+        : 15.0;
+
+    $validDays = isset($settings['auto_reject_valid_days'])
+        ? (int)$settings['auto_reject_valid_days']
+        : 180;
+
+    $prefix = isset($settings['auto_reject_code_prefix']) && is_string($settings['auto_reject_code_prefix'])
+        ? $settings['auto_reject_code_prefix']
+        : 'RETRY-';
+
+    // Če je auto kupon izklopljen ali je popust 0, ne ustvarjamo kupona
+    if (!$enabled || $discountPercent <= 0) {
+        return null;
+    }
+
+    // časovna os (z timezone iz cm_datetime_cfg)
+    try {
+        $now = new DateTimeImmutable('now', new DateTimeZone($tz));
+    } catch (\Throwable $e) {
+        $now = new DateTimeImmutable('now');
+    }
+
+    $validFrom = $now->format('Y-m-d');
+    $validTo   = $now->modify('+' . max(1, $validDays) . ' days')->format('Y-m-d');
+
+    // koda kupona
+    $suffix = strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+    $code   = $prefix . $suffix;
+
+    $idStr = (string)($inq['id'] ?? '');
+
+    // GLOBALNI kupon (unit = "")
+    $coupon = [
+        'id'               => $code,
+        'code'             => $code,
+        'name'             => 'Kupon po zavrnitvi',
+        'type'             => 'percent',
+        'value'            => $discountPercent,
+        'discount_percent' => $discountPercent, // za send_rejected_email
+        'enabled'          => true,
+        'unit'             => '',               // globalen kupon
+        'valid_from'       => $validFrom,
+        'valid_to'         => $validTo,
+        'min_nights'       => 0,
+        'max_nights'       => null,
+        'usage_limit'      => 1,
+        'used_count'       => 0,
+        'source'           => 'manual_reject',
+        'inquiry_id'       => $idStr,
+        'note'             => 'Auto coupon for rejected inquiry ' . $idStr,
+    ];
+
+    $data['codes'][] = $coupon;
+
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        return null;
+    }
+    if (@file_put_contents($promoPath, $json) === false) {
+        return null;
+    }
+
+    return $coupon;
+}
+
+
+/**
+ * Jedro za zavrnitev povpraševanja:
+ * - premik JSON iz /pending/ v /rejected/
+ * - posodobitev statusa
+ * - čiščenje pending_requests.json
+ * - generacija kupona in zapis v promo_codes.json
+ * - pošiljanje e-maila gostu
+ */
+function reject_inquiry_core(array $inq, string $reasonCode = 'manual_reject'): array
+{
+    $root      = '/var/www/html/app';
+    $dataRoot  = $root . '/common/data/json';
+    $inqRoot   = $dataRoot . '/inquiries';
+    $promoFile = $dataRoot . '/units/promo_codes.json';
+    $pendingIdxFile = $dataRoot . '/pending_requests.json';
+
+    $id    = (string)($inq['id'] ?? '');
+    $unit  = (string)($inq['unit'] ?? '');
+    $from  = (string)($inq['from'] ?? '');
+    $to    = (string)($inq['to'] ?? '');
+    $guest = $inq['guest'] ?? [];
+    $guestName  = (string)($guest['name']  ?? '');
+    $guestEmail = (string)($guest['email'] ?? '');
+
+    if ($id === '') {
+        return ['ok' => false, 'error' => 'missing_id_in_core'];
+    }
+
+    // --- 1) premik JSON datoteke: /pending/ → /rejected/ -------------------
+    $year  = substr($id, 0, 4);
+    $month = substr($id, 4, 2);
+
+    $pendingDir  = $inqRoot . "/{$year}/{$month}/pending";
+    $rejectedDir = $inqRoot . "/{$year}/{$month}/rejected";
+
+    $pendingPath  = $pendingDir  . "/{$id}.json";
+    $rejectedPath = $rejectedDir . "/{$id}.json";
+
+    if (!is_dir($rejectedDir) && !mkdir($rejectedDir, 0775, true) && !is_dir($rejectedDir)) {
+        return ['ok' => false, 'error' => 'cannot_create_rejected_dir', 'path' => $rejectedDir];
+    }
+
+    // posodobi status v podatkih
+    $inq['status']             = 'rejected';
+    $inq['stage']              = 'rejected';
+    $inq['rejected_at']        = date('c');
+    $inq['reject_reason_code'] = $reasonCode;
+
+    if (!write_json($rejectedPath, $inq)) {
+        return ['ok' => false, 'error' => 'write_rejected_failed', 'path' => $rejectedPath];
+    }
+
+    if (file_exists($pendingPath)) {
+        @unlink($pendingPath);
+    }
+
+    // --- 2) očisti pending_requests.json -----------------------------------
+    $pendingIdx = read_json($pendingIdxFile);
+    if (!is_array($pendingIdx)) {
+        $pendingIdx = [];
+    }
+
+    $newIdx = [];
+    foreach ($pendingIdx as $row) {
+        if (!is_array($row)) { continue; }
+        if (($row['id'] ?? null) === $id) {
+            // ta gre ven
+            continue;
+        }
+        $newIdx[] = $row;
+    }
+    write_json($pendingIdxFile, $newIdx);
+
+    // --- 3) ustvari promo kodo ---------------------------------------------
+    $coupon = null;
+    if ($guestEmail !== '') {
+        // timezone config iz cm_datetime_cfg
+        $cfg = cm_datetime_cfg();
+        $tz  = $cfg['timezone'] ?? 'Europe/Ljubljana';
+        $coupon = cm_create_manual_reject_coupon($root, $inq, $tz);
+    }
+
+    // --- 4) pošlji e-mail gostu --------------------------------------------
+    $emailSent = null;
+    if ($guestEmail !== '') {
+        try {
+            // helper iz admin/api/send_rejected.php
+            $emailSent = send_rejected_email($inq, $coupon, $reasonCode);
+        } catch (\Throwable $e) {
+            $emailSent = false;
+            error_log('[reject_inquiry] send_rejected_email failed: ' . $e->getMessage());
+        }
+    }
+
+    return [
+        'ok'      => true,
+        'id'      => $id,
+        'unit'    => $unit,
+        'from'    => $from,
+        'to'      => $to,
+        'coupon'  => $coupon,
+        'reason'  => $reasonCode,
+        'email_sent' => $emailSent,
+        'paths'   => [
+            'rejected'       => $rejectedPath,
+            'pending_index'  => $pendingIdxFile,
+            'promo_codes'    => $promoFile,
+        ],
+    ];
+}
+
+
+// ---------------------------------------------------------------------
+// VSTOP: preberi ID iz POST ALI JSON + robusten debug, če manjka
+// ---------------------------------------------------------------------
+
+$rawBody = file_get_contents('php://input') ?: '';
+$bodyJson = null;
+if ($rawBody !== '') {
+    $tmp = json_decode($rawBody, true);
+    if (is_array($tmp)) {
+        $bodyJson = $tmp;
+    }
+}
+
+// Najprej poskusi iz $_POST (form-urlencoded), potem iz JSON body
+$id = '';
+if (isset($_POST['id'])) {
+    $id = trim((string)$_POST['id']);
+} elseif (is_array($bodyJson) && isset($bodyJson['id'])) {
+    $id = trim((string)$bodyJson['id']);
+}
+
+$reason = 'manual_reject';
+if (isset($_POST['reason'])) {
+    $reason = trim((string)$_POST['reason']);
+} elseif (is_array($bodyJson) && isset($bodyJson['reason'])) {
+    $reason = trim((string)$bodyJson['reason']);
+}
+
+if ($id === '') {
+    http_response_code(400);
+    echo json_encode([
+        'ok'    => false,
+        'error' => 'missing_id',
+        'debug' => [
+            'post_keys' => array_keys($_POST),
+            'raw_body_sample' => safe_raw_body_sample($rawBody),
+            'content_type' => $_SERVER['CONTENT_TYPE'] ?? '',
+            'method'       => $_SERVER['REQUEST_METHOD'] ?? '',
+        ],
+    ]);
+    exit;
+}
+
+// poišči pending JSON po id
+$root     = '/var/www/html/app';
+$dataRoot = $root . '/common/data/json';
+$inqRoot  = $dataRoot . '/inquiries';
+
+$year  = substr($id, 0, 4);
+$month = substr($id, 4, 2);
+$pendingPath = $inqRoot . "/{$year}/{$month}/pending/{$id}.json";
+
+if (!file_exists($pendingPath)) {
+    http_response_code(404);
+    echo json_encode(['ok' => false, 'error' => 'pending_not_found', 'id' => $id]);
+    exit;
+}
+
+$raw = file_get_contents($pendingPath);
+$inq = json_decode($raw, true);
+if (!is_array($inq)) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'invalid_pending_json', 'path' => $pendingPath]);
+    exit;
+}
+
+// v jedro
+$res = reject_inquiry_core($inq, $reason ?: 'manual_reject');
+if (empty($res['ok'])) {
+    http_response_code(500);
+}
+echo json_encode($res);

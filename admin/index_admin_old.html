@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Channel Manager – Admin Developer Index</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    body {
+      margin: 0;
+      padding: 2rem 5vw 4rem;
+      line-height: 1.5;
+    }
+    h1, h2, h3 {
+      color: #fbbf24;
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+    }
+    h2 {
+      font-size: 1.4rem;
+      border-bottom: 1px solid #1f2937;
+      padding-bottom: 0.25rem;
+    }
+    h3 {
+      font-size: 1.1rem;
+      margin-top: 1.5rem;
+    }
+    a {
+      color: #93c5fd;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.88rem;
+      background: #020617;
+      padding: 0.1rem 0.25rem;
+      border-radius: 0.25rem;
+    }
+    small {
+      color: #9ca3af;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #1f2937;
+      color: #e5e7eb;
+      margin-right: 0.25rem;
+      margin-bottom: 0.15rem;
+      border: 1px solid #374151;
+    }
+    .tag-core { background: #14532d; border-color: #16a34a; }
+    .tag-api { background: #111827; border-color: #4b5563; }
+    .tag-json { background: #0f172a; border-color: #6b7280; }
+    .tag-public { background: #1f2937; border-color: #fbbf24; }
+    .tag-admin { background: #0f172a; border-color: #3b82f6; }
+    .box {
+      border-radius: 0.75rem;
+      background: #020617;
+      border: 1px solid #1f2937;
+      padding: 1rem 1.25rem;
+      margin-top: 0.75rem;
+    }
+    .box + .box {
+      margin-top: 0.75rem;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 900px) {
+      .two-col {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    .toc {
+      list-style: none;
+      padding-left: 0;
+    }
+    .toc li {
+      margin: 0.1rem 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    th, td {
+      padding: 0.3rem 0.4rem;
+      vertical-align: top;
+      border-bottom: 1px solid #111827;
+    }
+    th {
+      text-align: left;
+      color: #9ca3af;
+      font-weight: 500;
+      border-bottom-color: #1f2937;
+    }
+    tbody tr:nth-child(odd) td {
+      background: #020617;
+    }
+    tbody tr:nth-child(even) td {
+      background: #020617;
+    }
+    .pill {
+      display: inline-block;
+      margin-right: 0.35rem;
+      margin-bottom: 0.2rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 0.75rem;
+      border: 1px solid #1f2937;
+    }
+    header {
+      margin-bottom: 1.5rem;
+    }
+    header p {
+      max-width: 52rem;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Channel Manager – Admin Developer Index</h1>
+  <p>
+    Internal developer index for the <strong>Admin V4</strong> part of the project.
+    This page is not part of the public application flow; it is a map for future you (and future devs).
+  </p>
+  <p><small>Root: <code>/var/www/html/app</code> · Generated / maintained manually</small></p>
+
+  <h3>Table of contents</h3>
+  <ul class="toc">
+    <li><a href="#entry-pages">1. Admin entry pages</a></li>
+    <li><a href="#js-modules">2. Admin JS modules</a></li>
+    <li><a href="#css-modules">3. Admin CSS modules</a></li>
+    <li><a href="#api-endpoints">4. Admin API endpoints</a></li>
+    <li><a href="#json-stores">5. JSON stores &amp; usage</a></li>
+    <li><a href="#legacy-notes">6. Legacy / archive notes</a></li>
+  </ul>
+</header>
+
+<section id="entry-pages">
+  <h2>1. Admin entry pages</h2>
+
+  <div class="box two-col">
+    <div>
+      <h3>Admin calendar (V4)</h3>
+      <p>
+        <code>/admin/pubcal_admin.php</code>
+      </p>
+      <span class="tag tag-core">core</span>
+      <span class="tag tag-admin">admin</span>
+      <p>
+        Entry point for the new admin calendar (Variant B). Renders the calendar shell and loads the
+        admin JS stack:
+      </p>
+      <ul>
+        <li><code>/admin/ui/js/admin_shell.js</code></li>
+        <li><code>/admin/ui/js/admin_calendar.js</code></li>
+        <li><code>/admin/ui/js/range_select_admin.js</code></li>
+        <li><code>/admin/ui/js/admin_info_panel.js</code></li>
+        <li><code>/admin/ui/js/locks_loader.js</code></li>
+        <li><code>/admin/ui/js/admin_api.js</code></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Integrations console</h3>
+      <p>
+        <code>/admin/integrations.php</code>
+      </p>
+      <span class="tag tag-core">core</span>
+      <span class="tag tag-admin">admin</span>
+      <p>
+        UI for external channel integrations (Booking.com, Airbnb, ICS sources). Uses:
+      </p>
+      <ul>
+        <li><code>/admin/ui/js/integrations.js</code></li>
+        <li><code>/admin/api/integrations/*.php</code></li>
+        <li><code>/common/data/json/integrations/*.json</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>Public entry points (for context)</h3>
+    <p>These live under <code>/public</code> but are important for understanding shared JSON usage.</p>
+    <ul>
+      <li><code>/public/pubcal.php</code> <span class="tag tag-public">public</span> – public calendar</li>
+      <li><code>/public/offer.php</code> <span class="tag tag-public">public</span> – dynamic pricing &amp; offer</li>
+      <li><code>/public/thankyou.php</code> <span class="tag tag-public">public</span> – inquiry summary &amp; logging</li>
+      <li><code>/public/cancel_reservation.php</code> <span class="tag tag-public">public</span> – guest-side cancellation</li>
+    </ul>
+  </div>
+</section>
+
+<section id="js-modules">
+  <h2>2. Admin JS modules (<code>/admin/ui/js</code>)</h2>
+
+  <div class="box">
+    <h3>Core admin shell &amp; API</h3>
+    <ul>
+      <li>
+        <code>admin_shell.js</code>
+        <span class="tag tag-core">core</span>
+        <p>
+          Bootstraps the admin UI: tab navigation, page-level event handlers, and initialization of the
+          calendar, pending list, reservations manager and integrations panels.
+        </p>
+      </li>
+      <li>
+        <code>admin_api.js</code>
+        <span class="tag tag-core">core</span>
+        <span class="tag tag-api">API client</span>
+        <p>
+          Thin wrapper around <code>/admin/api/*.php</code> endpoints. Central place for AJAX calls related to
+          inquiries, reservations, occupancy and pricing.
+        </p>
+      </li>
+      <li>
+        <code>helpers.js</code>
+        <p>Shared JS utilities used across admin modules (formatting, DOM helpers, etc.).</p>
+      </li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Calendar stack</h3>
+    <ul>
+      <li>
+        <code>admin_calendar.js</code>
+        <span class="tag tag-core">core calendar</span>
+        <p>
+          Renders the admin monthly calendar grid and applies visual layers:
+          confirmed bookings, hard locks, external (ICS) occupancy, pending requests and manual blocks.
+        </p>
+      </li>
+      <li>
+        <code>range_select_admin.js</code>
+        <p>
+          Range selection logic for the admin calendar (click / drag, start–end selection, resetting,
+          highlighting &quot;gold glow&quot; selection).
+        </p>
+      </li>
+      <li>
+        <code>admin_info_panel.js</code>
+        <p>
+          Info panel attached to the calendar: shows details about the selected range, pending inquiry
+          metadata and actions (accept / reject / block).
+        </p>
+      </li>
+      <li>
+        <code>locks_loader.js</code>
+        <p>
+          Loads and overlays hard locks / <code>local_bookings.json</code> and related occupancy sources onto the
+          calendar view.
+        </p>
+      </li>
+      <li>
+        <p>
+          toast notifications in the admin calendar context.
+        </p>
+      </li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Reservations, inquiries &amp; integrations</h3>
+    <ul>
+      <li>
+        <code>manage_reservations.js</code>
+        <p>
+          Admin reservations view: reads <code>/common/data/json/reservations/...</code> through
+          <code>admin/api/list_reservations.php</code>, provides filters and actions (cancel, inspect).
+        </p>
+      </li>
+      <li>
+        <code>integrations.js</code>
+        <p>
+          Integrations UI logic (ICS URLs, connection status, manual pulls) using
+          <code>/admin/api/integrations/*.php</code> and
+          <code>/common/data/json/integrations/*.json</code>.
+        </p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section id="css-modules">
+  <h2>3. Admin CSS modules (<code>/admin/ui/css</code>)</h2>
+
+  <div class="box">
+    <h3>Layout &amp; global styles</h3>
+    <ul>
+      <li><code>layout.css</code> – overall admin layout, columns and main containers.</li>
+      <li><code>header.css</code> – admin header bar, navigation tabs, badges.</li>
+      <li><code>helpers.css</code> – small reusable utility classes.</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Calendar &amp; layers</h3>
+    <ul>
+      <li><code>calendar.css</code> – calendar container, month header, weekday row, scrolling.</li>
+      <li><code>day.css</code> – individual day cell layout, today highlight, selection border.</li>
+      <li><code>layers.css</code> – per-layer colors (booked, pending, blocked, hard lock, ICS, etc.).</li>
+      <li><code>info_panel.css</code> – styling for the calendar info panel.</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Inquiries, reservations &amp; integrations</h3>
+    <ul>
+      <li><code>inquiries.css</code> – list of pending inquiries, row highlighting, status chips.</li>
+      <li><code>manage_reservations.css</code> – reservations management view styling.</li>
+      <li><code>manage_reservations.dark.css</code> – dark mode / variant styling for reservations view.</li>
+      <li><code>integrations.css</code> – layouts and controls for the integrations console.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="api-endpoints">
+  <h2>4. Admin API endpoints (<code>/admin/api</code>)</h2>
+
+  <div class="box">
+    <h3>Inquiries &amp; pending requests</h3>
+    <ul>
+      <li><code>list_inquiries.php</code> – lists inquiries from <code>/common/data/json/inquiries/...</code>.</li>
+      <li><code>get_inquiry.php</code> – returns full details for a single inquiry (by ID).</li>
+      <li><code>accept_inquiry.php</code> – accept inquiry → create reservation / soft hold, update JSON pipeline.</li>
+      <li><code>reject_inquiry.php</code> – reject inquiry and move JSON to the rejected bucket.</li>
+      <li><code>sync_pending_requests.php</code> – syncs <code>pending_requests.json</code> with inquiries tree.</li>
+      <li><code>reject_pending_conflicts.php</code> – rejects pending inquiries that conflict with a newly accepted booking.</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Reservations &amp; cancellations</h3>
+    <ul>
+      <li><code>list_reservations.php</code> – lists reservations under <code>/common/data/json/reservations/</code>.</li>
+      <li><code>finalize_reservation.php</code> – finalize a reservation from accepted/soft hold state.</li>
+      <li><code>cancel_reservation.php</code> – cancel an existing reservation → writes to <code>cancellations/</code>.</li>
+      <li><code>send_accept_link.php</code> – send / re-send accept link to guest.</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Integrations &amp; ICS</h3>
+    <ul>
+      <li><code>integrations_get.php</code> – read integrations config (per unit) from <code>json/integrations/*.json</code>.</li>
+      <li><code>integrations_save.php</code> – save updated integration settings.</li>
+      <li><code>integrations/add_unit.php</code> – add integration entry for a new unit.</li>
+      <li><code>integrations/set_in_url.php</code> – set or update incoming ICS URL for a unit/source.</li>
+      <li><code>integrations/ics.php</code> – ICS endpoint serving outgoing calendar feeds (per unit, per source).</li>
+      <li><code>integrations/apply_booking_now.php</code> – manually apply Booking.com ICS to occupancy.</li>
+      <li><code>integrations/pull_now.php</code> – manually pull ICS data and store under <code>external/</code>.</li>
+      <li><code>test_fetch_ics.php</code> – helper endpoint to test ICS fetching and parsing.</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Pricing</h3>
+    <ul>
+      <li><code>pricing/set_prices.php</code> – update <code>prices.json</code> for a unit from the admin pricing UI.</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>Shared API utilities</h3>
+    <ul>
+      <li><code>_lib/paths.php</code> – centralised paths to JSON roots (units, inquiries, reservations, etc.).</li>
+      <li><code>_lib/json_io.php</code> – safe JSON read/write helpers with error handling.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="json-stores">
+  <h2>5. JSON stores &amp; usage</h2>
+  <p>
+    This section answers: <em>&ldquo;Which PHP/JS files read or write a given JSON file?&rdquo;</em><br>
+    The list is intentionally not exhaustive; new users can extend it over time.
+  </p>
+
+  <div class="box">
+    <h3>Per-unit configuration &amp; occupancy</h3>
+    <table>
+      <thead>
+      <tr>
+        <th>JSON file</th>
+        <th>Purpose</th>
+        <th>Used by (reads/writes)</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td><code>/common/data/json/units/manifest.json</code></td>
+        <td>List of units and basic meta used by both public and admin UI.</td>
+        <td>
+          <span class="pill">public/pubcal.php</span>
+          <span class="pill">public/js/pubcal.js</span>
+          <span class="pill">admin/pubcal_admin.php</span>
+          <span class="pill">admin/ui/js/admin_shell.js</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/site_settings.json</code></td>
+        <td>Global site settings (TT, discounts, email config, keycard info, etc.).</td>
+        <td>
+          <span class="pill">common/lib/site_settings.php</span>
+          <span class="pill">public/offer.php</span>
+          <span class="pill">public/api/sendmail_guest.php</span>
+          <span class="pill">public/api/sendmail_admin.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/pending_requests.json</code></td>
+        <td>Aggregated view of all pending requests across units.</td>
+        <td>
+          <span class="pill">admin/api/sync_pending_requests.php</span>
+          <span class="pill">admin/ui/js/manage_reservations.js</span>
+          <span class="pill">admin/ui/js/admin_calendar.js</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/A1/prices.json</code></td>
+        <td>Base per-day pricing map for unit A1.</td>
+        <td>
+          <span class="pill">lib/pricing.php</span>
+          <span class="pill">public/offer.php</span>
+          <span class="pill">admin/api/pricing/set_prices.php</span>
+          <span class="pill">admin/ui/js/admin_info_panel.js</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/A1/special_offers.json</code></td>
+        <td>Special offers / discounts for unit A1 (per date).</td>
+        <td>
+          <span class="pill">lib/pricing.php</span>
+          <span class="pill">public/offer.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/A1/occupancy.json</code></td>
+        <td>Main occupancy store for unit A1 (reserved, blocked, clean-before/after, holds).</td>
+        <td>
+          <span class="pill">public/pubcal.php</span>
+          <span class="pill">public/js/pubcal.js</span>
+          <span class="pill">admin/ui/js/admin_calendar.js</span>
+          <span class="pill">scripts/merge_external_into_occupancy.php</span>
+          <span class="pill">scripts/apply_booking_blocks.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/A1/occupancy_merged.json</code></td>
+        <td>Combined view of local + external (ICS) occupancy for unit A1.</td>
+        <td>
+          <span class="pill">scripts/merge_external_into_merged.php</span>
+          <span class="pill">admin/ui/js/admin_calendar.js</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/A1/local_bookings.json</code></td>
+        <td>Hard-lock local bookings that must always be respected.</td>
+        <td>
+          <span class="pill">admin/ui/js/locks_loader.js</span>
+          <span class="pill">admin/api/list_reservations.php</span>
+          <span class="pill">scripts/merge_external_into_occupancy.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/units/A1/occupancy_sources.json</code></td>
+        <td>Metadata about occupancy sources for A1 (local vs external vs merged).</td>
+        <td>
+          <span class="pill">common/lib/ics_sources.php</span>
+          <span class="pill">scripts/ingest_external_ics.php</span>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="box">
+    <h3>Inquiries, reservations &amp; cancellations</h3>
+    <table>
+      <thead>
+      <tr>
+        <th>JSON file / tree</th>
+        <th>Purpose</th>
+        <th>Used by (reads/writes)</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td><code>/common/data/json/inquiries/YYYY/MM/pending/*.json</code></td>
+        <td>Raw pending inquiries created by the public flow.</td>
+        <td>
+          <span class="pill">public/thankyou.php</span>
+          <span class="pill">public/api/submit_inquiry*.php</span>
+          <span class="pill">admin/api/list_inquiries.php</span>
+          <span class="pill">admin/api/accept_inquiry.php</span>
+          <span class="pill">admin/api/reject_inquiry.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/inquiries/YYYY/MM/accepted/*.json</code></td>
+        <td>Inquiries that have been accepted but not yet finalized.</td>
+        <td>
+          <span class="pill">admin/api/accept_inquiry.php</span>
+          <span class="pill">admin/api/finalize_reservation.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/reservations/YYYY/UNIT/*.json</code></td>
+        <td>Confirmed reservations (per year, per unit).</td>
+        <td>
+          <span class="pill">admin/api/finalize_reservation.php</span>
+          <span class="pill">admin/api/list_reservations.php</span>
+          <span class="pill">admin/ui/js/manage_reservations.js</span>
+          <span class="pill">common/lib/ics_builder.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/cancellations/YYYY/UNIT/*.json</code></td>
+        <td>Cancellation records for reporting and sync back to channels.</td>
+        <td>
+          <span class="pill">admin/api/cancel_reservation.php</span>
+          <span class="pill">common/lib/ics_builder.php</span>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="box">
+    <h3>Integrations / ICS configs</h3>
+    <table>
+      <thead>
+      <tr>
+        <th>JSON file</th>
+        <th>Purpose</th>
+        <th>Used by (reads/writes)</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td><code>/common/data/json/integrations/config.json</code></td>
+        <td>Global integrations configuration (feature flags, defaults).</td>
+        <td>
+          <span class="pill">admin/api/integrations_get.php</span>
+          <span class="pill">admin/api/integrations_save.php</span>
+          <span class="pill">admin/ui/js/integrations.js</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/integrations/connections.json</code></td>
+        <td>Connection registry for units and external channels.</td>
+        <td>
+          <span class="pill">admin/api/integrations/add_unit.php</span>
+          <span class="pill">scripts/ingest_external_ics.php</span>
+          <span class="pill">common/lib/ics_sources.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/integrations/A1.json</code></td>
+        <td>Unit-level integrations config (ICS URLs, keys) for A1.</td>
+        <td>
+          <span class="pill">admin/api/integrations_get.php</span>
+          <span class="pill">admin/api/integrations/set_in_url.php</span>
+          <span class="pill">admin/api/integrations/apply_booking_now.php</span>
+          <span class="pill">common/lib/ics_import.php</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>/common/data/json/integrations/A2.json</code></td>
+        <td>Unit-level integrations config for A2.</td>
+        <td>
+          <span class="pill">same as A1 (per-unit)</span>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="box">
+    <h3>Notes</h3>
+    <p>
+      If you add new JSON files, extend this section with a new row:
+    </p>
+    <ul>
+      <li>JSON path (absolute under <code>/common/data/json</code>).</li>
+      <li>1–2 sentence purpose.</li>
+      <li>List of PHP/JS files that read or write it.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="legacy-notes">
+  <h2>6. Legacy / archive notes</h2>
+  <div class="box">
+    <h3>Archives</h3>
+    <ul>
+      <li><code>/common/data/json/_archive_2025-11-07/</code> – snapshot of inquiries (pending/accepted/rejected) taken on 2025-11-07.</li>
+      <li><code>/common/data/json/units/A1/old_project/</code> – early Python scripts and experiments for occupancy updates.</li>
+      <li><code>/common/data/json/units/A1/occupancy.json.txt</code> – textual snapshot of earlier occupancy layout.</li>
+    </ul>
+    <p><small>These locations are considered read-only history and are not used by the live admin UI.</small></p>
+  </div>
+
+  <div class="box">
+    <h3>Helper reports &amp; tools</h3>
+    <ul>
+      <li><code>/_reports/project_inventory_YYYYMMDD_HHMMSS.txt</code> – project inventory snapshots (this page was built from them).</li>
+      <li><code>/tools/project_inventory.py</code> – generates the inventory reports.</li>
+      <li><code>/tools/inventory_jsons.py</code> – JSON-centric inventory tool.</li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>

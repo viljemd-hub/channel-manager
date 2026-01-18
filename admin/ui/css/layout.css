@@ -1,0 +1,33 @@
+/*
+ * Admin layout stylesheet.
+ *
+ * Responsibilities:
+ * - Define the overall layout for the admin interface (header, main content
+ *   areas, sidebars, scroll containers).
+ * - Provide responsive behavior for small vs. large screens where needed.
+ * - Set base spacing, max-widths and flex/grid containers for the admin shell.
+ *
+ * Used by:
+ * - /admin/pubcal_admin.php
+ * - /admin/integrations.php
+ * - Any other admin page that loads the shared layout.
+ *
+ * Notes:
+ * - Pure layout only; avoid putting component-specific styles here
+ *   (calendar, info panel, inquiries, etc. belong to their own files).
+ */
+
+
+/* /app/admin/ui/css/layout.css */
+body.adminv4{background:#0b0f14;color:#e6edf3;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+.cm-header{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 16px;background:#0f1520;border-bottom:1px solid #1f2a3a}
+.cm-main{display:block;padding:16px}
+.calendar-wrapper{height:calc(100vh - 120px);overflow:auto}
+.tab{display:none}
+.tab.active{display:block}
+.inquiries-wrap{display:grid;grid-template-columns:1fr 420px; gap:16px}
+.inquiries-list,.inquiry-detail{background:#0f1520;border:1px solid #1f2a3a;border-radius:12px;padding:12px;white-space:pre-wrap}
+.btn,.btn-small{background:#1a2332;color:#e6edf3;border:1px solid #2a3a52;border-radius:10px;padding:4px;cursor:pointer; margin-left:4px;margin-top:2px;}
+.btn-small{font-size:14px;}
+.unit-select{background:#0f1520;color:#e6edf3;border:1px solid #2a3a52; border-radius:8px;padding:6px 8px}
+.layerbar{display:flex;gap:10px;align-items:center}

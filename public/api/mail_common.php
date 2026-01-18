@@ -1,0 +1,75 @@
+<?php
+/**
+ * CM Free / CM Plus – Channel Manager
+ * File: public/api/mail_common.php
+ * Author: Viljem Dvojmoč
+ * Assistant: GPT
+ * Copyright (c) 2026 Viljem Dvojmoč. All rights reserved.
+ */
+
+declare(strict_types=1);
+
+if (!function_exists('_eur')) {
+  function _eur($v): string {
+    if (!is_numeric($v)) return '-';
+    return number_format((float)$v, 2, ',', '.') . ' €';
+  }
+}
+
+if (!function_exists('sanitize_email')) {
+  function sanitize_email(?string $e): string {
+    $e = trim((string)$e);
+    $e = preg_replace('/[\r\n]+/', '', $e); // CRLF guard
+    return filter_var($e, FILTER_VALIDATE_EMAIL) ? $e : '';
+  }
+}
+
+if (!function_exists('send_via_sendmail')) {
+  /**
+   * Pošlji HTML pošto prek msmtp (sendmail vmesnik).
+   * Uporabi: /usr/bin/msmtp -t -i -f "<fromEmail>"
+   * Podpira: Reply-To, From ime, Cc, Bcc
+   */
+  function send_via_sendmail(
+    string $to,
+    string $fromEmail,
+    string $subject,
+    string $html,
+    string $replyTo = '',
+    string $fromName = '',
+    string $cc = '',
+    string $bcc = ''
+  ): bool {
+    $to        = sanitize_email($to);
+    $fromEmail = sanitize_email($fromEmail) ?: $to;
+    $replyTo   = sanitize_email($replyTo);
+    $cc        = sanitize_email($cc);
+    $bcc       = sanitize_email($bcc);
+    if (!$to) return false;
+
+    $fromHeader = $fromName ? sprintf('%s <%s>', $fromName, $fromEmail) : $fromEmail;
+
+    $headers  = "From: {$fromHeader}\r\n";
+    $headers .= "To: {$to}\r\n";
+    if ($cc)  $headers .= "Cc: {$cc}\r\n";
+    if ($bcc) $headers .= "Bcc: {$bcc}\r\n";
+    if ($replyTo) $headers .= "Reply-To: {$replyTo}\r\n";
+    $headers .= "Subject: {$subject}\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $headers .= "Content-Transfer-Encoding: 8bit\r\n";
+
+    $raw = $headers . "\r\n" . $html . "\r\n";
+
+    $cmd = "/usr/bin/msmtp -t -i -f " . escapeshellarg($fromEmail);
+    $fh = @popen($cmd, 'w');
+    if (!$fh) { error_log("send_via_sendmail: popen failed"); return false; }
+    $written = @fwrite($fh, $raw);
+    $exit = @pclose($fh);
+    if ($written === false || $written === 0 || $exit !== 0) {
+      error_log("send_via_sendmail: write/close failed (written=" . var_export($written, true) . ", exit={$exit})");
+      return false;
+    }
+    return true;
+  }
+}

@@ -1,0 +1,701 @@
+/**
+ * CM Free / CM Plus – Channel Manager
+ * File: admin/ui/js/manage_reservations.js
+ * Author: Viljem Dvojmoč
+ * Assistant: GPT
+ * Copyright (c) 2026 Viljem Dvojmoč. All rights reserved.
+ */
+
+// /app/admin/ui/js/manage_reservations.js
+
+/**
+ * "Manage reservations" tab / page.
+ *
+ * - Seznam rezervacij po enoti / letu / statusu / izvoru.
+ * - Badge-i za confirmed / cancelled / soft-hold / ics / direct.
+ * - Akcije: cancel + re-send accept.
+ *
+ * Data layer:
+ * - GET  /app/admin/api/reservations/list.php   (JSON)
+ * - POST /app/admin/api/reservations/cancel.php
+ * - POST /app/admin/api/inquiries/send_accept_link.php
+ */
+
+(function () {
+  "use strict";
+
+  // --------------------------
+  // Generic helpers
+  // --------------------------
+
+  function qs(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+
+  function qsa(sel, root) {
+    return Array.prototype.slice.call(
+      (root || document).querySelectorAll(sel)
+    );
+  }
+
+  async function getJSON(url) {
+    const res = await fetch(url, {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status + " → " + url);
+    return res.json();
+  }
+
+  async function postJSON(url, body) {
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status + " → " + url);
+    return res.json();
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // SMS OTP helper – same logic as in confirm_reservation.php
+  // id format: "YYYYMMDDHHMMSS-rand-UNIT" → use HHMMSS part as code
+  function getSmsCodeFromId(id) {
+    const m = String(id || "").match(/^(\d{14})-/);
+    if (!m) return "";
+    const ts = m[1]; // YYYYMMDDHHMMSS
+    return ts.slice(8); // HHMMSS
+  }
+
+  // Zadnje naloženi itemi, indeksirani po ID → za Cancel logiko
+  const LAST_ITEMS_BY_ID = Object.create(null);
+
+  // --------------------------
+  // UI helpers
+  // --------------------------
+
+  async function loadMrUnits() {
+    try {
+      const manifest = await getJSON("/app/common/data/json/units/manifest.json");
+      const units = manifest.units || [];
+      const select = qs("#mr-filter-unit");
+      if (!select) return units;
+
+      // Najprej "All units", potem posamezne enote
+      const options = ['<option value="">All units</option>'].concat(
+        units.map(function (u) {
+          var label = u.id;
+          if (u.label) {
+            label += " – " + u.label;
+          }
+          return '<option value="' + escapeHtml(u.id) + '">' + escapeHtml(label) + "</option>";
+        })
+      );
+
+      select.innerHTML = options.join("");
+      // privzeto: All units (prazna vrednost)
+      select.value = "";
+
+      return units;
+    } catch (e) {
+      console.error("[manage_reservations] loadMrUnits failed:", e);
+      return [];
+    }
+  }
+
+  function buildStatusChip(r) {
+    const s = r.status || "unknown";
+    const src = r.source || "";
+    const hard = r.lock === "hard";
+    const soft = r.lock === "soft" || r.soft === true;
+
+    let cls = "mr-badge";
+    let label = s;
+
+    if (hard && s === "confirmed") {
+      cls += " hard";
+      label = "Confirmed";
+    } else if (s === "cancelled") {
+      cls += " cancelled";
+      label = "Cancelled";
+    } else if (soft) {
+      cls += " soft";
+      label = "Soft-hold";
+    } else if (src === "ics") {
+      cls += " ics";
+      label = "ICS";
+    } else if (src === "direct") {
+      cls += " direct";
+      label = "Direct";
+    }
+
+    return '<span class="' + cls + '">' + escapeHtml(label) + "</span>";
+  }
+
+  // --------------------------
+  // List rendering – cards
+  // --------------------------
+
+  function renderList(items, root) {
+    const host = root || document;
+    const list = qs("#mr-list", host);
+    const info = qs("#mr-info", host);
+
+    if (!list) return;
+
+    if (!items || !items.length) {
+      list.innerHTML =
+        '<p class="mr-empty">Ni najdenih rezervacij za izbrane filtre.</p>';
+      if (info) {
+        info.textContent = "Ni rezultatov.";
+      }
+      return;
+    }
+
+    const cards = items.map(function (r) {
+      const id = r.id || r.res_id || "";
+      const unit = r.unit || "";
+      const src = r.source || "";
+      const status = r.status || "";
+      const lock =
+        r.lock || (r.soft ? "soft" : "");
+
+      const from = r.from || r.date_from || "";
+      const to = r.to || r.date_to || "";
+
+      // guest je lahko string ali objekt
+      let guest = "";
+      if (typeof r.guest === "string") {
+        guest = r.guest;
+      } else if (r.guest && typeof r.guest === "object") {
+        guest = r.guest.name || r.guest.full_name || "";
+      } else {
+        guest = r.guest_name || "";
+      }
+
+      const email =
+        (r.guest && typeof r.guest === "object" && r.guest.email) ||
+        r.email ||
+        r.guest_email ||
+        "";
+
+      const badge = buildStatusChip(r);
+
+      // --- NEW: decide when to show "Re-send accept" ---
+      const statusLc = (status || "").toLowerCase();
+      const lockLc = (lock || "").toLowerCase();
+      const soft = lockLc === "soft" || r.soft === true;
+
+      // Show re-send only for accepted soft-hold inquiries that still have an email
+      const canResendAccept = soft && statusLc === "accepted" && !!email;
+
+      LAST_ITEMS_BY_ID[id] = r;
+
+      return (
+        '<article class="mr-card" data-id="' + escapeHtml(id) + '">' +
+        '  <header class="mr-card-header">' +
+        '    <div class="mr-card-main">' +
+        '      <div class="mr-card-id">' + escapeHtml(id) + "</div>" +
+        '      <div class="mr-card-badge">' + badge + "</div>" +
+        "    </div>" +
+        '    <div class="mr-card-unit">' + escapeHtml(unit) + "</div>" +
+        "  </header>" +
+        '  <div class="mr-card-body">' +
+        '    <div class="mr-card-row">' +
+        '      <span class="mr-card-label">Termin:</span>' +
+        '      <span>' +
+        escapeHtml(from) +
+        " → " +
+        escapeHtml(to) +
+        "</span>" +
+        "    </div>" +
+        '    <div class="mr-card-row">' +
+        '      <span class="mr-card-label">Gost:</span>' +
+        '      <span>' +
+        (guest ? escapeHtml(guest) : "—") +
+        (email ? "<br><small>" + escapeHtml(email) + "</small>" : "") +
+        "</span>" +
+        "    </div>" +
+        (src
+          ? '  <div class="mr-card-row">' +
+            '    <span class="mr-card-label">Vir:</span>' +
+            "    <span>" +
+            escapeHtml(src) +
+            "</span>" +
+            "  </div>"
+          : "") +
+        (canResendAccept
+          ? '  <div class="mr-card-row mr-card-row-accept">' +
+            '      <button type="button" class="mr-btn mr-btn-resend" data-id="' +
+            escapeHtml(id) +
+            '">Ponovno pošlji potrditveni link</button>' +
+            "  </div>"
+          : "") +
+        "  </div>" +
+        "</article>"
+      );
+    });
+
+    list.innerHTML = cards.join("");
+
+    if (info) {
+      info.textContent = "Najdenih " + items.length + " rezervacij.";
+    }
+
+    // click handler za detail
+    list.addEventListener("click", function (e) {
+      const card = e.target.closest(".mr-card");
+      if (!card) return;
+      const id = card.getAttribute("data-id");
+      if (!id) return;
+      const item = LAST_ITEMS_BY_ID[id];
+      if (!item) return;
+      renderDetail(item, host);
+    });
+
+    // re-send accept gumbi
+    qsa(".mr-btn-resend", list).forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        const id = btn.getAttribute("data-id");
+        if (!id) return;
+        handleResendAccept(id, host);
+      });
+    });
+  }
+
+  // --------------------------
+  // Detail panel
+  // --------------------------
+
+  function renderEmptyDetail(root) {
+    const panel = qs("#mr-detail", root || document);
+    if (!panel) return;
+    panel.innerHTML =
+      '<div class="mr-detail-card">' +
+      '  <div class="mr-detail-row">' +
+      '    <span class="mr-detail-label">Reservation:</span>' +
+      "    <b>Izberi rezervacijo na levi.</b>" +
+      "  </div>" +
+      "</div>";
+  }
+
+  function renderDetail(item, root) {
+    const panel = qs("#mr-detail", root || document);
+    if (!panel) return;
+
+    if (!item || typeof item !== "object") {
+      renderEmptyDetail(root);
+      return;
+    }
+
+    const id     = item.id || item.res_id || "";
+    const unit   = item.unit || "";
+    const src    = item.source || "";
+    const status = item.status || "";
+    const lock   = item.lock || (item.soft ? "soft" : "");
+    const from   = item.from || item.date_from || "";
+    const to     = item.to   || item.date_to   || "";
+    const nights =
+      item.nights != null
+        ? item.nights
+        : (item.meta && item.meta.nights != null)
+        ? item.meta.nights
+        : "";
+
+    let guest = "";
+    if (typeof item.guest === "string") {
+      guest = item.guest;
+    } else if (item.guest && typeof item.guest === "object") {
+      guest = item.guest.name || item.guest.full_name || "";
+    } else {
+      guest = item.guest_name || "";
+    }
+
+    const email =
+      (item.guest && typeof item.guest === "object" && item.guest.email) ||
+      item.email ||
+      item.guest_email ||
+      "";
+
+    const phone =
+      (item.guest && typeof item.guest === "object" && item.guest.phone) ||
+      item.phone ||
+      item.guest_phone ||
+      "";
+
+    const smsCode = getSmsCodeFromId(id);
+
+    const message =
+      // 1) najprej note na guest objektu – TO imaš v JSON
+      (item.guest &&
+        typeof item.guest === "object" &&
+        (item.guest.note || item.guest.message)) ||
+
+      // 2) top-level message, če kdaj obstaja
+      (typeof item.message === "string" && item.message) ||
+
+      // 3) različne stare oblike
+      item.guest_message ||
+      (item.meta && (item.meta.guest_message || item.meta.note)) ||
+      "";
+
+    const created =
+      item.created_at ||
+      (item.meta && item.meta.created_at) ||
+      item.created ||
+      "";
+
+    let total = null;
+    if (item.total_eur != null) {
+      total = item.total_eur;
+    } else if (item.meta && item.meta.total_eur != null) {
+      total = item.meta.total_eur;
+    }
+    const currency =
+      item.currency ||
+      (item.meta && item.meta.currency) ||
+      "€";
+
+    const badgeHtml = buildStatusChip(item);
+    const lockLabel =
+      lock === "hard" ? "hard" :
+      lock === "soft" ? "soft-hold" :
+      "-";
+
+    let amountHtml = "";
+    if (total != null && total !== "") {
+      amountHtml =
+        '  <div class="mr-detail-row">' +
+        '    <span class="mr-detail-label">Znesek:</span>' +
+        '    <span>' + escapeHtml(String(total)) + " " + escapeHtml(currency) + '</span>' +
+        '  </div>';
+    }
+
+    panel.innerHTML =
+      '<div class="mr-detail-card">' +
+      '  <header class="mr-detail-header">' +
+      '    <div class="mr-detail-main">' +
+      '      <div class="mr-detail-id">' + escapeHtml(id) + '</div>' +
+      '      <div class="mr-detail-badge">' + badgeHtml + '</div>' +
+      '    </div>' +
+      '    <div class="mr-detail-unit">' + escapeHtml(unit) + '</div>' +
+      '  </header>' +
+
+      '  <div class="mr-detail-body">' +
+      '    <div class="mr-detail-row">' +
+      '      <span class="mr-detail-label">Termin:</span>' +
+      '      <span>' +
+               escapeHtml(from) + ' → ' + escapeHtml(to) +
+               (nights !== ""
+                 ? " (" + escapeHtml(String(nights)) + " nights)"
+                 : "") +
+      '      </span>' +
+      '    </div>' +
+
+      '    <div class="mr-detail-row">' +
+      '      <span class="mr-detail-label">Gost:</span>' +
+      '      <span>' + (guest ? escapeHtml(guest) : "—") + '</span>' +
+      '    </div>' +
+
+      (email
+        ? '  <div class="mr-detail-row">' +
+          '    <span class="mr-detail-label">E-mail:</span>' +
+          '    <span>' + escapeHtml(email) + '</span>' +
+          '  </div>'
+        : "") +
+
+      (phone
+        ? '  <div class="mr-detail-row">' +
+          '    <span class="mr-detail-label">Telefon:</span>' +
+          '    <span>' +
+               escapeHtml(phone) +
+               (smsCode
+                 ? ' <span class="mr-detail-sms">(SMS koda: <strong>' +
+                   escapeHtml(smsCode) +
+                   "</strong>)</span>"
+                 : "") +
+          "</span>" +
+          '  </div>'
+        : "") +
+
+      '    <div class="mr-detail-row">' +
+      '      <span class="mr-detail-label">Vir:</span>' +
+      '      <span>' + (src ? escapeHtml(src) : "—") + '</span>' +
+      '    </div>' +
+
+      '    <div class="mr-detail-row">' +
+      '      <span class="mr-detail-label">Status:</span>' +
+      '      <span>' +
+               (status ? escapeHtml(status) : "—") +
+               (lockLabel !== "-"
+                 ? " · lock: " + escapeHtml(lockLabel)
+                 : "") +
+      '      </span>' +
+      '    </div>' +
+
+      (created
+        ? '  <div class="mr-detail-row">' +
+          '    <span class="mr-detail-label">Ustvarjeno:</span>' +
+          '    <span>' + escapeHtml(created) + '</span>' +
+          '  </div>'
+        : "") +
+
+      (message
+        ? '  <div class="mr-detail-row mr-detail-row-message">' +
+          '    <span class="mr-detail-label">Sporočilo:</span>' +
+          '    <span>' + escapeHtml(message) + '</span>' +
+          '  </div>'
+        : "") +
+
+      amountHtml +
+      '  </div>' +
+
+      '  <div class="mr-detail-raw">' +
+      '    <button type="button" class="mr-btn mr-btn-raw" id="mr-toggle-raw">Pokaži surovi JSON</button>' +
+      '    <pre id="mr-raw" class="mr-raw" hidden>' +
+             escapeHtml(JSON.stringify(item, null, 2)) +
+      '    </pre>' +
+      '  </div>' +
+      '</div>';
+
+    const toggle = panel.querySelector("#mr-toggle-raw");
+    const pre    = panel.querySelector("#mr-raw");
+    if (toggle && pre) {
+      toggle.addEventListener("click", function () {
+        const isHidden = pre.hasAttribute("hidden");
+        if (isHidden) {
+          pre.removeAttribute("hidden");
+          toggle.textContent = "Skrij surovi JSON";
+        } else {
+          pre.setAttribute("hidden", "hidden");
+          toggle.textContent = "Pokaži surovi JSON";
+        }
+      });
+    }
+  }
+
+  // --------------------------
+  // Load & filters
+  // --------------------------
+
+  async function loadReservations(root) {
+    const host = root || document;
+    const unitSel = qs("#mr-filter-unit", host);
+    const ym = qs("#mr-filter-ym", host);
+    const yearSel = qs("#mr-filter-year", host);
+    const statusSel = qs("#mr-filter-status", host);
+    const sourceSel = qs("#mr-filter-source", host);
+    const softCheckbox = qs("#mr-filter-soft", host);
+    const qInput = qs("#mr-filter-q", host);
+    const info = qs("#mr-info", host);
+    const list = qs("#mr-list", host);
+
+    const params = {};
+    if (unitSel && unitSel.value) params.unit = unitSel.value;
+    if (ym && ym.value) params.ym = ym.value;
+    if (yearSel && yearSel.value) params.year = yearSel.value;
+    if (statusSel && statusSel.value) params.status = statusSel.value;
+    if (sourceSel && sourceSel.value) params.source = sourceSel.value;
+    if (softCheckbox && softCheckbox.checked) params.include_soft = 1;
+    if (qInput && qInput.value) params.q = qInput.value.trim();
+
+    if (info) {
+      info.textContent = "Nalaganje…";
+    }
+    if (list) {
+      list.innerHTML = '<p class="mr-loading">Loading…</p>';
+    }
+
+    try {
+      const res = await postJSON("/app/admin/api/reservations/list.php", params);
+      if (!res || res.ok === false) {
+        throw new Error(res && (res.error || res.message || "list_failed"));
+      }
+      const items = res.items || [];
+      renderList(items, host);
+      if (info) {
+        info.textContent = "Najdenih " + items.length + " rezervacij.";
+      }
+    } catch (e) {
+      console.error("[manage_reservations] loadReservations failed:", e);
+      if (info) {
+        info.textContent = "Napaka pri nalaganju rezervacij.";
+      }
+      if (list) {
+        list.innerHTML = '<p class="mr-error">Failed to load reservations.</p>';
+      }
+    }
+  }
+
+  async function handleCancel(id, root) {
+    if (!id) return;
+
+    const item = LAST_ITEMS_BY_ID[id] || null;
+    const src = item && item.source ? String(item.source) : "";
+    const lock = item && item.lock ? String(item.lock) : "";
+    const unit = (item && item.unit) || "";
+    const from = (item && item.from) || "";
+    const to = (item && item.to) || "";
+
+    // 1) ICS rezervacije → samo info
+    if (src === "ics") {
+      alert(
+        "Rezervacije iz kanalov (ICS – npr. Booking/Airbnb) lahko urejaš samo na izvoru."
+      );
+      return;
+    }
+
+    // 2) Lokalni admin blok (local_block) → brez posebnih trikov
+    if (src === "local_block") {
+      const ok = confirm(
+        `Odstranim lokalni admin blok za ${unit} (${from} → ${to})?`
+      );
+      if (!ok) return;
+
+      try {
+        const res = await postJSON(
+          "/app/admin/api/local_block_remove.php",
+          { unit: unit, from: from, to: to }
+        );
+        if (!res || res.ok === false) {
+          throw new Error(res && (res.error || res.message || "local_block_remove_failed"));
+        }
+        alert("Lokalni admin blok je odstranjen.");
+        await loadReservations(root);
+      } catch (e) {
+        console.error("[manage_reservations] local_block_remove failed:", e);
+        alert("Napaka pri odstranjevanju lokalnega bloka.");
+      }
+      return;
+    }
+
+    // 3) Klasična rezervacija – confirm & cancel
+    let msg = "Prekličem rezervacijo " + id + "?";
+    if (unit || from || to) {
+      msg =
+        "Prekličem rezervacijo " +
+        id +
+        " (" +
+        unit +
+        " " +
+        from +
+        " → " +
+        to +
+        ")?";
+    }
+
+    const ok = confirm(msg);
+    if (!ok) return;
+
+    try {
+      const res = await postJSON("/app/admin/api/reservations/cancel.php", {
+        id: id
+      });
+      if (!res || res.ok === false) {
+        throw new Error(res && (res.error || res.message || "cancel_failed"));
+      }
+      alert("Rezervacija je preklicana.");
+      await loadReservations(root);
+    } catch (e) {
+      console.error("[manage_reservations] cancel failed:", e);
+      alert("Napaka pri preklicu rezervacije.");
+    }
+  }
+
+  async function handleResendAccept(id, root) {
+    if (!id) return;
+
+    const ok = confirm(
+      "Ponovno pošljem potrditveni link gostu za rezervacijo " + id + "?"
+    );
+    if (!ok) return;
+
+    try {
+      const res = await postJSON(
+        "/app/admin/api/inquiries/send_accept_link.php",
+        { inquiry_id: id }
+      );
+      if (!res || res.ok === false) {
+        throw new Error(res && (res.error || res.message || "resend_failed"));
+      }
+      alert("Potrditveni link je bil ponovno poslan.");
+    } catch (e) {
+      console.error("[manage_reservations] resend_accept failed:", e);
+      alert("Napaka pri ponovnem pošiljanju potrditvenega linka.");
+    }
+  }
+
+  // --------------------------
+  // Init
+  // --------------------------
+
+  function init(root) {
+    const host = root || document;
+
+    const btnLoad = qs("#mr-btn-load", host);
+    if (btnLoad) {
+      btnLoad.addEventListener("click", function () {
+        loadReservations(host);
+      });
+    }
+
+    [
+      "#mr-filter-unit",
+      "#mr-filter-ym",
+      "#mr-filter-year",
+      "#mr-filter-status",
+      "#mr-filter-source",
+      "#mr-filter-soft"
+    ].forEach(function (sel) {
+      const el = qs(sel, host);
+      if (el) el.addEventListener("change", loadReservations.bind(null, host));
+    });
+
+    const qInput = qs("#mr-filter-q", host);
+    if (qInput) {
+      qInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") loadReservations(host);
+      });
+    }
+
+    const btnCancel = qs("#mr-btn-cancel", host);
+    if (btnCancel) {
+      btnCancel.addEventListener("click", function () {
+        const panel = qs("#mr-detail", host);
+        if (!panel) return;
+        const idEl = panel.querySelector(".mr-detail-id");
+        if (!idEl) return;
+        const id = idEl.textContent || "";
+        if (!id) return;
+        handleCancel(id, host);
+      });
+    }
+
+    // Prvi load enot + rezervacij
+    loadMrUnits().then(function () {
+      loadReservations(host);
+    });
+  }
+
+  // za stari admin_shell tab (če ga še kdaj rabiš)
+  window.ManageReservations = { init: init };
+
+  // Auto-init na standalone strani
+  document.addEventListener("DOMContentLoaded", function () {
+    if (qs("#manage-reservations")) {
+      init(document);
+    }
+  });
+})();

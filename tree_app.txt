@@ -1,0 +1,408 @@
+apartma@apartma-GN7:/var/www/html/app$ tree
+.
+├── admin
+│   ├── admin_calendar.php
+│   ├── api
+│   │   ├── accept_inquiry.php
+│   │   ├── add_unit.php
+│   │   ├── admin_reserve.php
+│   │   ├── admin_reserve_soft.php ----------------
+│   │   ├── autopilot_get.php
+│   │   ├── autopilot_precheck.php
+│   │   ├── autopilot_save.php
+│   │   ├── cancel_reservation.php
+│   │   ├── channels_get.php
+│   │   ├── channels_save.php
+│   │   ├── confirm_pending.php
+│   │   ├── delete_unit.php
+│   │   ├── finalize_core.php
+│   │   ├── finalize_reservation.php -------------✅
+│   │   ├── find_reservation_by_range.php
+│   │   ├── first_use_init.php
+│   │   ├── get_inquiry.php
+│   │   ├── ics_pull_unit.php
+│   │   ├── integrations
+│   │   │   ├── add__unit.php
+│   │   │   ├── apply_booking_now.php
+│   │   │   ├── apply_bookings_now.php.readme.txt
+│   │   │   ├── autopilot.php.readme.txt
+│   │   │   ├── ics_bak.php
+│   │   │   ├── ics.php
+│   │   │   ├── ics_preview.php
+│   │   │   ├── offers_get.php
+│   │   │   ├── offers_save.php
+│   │   │   ├── promo_codes_save.php
+│   │   │   ├── promo_get.php
+│   │   │   ├── pull_now.php
+│   │   │   ├── pull_now.php_readme.txt
+│   │   │   ├── regen_merged_all.php
+│   │   │   ├── remove_platform.php
+│   │   │   ├── save_unit_meta.php
+│   │   │   ├── set_in_url.php
+│   │   │   └── test_pull_booking.sh
+│   │   ├── integrations_get.php
+│   │   ├── integrations_save.php
+│   │   ├── _lib
+│   │   │   ├── json_io.php
+│   │   │   └── paths.php
+│   │   ├── list_inquiries.php
+│   │   ├── list_reservations.php
+│   │   ├── local_block_add.php
+│   │   ├── local_block_remove.php
+│   │   ├── offers_get.php
+│   │   ├── offers_save.php
+│   │   ├── pending_mark_toggle.php
+│   │   ├── pricing
+│   │   │   └── set_prices.php
+│   │   ├── promo_get.php
+│   │   ├── promo_save.php
+│   │   ├── reject_inquiry.php
+│   │   ├── reject_pending_conflicts.php
+│   │   ├── resend_accept_email.php
+│   │   ├── send_accept_link.php
+│   │   ├── send_rejected.php
+│   │   ├── sync_pending_requests.php
+│   │   ├── test_fetch_ics.php
+│   │   ├── unit_settings_get.php
+│   │   ├── unit_settings_save.php
+│   │   ├── unit_settings_update.php
+│   │   └── units_list.php
+│   ├── _common.php
+│   ├── index_admin.html
+│   ├── index_admin_old.html
+│   ├── index.php
+│   ├── index_router.php
+│   ├── inquiries_admin.php
+│   ├── inquiries.php
+│   ├── inquiry_action.php
+│   ├── integrations.php
+│   ├── manage_reservations.php
+│   ├── mobile_calendar.php
+│   ├── mobile.php
+│   ├── opening_wizard.php
+│   ├── ui
+│   │   ├── css
+│   │   │   ├── calendar.css
+│   │   │   ├── day.css
+│   │   │   ├── header.css
+│   │   │   ├── helpers.css
+│   │   │   ├── info_panel.css
+│   │   │   ├── inquiries_admin.css
+│   │   │   ├── inquiries.css
+│   │   │   ├── integrations.css
+│   │   │   ├── layers.css
+│   │   │   ├── layers.css.txt
+│   │   │   ├── layout.css
+│   │   │   ├── manage_reservations.css
+│   │   │   └── manage_reservations.dark.css
+│   │   └── js
+│   │       ├── admin_api.js
+│   │       ├── admin_calendar.js
+│   │       ├── admin_info_panel.js
+│   │       ├── calendar_shell.js
+│   │       ├── helpers.js
+│   │       ├── inquiries_admin.js
+│   │       ├── integrations_autopilot.js
+│   │       ├── integrations_channels.js
+│   │       ├── integrations_core.js
+│   │       ├── integrations_diag.js
+│   │       ├── integrations_diagnostics.js
+│   │       ├── integrations_editor.js
+│   │       ├── integrations_json_editor.js
+│   │       ├── integrations_legacy.js
+│   │       ├── integrations_offers.js
+│   │       ├── integrations_promo.js
+│   │       ├── integrations_units.js
+│   │       ├── locks_loader.js
+│   │       ├── manage_reservations.js
+│   │       └── range_select_admin.js
+│   └── view.php
+├── common
+│   ├── data
+│   │   ├── admin_key.txt
+│   │   ├── i18n
+│   │   │   ├── strings_en.json
+│   │   │   └── strings_sl.json
+│   │   ├── ICS_kanli_readme.txt
+│   │   ├── json
+│   │   │   ├── cancellations
+│   │   │   │   └── 2026
+│   │   │   │       ├── A1
+│   │   │   │       │   └── 20251226172105-3a4a-A1.json
+│   │   │   │       ├── A2
+│   │   │   │       │   └── 20251218162505-38ad-A2.json
+│   │   │   │       └── S1
+│   │   │   │           ├── 20251217155918-98e6-S1.json
+│   │   │   │           └── 20260102125323-af15-S1.json
+│   │   │   ├── guests
+│   │   │   │   └── Jean-Philippe.txt
+│   │   │   ├── inquiries
+│   │   │   │   ├── 2025
+│   │   │   │   │   └── 12
+│   │   │   │   │       ├── accepted
+│   │   │   │   │       │   └── 20251217095006-789f-S1.json.txt
+│   │   │   │   │       ├── confirmed
+│   │   │   │   │       │   ├── 20251216235127-259f-A1.json
+│   │   │   │   │       │   └── 20251231144744-28bf-S1.json
+│   │   │   │   │       ├── pending
+│   │   │   │   │       └── rejected
+│   │   │   │   │           └── 20251231150114-2e98-S1.json
+│   │   │   │   ├── 2026
+│   │   │   │   │   └── 01
+│   │   │   │   │       ├── accepted
+│   │   │   │   │       │   └── 20260103114009-8db4-S1.json
+│   │   │   │   │       ├── confirmed
+│   │   │   │   │       │   └── 20260103111504-3acf-S1.json
+│   │   │   │   │       ├── pending
+│   │   │   │   │       │   └── 20260103111504-3acf-S1.json.txt
+│   │   │   │   │       └── rejected
+│   │   │   │   └── logs
+│   │   │   │       ├── submit_inquiry.log
+│   │   │   │       └── thankyou.log
+│   │   │   ├── instance.json
+│   │   │   ├── integrations
+│   │   │   │   ├── A1.json
+│   │   │   │   ├── A1.json.bak.1762786992
+│   │   │   │   ├── A1.json.txt
+│   │   │   │   ├── A2.json
+│   │   │   │   ├── A2.json.bak.1762786992
+│   │   │   │   ├── A2.json.txt
+│   │   │   │   ├── config.json
+│   │   │   │   ├── connections.json
+│   │   │   │   ├── how_to_make_key.txt
+│   │   │   │   ├── S1.json
+│   │   │   │   ├── S1.json.txt
+│   │   │   │   └── X1.json
+│   │   │   ├── logs
+│   │   │   │   └── cancellations.log
+│   │   │   ├── marked_pending.json
+│   │   │   ├── occupancy.json
+│   │   │   ├── pending_requests.json
+│   │   │   ├── _reports
+│   │   │   ├── reservations
+│   │   │   │   └── 2026
+│   │   │   │       ├── A1
+│   │   │   │       ├── A2
+│   │   │   │       └── S1
+│   │   │   │           └── 20260103111504-3acf-S1.json
+│   │   │   └── units
+│   │   │       ├── A1
+│   │   │       │   ├── autopilot.lock
+│   │   │       │   ├── day_use.json
+│   │   │       │   ├── external
+│   │   │       │   │   ├── airbnb_ics.json
+│   │   │       │   │   ├── airbnb_raw.ics
+│   │   │       │   │   ├── Besedilna datoteka.txt
+│   │   │       │   │   ├── booking_ics.json
+│   │   │       │   │   ├── booking_raw.ics
+│   │   │       │   │   ├── booking_raw.ics.txt
+│   │   │       │   │   ├── ICS_booking.json
+│   │   │       │   │   ├── ICS_bookings.json
+│   │   │       │   │   ├── inventory_20251109_003453.txt
+│   │   │       │   │   ├── project_inventory_20251205_200421.txt
+│   │   │       │   │   └── project_inventory_20251205_200711.txt
+│   │   │       │   ├── local_bookings.json
+│   │   │       │   ├── occupancy_data.json
+│   │   │       │   ├── occupancy_external_ics.json
+│   │   │       │   ├── occupancy.json
+│   │   │       │   ├── occupancy_merged.json
+│   │   │       │   ├── occupancy_raw
+│   │   │       │   │   └── local.json
+│   │   │       │   ├── occupancy_sources.json
+│   │   │       │   ├── prices.json
+│   │   │       │   ├── site_settings.baseline.json
+│   │   │       │   ├── site_settings.json
+│   │   │       │   └── special_offers.json
+│   │   │       ├── A2
+│   │   │       │   ├── autopilot.lock
+│   │   │       │   ├── day_use.json
+│   │   │       │   ├── external
+│   │   │       │   │   ├── booking_ics.json
+│   │   │       │   │   ├── booking_raw.ics
+│   │   │       │   │   ├── lab2_ics.json
+│   │   │       │   │   └── lab2_raw.ics
+│   │   │       │   ├── local_bookings.json
+│   │   │       │   ├── occupancy.json
+│   │   │       │   ├── occupancy_merged.json
+│   │   │       │   ├── occupancy_raw
+│   │   │       │   │   └── local.json
+│   │   │       │   ├── occupancy_sources.json
+│   │   │       │   ├── prices.json
+│   │   │       │   ├── site_settings.json
+│   │   │       │   ├── special_offers.json
+│   │   │       │   ├── special_offers.json.txt
+│   │   │       │   ├── update_occupancy_from_ics.py
+│   │   │       │   └── update_occupancy_from_ics_readme.txt
+│   │   │       ├── manifest.json
+│   │   │       ├── marked_pending.json
+│   │   │       ├── pending_requests.json
+│   │   │       ├── promo_codes.json
+│   │   │       ├── promo_codes.json.bak
+│   │   │       ├── promo_codes.json.bak_20251130_213523
+│   │   │       ├── promo_codes.tmp.json
+│   │   │       ├── S1
+│   │   │       │   ├── autopilot.lock
+│   │   │       │   ├── day_use.json
+│   │   │       │   ├── external
+│   │   │       │   │   ├── booking_ics.json
+│   │   │       │   │   └── booking_raw.ics
+│   │   │       │   ├── local_bookings.json
+│   │   │       │   ├── occupancy_external_ics.json
+│   │   │       │   ├── occupancy.json
+│   │   │       │   ├── occupancy_merged.json
+│   │   │       │   ├── occupancy_raw
+│   │   │       │   │   └── local.json
+│   │   │       │   ├── occupancy_sources.json
+│   │   │       │   ├── prices.json
+│   │   │       │   ├── prices.json.bak.20251205_182852
+│   │   │       │   ├── site_settings.json
+│   │   │       │   ├── site_settings_predhodna.json.txt
+│   │   │       │   ├── special_offers.json
+│   │   │       │   ├── update_occupancy_from_ics.py
+│   │   │       │   └── update_occupancy_from_ics_readme.txt
+│   │   │       └── site_settings.json
+│   │   └── query
+│   │       ├── inbox_2025-10.ndjson
+│   │       └── outbox_2025-10.ndjson
+│   └── lib
+│       ├── autopilot.php
+│       ├── datetime_fmt.php
+│       ├── datetime_fmt.php.readme.txt
+│       ├── email.php
+│       ├── ics_builder.php
+│       ├── ics_import.php
+│       ├── ics_parse.php
+│       ├── ics_sources.php
+│       ├── ics_utils.php
+│       ├── json.php
+│       ├── load_inquiry.php
+│       └── site_settings.php
+├── common_clean
+│   ├── data
+│   │   ├── admin_key.txt
+│   │   ├── ICS_kanli_readme.txt
+│   │   ├── json
+│   │   │   ├── cancellations
+│   │   │   ├── inquiries
+│   │   │   ├── integrations
+│   │   │   ├── logs
+│   │   │   ├── _reports
+│   │   │   ├── reservations
+│   │   │   └── units
+│   │   └── query
+│   │       ├── inbox_2025-10.ndjson
+│   │       └── outbox_2025-10.ndjson
+│   └── lib
+│       ├── autopilot.php
+│       ├── datetime_fmt.php
+│       ├── datetime_fmt.php.readme.txt
+│       ├── datetime_fmt.php.txt
+│       ├── email.php
+│       ├── ics_builder.php
+│       ├── ics_import.php
+│       ├── ics_parse.php
+│       ├── ics_sources.php
+│       ├── ics_utils.php
+│       └── site_settings.php
+├── Deploy_readme.txt
+├── docs
+├── ics_lab
+│   ├── cache
+│   │   ├── import_SIM1.ics
+│   │   ├── import_SIM1.json
+│   │   ├── import_SIM1_meta.json
+│   │   ├── import_SIM2.ics
+│   │   ├── import_SIM2.json
+│   │   └── import_SIM2_meta.json
+│   ├── data
+│   │   ├── SIM1.json
+│   │   └── SIM2.json
+│   ├── ics.php
+│   └── index.php
+├── izsek.txt
+├── lib
+│   ├── coupon_activate.js
+│   ├── i18n.js
+│   ├── mail.php
+│   └── pricing.php
+├── logs
+│   ├── app.log
+│   └── msmtp.log
+├── mail
+│   ├── logs
+│   │   └── contact_form.log
+│   ├── sendmail_admin.php
+│   └── sendmail_guest.php
+├── Navoodila za uporabo.txt
+├── public
+│   ├── admin
+│   │   ├── _common.php
+│   │   ├── inquiries.php
+│   │   ├── inquiries.php.png
+│   │   ├── inquiry_action.php
+│   │   └── view.php
+│   ├── api
+│   │   ├── mail_common.php
+│   │   ├── sendmail_admin.php  ----------------------✅
+│   │   ├── sendmail_guest.php  ----------------------✅
+│   │   └── submit_inquiry.php
+│   ├── assets
+│   │   └── qrcode.min.js
+│   ├── cancel_reservation.php  ---------------------✅
+│   ├── confirm_reservation.php ---------------------✅
+│   ├── css
+│   │   └── pubcal.css
+│   ├── index.html
+│   ├── js
+│   │   ├── calendar_to_offer.js
+│   │   ├── info_drag.js
+│   │   ├── pubcal.js
+│   │   ├── range_selection_v2.8.6.js
+│   │   └── reset_pubcal.js
+│   ├── lib
+│   │   ├── coupon_activate.js
+│   │   ├── i18n.js
+│   │   ├── mail.php
+│   │   └── pricing.php
+│   ├── offer_day.php
+│   ├── offer.php
+│   ├── pubcal.php
+│   ├── reservation_pdf.php
+│   ├── reset_pubcal.js
+│   └── thankyou.php
+├── _reports
+│   └── project_inventory_20260104_131852.txt
+├── scripts
+│   ├── expire_soft_holds.php
+│   ├── regen_merged_all.php
+│   ├── update_occupancy.py
+│   ├── update_occupancy.py.readme.txt
+│   └── validate_merged_for_ics_out.php
+├── Testitanja.txt
+├── tools
+│   ├── autopilot_sweep_pending.php
+│   ├── autopilot_sweep_pending_readme.txt
+│   ├── check_brackets.sh
+│   ├── check_brackets_v2.sh
+│   ├── cleanup_2025-12-09.sh
+│   ├── cm_fresh_start.sh
+│   ├── cm_fresh_start.sh.readme.txt
+│   ├── CRON_EXAMPLES.txt
+│   ├── hitro generiranje ključev in URL-jev.txt
+│   ├── inventory_jsons.py
+│   ├── inventory_jsons_readme.txt
+│   ├── inventory_jsons.txt
+│   ├── make_dummy_res.php
+│   ├── migrate_promo_codes.php
+│   ├── project_docsync.py
+│   ├── project_docsync.readme.txt
+│   ├── project_inventory.py
+│   ├── project_inventory_readme.txt
+│   ├── README_CRON_SCaffold.txt
+│   ├── Sudo nastavitve.txt
+│   ├── SYSTEMD_TIMER_EXAMPLE.txt
+│   ├── test_msmtp.sh
+│   ├── upgrade_to_plus.php
+│   └── upgrade_to_plus.php.txt
+└── tree_app.txt
+

@@ -1,0 +1,178 @@
+ 
+Here we go. 🙂
+Content za `apply_booking_now.php.readme.txt` (pot: `/var/www/html/app/admin/api/integrations/apply_booking_now.php.readme.txt`):
+
+---
+
+**File:** `admin/api/integrations/apply_booking_now.php`
+**Type:** API endpoint (JSON)
+**Method:** `GET` or `POST` (URL params for `unit`, `platform`, `key`)
+
+---
+
+## Purpose
+
+This endpoint **applies already-fetched ICS data** (from a previously stored Booking.com ICS file) to a unit’s `occupancy.json` and then **regenerates `occupancy_merged.json`**.
+
+It is used as a “manual apply” step when you:
+
+* already have the ICS file stored locally (e.g. `booking_raw.ics` / `booking_ics.json`),
+* want to merge ICS ranges into the current occupancy without doing another HTTP fetch.
+
+---
+
+## Responsibilities
+
+1. **Authenticate admin access**
+
+   * Reads `/common/data/admin_key.txt`
+   * Compares the provided `key` parameter using `hash_equals`
+   * Rejects the request with `403` on mismatch or missing key
+
+2. **Validate unit & platform**
+
+   * `unit` must be a valid unit ID (e.g. `A1`, `A2`, `S1`)
+   * `platform` must be `booking` (other platforms can be added later)
+
+3. **Locate stored ICS data**
+
+   * Raw ICS:
+     `common/data/json/units/<UNIT>/external/booking_raw.ics`
+   * Normalized ICS JSON (optional, but recommended):
+     `common/data/json/units/<UNIT>/external/booking_ics.json`
+
+4. **Parse all-day events**
+
+   * Uses the same parser as `pull_now.php` (`parseAllDayRangesWithUid()`):
+
+     * Extracts all-day ranges from `BEGIN:VEVENT` / `END:VEVENT`
+     * Normalizes to `{from, to, summary}` using `YYYY-MM-DD` dates
+
+5. **Merge ICS ranges into `occupancy.json`**
+
+   * Loads existing `occupancy.json` for the unit (if it exists)
+   * Builds an in-memory list of segments
+   * Applies idempotent merge rules:
+
+     * **Skip duplicates**:
+
+       * If there is already a segment with the same `from`, `to` and `source="ics"`
+     * **Skip direct reservations**:
+
+       * If there is a segment with the same `from`, `to`, `type="reserved"`, `source="direct"`
+     * **Add new ICS segments**:
+
+       * Assigns:
+
+         * `type: "reserved"`
+         * `lock: "hard"`
+         * `source: "ics"`
+         * `id: "ics:booking:<uid>"` or a SHA1-based fallback
+   * Sorts all segments by `from` ascending
+   * Writes back to:
+
+     * `common/data/json/units/<UNIT>/occupancy.json`
+
+6. **Regenerate merged occupancy**
+
+   * Includes `common/lib/datetime_fmt.php`
+   * Calls:
+
+     ```php
+     cm_regen_merged_for_unit($unitsRoot, $unit);
+     ```
+   * This rebuilds:
+
+     * `common/data/json/units/<UNIT>/occupancy_merged.json`
+   * Merge layers:
+
+     * `local_bookings.json`
+     * `occupancy.json`
+     * `ics_import.json` (if present)
+
+7. **Return JSON response**
+
+   * Includes:
+
+     * `added` (number of new ICS segments applied)
+     * `skipped_same` (duplicates skipped)
+     * `skipped_direct` (collisions with direct reservations skipped)
+     * `occupancy_path`
+     * `total_segments` after merge
+     * `merged_regen` (`true` / `false` / `null`)
+
+---
+
+## Typical Usage
+
+* Triggered from the **Admin → Integrations** panel:
+
+  * As a “Apply existing ICS” button
+  * Used when the ICS file has already been fetched (e.g. by another job), and you only want to sync it into `occupancy.json` + `occupancy_merged.json`.
+
+* Can also be used in development:
+
+  * After manually editing `booking_raw.ics` or `booking_ics.json`
+  * To re-apply them without hitting Booking.com again
+
+---
+
+## Example Call (GET)
+
+```text
+/admin/api/integrations/apply_booking_now.php
+  ?unit=A1
+  &platform=booking
+  &key=YOUR_ADMIN_KEY
+```
+
+---
+
+## Example JSON Response
+
+```json
+{
+  "ok": true,
+  "unit": "A1",
+  "platform": "booking",
+  "added": 3,
+  "skipped_same": 1,
+  "skipped_direct": 0,
+  "occupancy_path": "/var/www/html/app/common/data/json/units/A1/occupancy.json",
+  "total_segments": 14,
+  "merged_regen": true
+}
+```
+
+---
+
+## When to Use `apply_booking_now.php` vs `pull_now.php`
+
+* **`pull_now.php`**
+
+  * Fetches ICS from the remote URL
+  * Stores raw + normalized ICS
+  * Applies ICS to occupancy
+  * Regenerates merged
+
+* **`apply_booking_now.php`**
+
+  * Does **not** fetch from remote
+  * Uses already stored ICS data
+  * Applies ICS to occupancy
+  * Regenerates merged
+
+Use `apply_booking_now.php` when:
+
+* You already have a fresh ICS file on disk
+* You just need to “replay” it into occupancy
+* You are testing ICS merge logic locally
+
+---
+
+Če hočeš, nadaljujeva v istem stilu z:
+
+* `datetime_fmt.php.readme.txt`
+* `autopilot.php.readme.txt`
+
+samo povej katerega želiš naslednjega.

@@ -1,0 +1,420 @@
+/*
+ * Admin integrations (channels / ICS) UI stylesheet.
+ *
+ * Responsibilities:
+ * - Style integrations console: cards/rows per unit, channel badges,
+ *   input fields for ICS URLs and action buttons.
+ * - Provide visual feedback for connection status and last sync info.
+ * - Handle layout for multi-unit integration overview.
+ *
+ * Used by:
+ * - /admin/integrations.php with logic in integrations.js.
+ *
+ * Notes:
+ * - Keep channel-specific colors/icons here so that the JS logic
+ *   stays generic (channel-agnostic).
+ */
+
+
+/* /var/www/html/app/admin/ui/css/integrations.css */
+
+:root {
+  --bg: #0f1620;
+  --bg-soft: #121a26;
+  --panel: #131c2a;
+  --panel-2: #0e1520;
+  --text: #e7eefc;
+  --muted: #9bb0c7;
+  --accent: #3b82f6;
+  --border: #1f2a3b;
+  --ok: #22c55e;
+}
+
+body.theme-dark {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.page-wrap { padding: 16px; }
+.page-h1   { font-size: 20px; margin: 8px 0 16px; font-weight: 600; }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  overflow: hidden;
+}
+
+.card-h {
+  padding: 10px 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,.02);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-b {
+  padding: 12px;
+}
+
+.form-row { display:flex; align-items:center; gap:10px; margin:10px 0; }
+.input {
+  flex: auto;
+  width: 30vw;
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.checkbox { display:flex; align-items:center; gap:8px; cursor:pointer; color: var(--text); }
+.checkbox input { accent-color: var(--accent); }
+
+.btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  height: 34px; padding: 0 12px;
+  background: var(--accent); color:#fff; border:0; border-radius:10px;
+  font-weight:600; cursor:pointer;
+}
+.btn.ghost {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.ok { background: var(--ok); }
+
+.actions { display:flex; gap:8px; margin-top:8px; }
+
+.bullets { margin: 0 0 6px 18px; }
+.muted { color: var(--muted); font-size: 12px; }
+/* /var/www/html/app/admin/ui/css/integrations.css */
+/* Ne ruši tvojega “manage_reservations.dark.css”; samo doda drobne prilagoditve */
+.adm-shell { min-height: 100vh; background: var(--adm-bg, #0b1623); color: #e8f0fe; }
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bar-left,
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bar .lbl {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+
+.sel { background:#0f2236; color:#e8f0fe; border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:8px 10px; }
+
+
+.bar .sel {
+  min-width: 220px;
+}
+
+.cards-grid {
+  display:grid; grid-template-columns: repeat(auto-fit,minmax(600px,1fr));
+  gap:16px; padding:16px;
+}
+.card { background:#0e1d2d; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow: 0 4px 18px rgba(0,0,0,.25); }
+.card-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.06); }
+.card-body { padding:14px 16px; }
+.pill.neutral { background:#102739; color:#a6c8ff; border:1px solid rgba(166,200,255,.25); border-radius:999px; padding:4px 10px; font-size:12px; }
+
+.row { display:flex; align-items:center; justify-content:space-evenly; gap:12px; padding:10px 0; border-bottom:1px dashed rgba(255,255,255,.07); }
+.row:last-child { border-bottom:none; }
+.row-col { flex:1; min-width:0; }
+.lbl { font-size:13px; opacity:.85; margin-bottom:4px; }
+.code-url { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:#091523; border:1px solid rgba(255,255,255,.08); padding:8px 10px; border-radius:10px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.btn { background:#0f2236; color:#e8f0fe; border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px 12px; cursor:pointer; }
+.btn.small { padding:6px 10px; font-size:12px; }
+.btn.primary { background:#14385b; border-color:#2f5f8e; }
+
+.list { margin:0; padding-left:18px; }
+.list .dot { display:inline-block; width:8px; height:8px; background:#2f86ff; border-radius:50%; margin-right:8px; }
+
+.note { margin-top:10px; opacity:.9; }
+.muted { opacity:.7; }
+.small { font-size:12px; }
+.pre { background:#091523; border:1px solid rgba(255,255,255,.08); padding:10px; border-radius:10px; min-height:60px; }
+
+/* modal */
+dialog::backdrop { background:rgba(0,0,0,.4); }
+.modal { background:#096891; border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:16px; min-width:320px; }
+.modal h3 { margin:0 0 10px 0; }
+.fld { display:flex; flex-direction:column; gap:6px; margin:8px 0; }
+.modal input { background:#0f2236; color:#e8f0fe; border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px 10px; }
+.modal .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+
+/* Detail panel za promo codes / special offers */
+.detail-panel {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #2b3e54;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.detail-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-panel-title .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #6aa6ff;
+  opacity: 0.9;
+}
+
+.detail-panel-body {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin-bottom: 0.4rem;
+}
+/* Ločnice in malo več zračnosti za promo/offer tabele */
+.table-codes tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.table-codes tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table-codes tbody td {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Nežna osvetlitev vrstice ob hoverju, da se čuti klik */
+.table-codes tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+/* Svetlomodra obroba okoli promo/offer tabel */
+/* Osnovna tabela za promo/offer liste */
+.table-codes {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;          /* vertikalni razmik med vrsticami */
+}
+
+/* Header naj bo “plosk” brez razmika */
+.table-codes thead tr {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.table-codes thead th {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+/* Vsaka vrstica v tbody = mini kartica */
+.table-codes tbody tr {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #2b3e54;
+  border-radius: 6px;
+  overflow: hidden;               /* zaokroženi robovi */
+}
+
+/* Zmanjšamo notranje črtice, ker zdaj imamo obrobo */
+.table-codes tbody tr + tr {
+  /* brez border-bottom, razmik že dela border-spacing */
+}
+
+.table-codes tbody td {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Hover – malo svetlejša kartica */
+.table-codes tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Header naj zgleda malo bolj “kartično” */
+.table-codes thead tr {
+  background: rgba(255, 255, 255, 0.03);
+}
+/* Dialog (json editor) – temnejše ozadje + širši okvir */
+.dlg::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.dlg {
+  padding: 0;
+}
+
+.dlg .dlg-inner {
+  width: 100%;
+  max-width: min(1100px, 96vw);   /* širši, a znotraj okna */
+  max-height: 90vh;               /* vedno vidna v celoti */
+  overflow: auto;                 /* notranji scroll, če je vsebine preveč */
+
+  background: #5c7bd1;            /* malo svetlejša modra */
+  border-radius: 8px;
+  border: 1px solid #2b3e54;
+  padding: 1rem 1.25rem;
+
+  resize: both;                   /* ročno prilagodljiv okvir */
+  box-sizing: border-box;
+}
+.field-group-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* Top bar nad karticami (unit select + Add Unit) */
+#integrations-root > .bar {
+  grid-column: 1 / -1;       /* čez vse stolpce grida */
+  margin-bottom: 0.5rem;
+}
+/* Poskrbimo, da se vsebina kartice lahko lepo razporedi */
+#integrations-root .card {
+  min-width: 0;          /* da se notranje stvari ne rinčijo preko roba */
+}
+
+
+/* JSON textarea – polna širina, dark */
+.mono {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: 0.8rem;
+  background: #020309;
+  border: 1px solid #2b3e54;
+  border-radius: 4px;
+  color: #ccd7ff;
+  padding: 0.5rem;
+}
+
+/* Danger gumb (če še nimaš definiranega) */
+.btn.danger {
+  background: #7a1b2a;
+  border-color: #a5283a;
+}
+.btn.danger:hover {
+  background: #a5283a;
+}
+/* Vsa polja v dialogu naj bodo čez širino okvirčka */
+.dlg .field input[type="text"],
+.dlg .field input[type="number"],
+.dlg .field input[type="date"],
+.dlg .field select,
+.dlg .field textarea {
+  padding: 2px;
+  background: #8aa9ff;
+  width: 40%;
+  max-width: 80%;
+  box-sizing: border-box;
+}
+#editName {
+  width: 100%;
+}
+#editPercent {
+  width: 40px;
+}
+#editFrom {
+  width: 25%;
+}
+#editTo {
+  width: 25%;
+}
+
+/* Summary row */
+.units-summary {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Scroll area */
+.scroll-box {
+  max-height: 260px;    /* prilagodljivo */
+  overflow-y: auto;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+/* Units table */
+.table-units {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-units th,
+.table-units td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.table-units td:first-child {
+  width: 70px;
+}
+
+.table-units td:last-child {
+  width: 120px;
+  text-align: right;
+}
+.unit-active-cell { cursor: pointer; user-select: none; }
+.unit-active-cell:hover { text-decoration: underline; }
+
+/* --- Channels card: last row, full grid span, responsive max width --- */
+
+/* Grid naj ne poskuša "stretchat" kartic po višini (vizualno mirneje) */
+.cards-grid {
+  align-items: start;
+}
+
+/* Channels naj bo sam v svoji vrstici (span čez vse kolone) */
+#card-channels {
+  grid-column: 1 / -1;
+
+  /* kartica se lahko širi/zmanjšuje z oknom,
+     ampak ne gre brezveze v nedogled */
+  width: 100%;
+  max-width: clamp(520px, 92vw, 1400px);
+
+  /* lepo centrirano v full-width slotu */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Če tabela kdaj preseže max širino kartice: scroll samo znotraj kartice */
+#card-channels .card-body {
+  overflow-x: auto;
+}
+
+/* Autopilot card – locked in CM Free */
+#card-autopilot.cm-autopilot-locked {
+  opacity: 0.6;
+}
+
+
+.cm-autopilot-locked .cm-card-header::after {
+  content: ' CM Plus';
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+

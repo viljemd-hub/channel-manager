@@ -1,4 +1,4 @@
-# Channel Manager — kratka navodila
+# Channel Manager — short install guide
 
 Izsek iz INSTALL.txt (povzetek):
 ```

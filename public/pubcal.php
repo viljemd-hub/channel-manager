@@ -59,7 +59,11 @@ unset($_SESSION['flash_msg']);
 
 
 // /var/www/html/app/public/pubcal.php
-define('PUBLIC_BASE_URL', 'http://apartmamatevz.duckdns.org'); 
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST'] ?? 'apartmamatevz.duckdns.org';
+
+define('PUBLIC_BASE_URL', $scheme . '://' . $host);
+
 // Prebere parametre iz URL-ja (če prideš nazaj iz offer_v1.php ali refresha)
 $unit = isset($_GET['unit']) ? $_GET['unit'] : 'A1';
 $from = isset($_GET['from']) ? $_GET['from'] : '';

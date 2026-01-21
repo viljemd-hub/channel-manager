@@ -1,0 +1,25 @@
+ 
+Uporaba
+1) Shrani skripto in naredi izvršljivo
+nano /var/www/html/app/tools/cm_fresh_start.sh
+chmod +x /var/www/html/app/tools/cm_fresh_start.sh
+
+2) Najprej DRY-RUN (priporočeno)
+/var/www/html/app/tools/cm_fresh_start.sh
+
+3) Dejansko brisanje
+/var/www/html/app/tools/cm_fresh_start.sh --force
+
+Kaj boš potem preveril
+
+da je inquiries mapa prazna:
+
+ls -la /var/www/html/app/common/data/json/inquiries
+
+
+da so internal soft_hold segmenti odstranjeni:
+
+jq '.[] | select(.lock=="soft" or .source=="internal")' /var/www/html/app/common/data/json/units/S1/occupancy.json
+
+
+(to mora vrniti nič)

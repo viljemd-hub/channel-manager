@@ -126,7 +126,9 @@ function send_rejected_email(array $inq, ?array $coupon = null, string $reasonCo
     if ($hasCoupon) {
         $code    = htmlspecialchars((string)($coupon['code'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $percent = (float)($coupon['discount_percent'] ?? $coupon['value'] ?? 0);
-        $validTo = htmlspecialchars((string)($coupon['valid_to'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    // ISO (2026-07-19) → EU (19.07.2026) za izpis v e-mailu
+    $validToEu = formatEuDate((string)($coupon['valid_to'] ?? ''));
+    $validTo   = htmlspecialchars($validToEu, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         if ($code !== '' && $percent > 0.0) {
             $html .= "<p>V zahvalo za vaš interes smo vam pripravili kupon za popust:</p>";

@@ -25,6 +25,32 @@ function cm_load_settings(): array {
   return is_array($data) ? $data : [];
 }
 
+function cm_get_product_tier(): string
+{
+    // Read global site_settings.json via existing helper
+    $settings = cm_load_settings();
+    $tier = strtolower((string)($settings['product']['tier'] ?? 'free'));
+
+    // Normalise and guard against typos
+    $allowed = ['free', 'plus', 'pro'];
+    if (!in_array($tier, $allowed, true)) {
+        $tier = 'free';
+    }
+
+    return $tier;
+}
+
+/**
+ * Returns true when CM Plus (or higher) features should be enabled.
+ * For now both "plus" and "pro" are treated as "Plus" for UI gating.
+ */
+function cm_is_plus_enabled(): bool
+{
+    $tier = cm_get_product_tier();
+    return $tier === 'plus' || $tier === 'pro';
+}
+
+
 function cm_datetime_cfg(): array {
   $s = cm_load_settings();
   $cfg = $s['datetime'] ?? [];

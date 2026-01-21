@@ -102,12 +102,30 @@ if (!$ALLOWED_PAYMENT_METHODS) {
 
 // License / feature flags for payments
 $licenseTier = strtolower((string)($licenseCfg['tier'] ?? 'free'));
+
+// Normalize license.features – supports both:
+// 1) ["advanced_payments", "invoicing", ...]
+// 2) {"advanced_payments": true, "invoicing": false, ...}
 $licenseFeatures = [];
 if (isset($licenseCfg['features']) && is_array($licenseCfg['features'])) {
-    $licenseFeatures = array_map('strval', $licenseCfg['features']);
+    $keys = array_keys($licenseCfg['features']);
+    if ($keys && is_int($keys[0])) {
+        // numeric keys → already a list
+        $licenseFeatures = array_map('strval', $licenseCfg['features']);
+    } else {
+        // associative map → collect only enabled flags
+        foreach ($licenseCfg['features'] as $name => $enabled) {
+            if ($enabled) {
+                $licenseFeatures[] = (string)$name;
+            }
+        }
+    }
 }
+
 $HAS_ADVANCED_PAYMENTS = in_array('advanced_payments', $licenseFeatures, true);
-// SEPA is available only if both config method "sepa" is enabled and the license allows advanced payments
+
+// SEPA is available only if both config method "sepa" is enabled
+// and the license allows advanced payments.
 $HAS_SEPA = in_array('sepa', $ALLOWED_PAYMENT_METHODS, true) && $HAS_ADVANCED_PAYMENTS;
 
 $bookingCfg  = $paymentCfg['booking'] ?? [];
@@ -190,6 +208,7 @@ if (!function_exists('cm_random_id')) {
 // -----------------------------------------------------------------------------
 // Sending confirmation email to guest
 // -----------------------------------------------------------------------------
+
 if (!function_exists('cm_send_reservation_confirmation')) {
     function cm_send_reservation_confirmation(array $res, array $opts = []): array {
         // basic cfg + e-mail settings
@@ -289,7 +308,7 @@ if (!function_exists('cm_send_reservation_confirmation')) {
             $groupStr = $gParts ? implode(', ', $gParts) : '—';
         }
 
-        // payment method
+        // payment method (and method key for SEPA QR hint)
         $paymentMethodKey = (string)($res['payment']['method'] ?? '');
         if ($lang === 'en') {
             $pmMap = [
@@ -330,6 +349,8 @@ if (!function_exists('cm_send_reservation_confirmation')) {
                 'cancel'  => 'If you need to cancel the reservation, you can use this link:',
                 'bye'     => 'Best regards,',
                 'brand'   => 'Apartma Matevž',
+                // NEW: SEPA QR hint text
+                'sepa_qr_hint' => 'The QR code for payment is included in the PDF confirmation.',
             ];
         } else {
             $L = [
@@ -353,6 +374,8 @@ if (!function_exists('cm_send_reservation_confirmation')) {
                 'cancel'  => 'Če morate rezervacijo odpovedati, uporabite naslednjo povezavo:',
                 'bye'     => 'Lep pozdrav,',
                 'brand'   => 'Apartma Matevž',
+                // NEW: SEPA QR hint text
+                'sepa_qr_hint' => 'QR koda za plačilo je priložena v PDF dokumentu.',
             ];
         }
 
@@ -376,6 +399,7 @@ if (!function_exists('cm_send_reservation_confirmation')) {
         $bodyHtml .= '<h2>' . $h($L['title']) . '</h2>';
         $bodyHtml .= '<p>' . $h($intro) . '</p>';
 
+        // Osnovni podatki o rezervaciji
         $bodyHtml .= '<ul>';
         $bodyHtml .= '<li><b>' . $h($L['id'])    . ':</b> ' . $h($id)       . '</li>';
         $bodyHtml .= '<li><b>' . $h($L['unit'])  . ':</b> ' . $h($unit)     . '</li>';
@@ -383,7 +407,9 @@ if (!function_exists('cm_send_reservation_confirmation')) {
         $bodyHtml .= '<li><b>' . $h($L['guests']). ':</b> ' . $h($groupStr) . '</li>';
         $bodyHtml .= '</ul>';
 
-        $bodyHtml .= '<h3>' . $h($L['total']) . '</h3>';
+        // Skupni znesek nastanitve (brez TT) - jasno izpostavljen
+        $bodyHtml .= '<h3>' . $h($L['total']) .   ':</b> ' . $h($fmtEur($total)) . '</h3>';
+        // Razbitje zneska
         $bodyHtml .= '<ul>';
         $bodyHtml .= '<li><b>' . $h($L['base'])      . ':</b> ' . $h($fmtEur($base))      . '</li>';
         $bodyHtml .= '<li><b>' . $h($L['discounts']) . ':</b> ' . $h($fmtEur($discounts + $promo + $special)) . '</li>';
@@ -402,6 +428,11 @@ if (!function_exists('cm_send_reservation_confirmation')) {
         $bodyHtml .= '<p>' . $h($L['tt_note']) . '</p>';
 
         $bodyHtml .= '<p><b>' . $h($L['payment']) . ':</b> ' . $h($paymentLabel) . '</p>';
+
+        // NEW: QR hint only for SEPA
+        if ($paymentMethodKey === 'sepa') {
+            $bodyHtml .= '<p>' . $h($L['sepa_qr_hint']) . '</p>';
+        }
 
         if ($pdfLink !== '') {
             $bodyHtml .= '<p>' . $h($L['pdf'])
@@ -447,6 +478,15 @@ if (!function_exists('cm_send_reservation_confirmation')) {
                 $linesText[] = '  ' . $kcNote;
             }
         }
+        // payment line in text
+        $linesText[] = '';
+        $linesText[] = $L['payment'] . ': ' . $paymentLabel;
+
+        // NEW: QR hint in text e-mail (only SEPA)
+        if ($paymentMethodKey === 'sepa') {
+            $linesText[] = $L['sepa_qr_hint'];
+        }
+
         if ($pdfLink !== '') {
             $linesText[] = '';
             $linesText[] = $L['pdf'] . ' ' . $pdfLink;
@@ -482,6 +522,8 @@ if (!function_exists('cm_send_reservation_confirmation')) {
         ];
     }
 }
+
+
 
 // -----------------------------------------------------------------------------
 // ENTRYPOINT
@@ -651,30 +693,37 @@ if ($payment === 'sepa') {
         $paymentBlock['reminder_days_before_payment_deadline'] = $PAYMENT_REMINDER_DAYS;
     }
 
-    $amount = 0.0;
-    if (isset($res['calc_final']) && is_numeric($res['calc_final'])) {
-        $amount = (float)$res['calc_final'];
-    } elseif (isset($res['pricing']['calc_final']) && is_numeric($res['pricing']['calc_final'])) {
-        $amount = (float)$res['pricing']['calc_final'];
-    }
+$amount = 0.0;
 
-    $sepaName = (string)($SEPA_CFG['name'] ?? '');
-    $sepaIban = (string)($SEPA_CFG['iban'] ?? '');
-    $sepaBic  = (string)($SEPA_CFG['bic']  ?? '');
-    $rem      = "Reservation {$reservationId}";
+if (isset($res['calc']['final']) && is_numeric($res['calc']['final'])) {
+    // New structure: $res['calc']['final'] is the main "final" amount (without TT)
+    $amount = (float)$res['calc']['final'];
+} elseif (isset($res['calc_final']) && is_numeric($res['calc_final'])) {
+    // Legacy fallback
+    $amount = (float)$res['calc_final'];
+} elseif (isset($res['pricing']['calc_final']) && is_numeric($res['pricing']['calc_final'])) {
+    // Another legacy fallback
+    $amount = (float)$res['pricing']['calc_final'];
+}
 
-    $sepaNode = [
-        'name'       => $sepaName,
-        'iban'       => $sepaIban,
-        'bic'        => $sepaBic,
-        'amount_eur' => $amount > 0 ? ('EUR ' . number_format($amount, 2, ',', '.')) : 'EUR 0,00',
-        'remittance' => $rem,
-    ];
+// SEPA config
+$sepaName = (string)($SEPA_CFG['name'] ?? '');
+$sepaIban = (string)($SEPA_CFG['iban'] ?? '');
+$sepaBic  = (string)($SEPA_CFG['bic']  ?? '');
+$rem      = "Reservation {$reservationId}";
 
-    if ($sepaName !== '' && $sepaIban !== '' && $sepaBic !== '') {
-        $sepaPayload = cm_epc_sct_payload($sepaName, $sepaIban, $sepaBic, $amount, $rem);
-        $sepaNode['epc_payload'] = $sepaPayload;
-    }
+$sepaNode = [
+    'name'       => $sepaName,
+    'iban'       => $sepaIban,
+    'bic'        => $sepaBic,
+    'amount_eur' => $amount > 0 ? ('EUR ' . number_format($amount, 2, ',', '.')) : 'EUR 0,00',
+    'remittance' => $rem,
+];
+
+if ($sepaName !== '' && $sepaIban !== '' && $sepaBic !== '') {
+    $sepaPayload = cm_epc_sct_payload($sepaName, $sepaIban, $sepaBic, $amount, $rem);
+    $sepaNode['epc_payload'] = $sepaPayload;
+}
 
     $paymentBlock['sepa'] = $sepaNode;
 } else {

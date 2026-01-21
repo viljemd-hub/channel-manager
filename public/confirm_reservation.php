@@ -19,10 +19,11 @@ $tz  = $cfg['timezone'] ?? 'Europe/Ljubljana';
  */
 $settingsAll = function_exists('cm_load_settings') ? cm_load_settings() : [];
 $paymentCfg  = $settingsAll['payment'] ?? [];
+$licenseCfg  = $settingsAll['license'] ?? [];
 
 /**
- * Calculations alloved payment metod from config.
- * Free verzon default is "at_desk".
+ * Allowed payment methods from config.
+ * Free version default is "at_desk".
  */
 $methodsCfg = $paymentCfg['methods'] ?? ['at_desk'];
 $ALLOWED_PAYMENT_METHODS = array_values(array_unique(
@@ -32,8 +33,26 @@ if (!$ALLOWED_PAYMENT_METHODS) {
     $ALLOWED_PAYMENT_METHODS = ['at_desk'];
 }
 
-// is it SEPA aloved in this package (CM Plus)?
-$HAS_SEPA = in_array('sepa', $ALLOWED_PAYMENT_METHODS, true);
+// Normalize license.features like in finalize_reservation.php
+$licenseFeatures = [];
+if (isset($licenseCfg['features']) && is_array($licenseCfg['features'])) {
+    $keys = array_keys($licenseCfg['features']);
+    if ($keys && is_int($keys[0])) {
+        $licenseFeatures = array_map('strval', $licenseCfg['features']);
+    } else {
+        foreach ($licenseCfg['features'] as $name => $enabled) {
+            if ($enabled) {
+                $licenseFeatures[] = (string)$name;
+            }
+        }
+    }
+}
+
+$HAS_ADVANCED_PAYMENTS = in_array('advanced_payments', $licenseFeatures, true);
+
+// Is SEPA allowed in this package (CM Plus)?
+$HAS_SEPA = in_array('sepa', $ALLOWED_PAYMENT_METHODS, true) && $HAS_ADVANCED_PAYMENTS;
+
 
 
 function h($s){
@@ -111,6 +130,12 @@ function cm_confirm_text(string $key, string $lang): string {
             'sl' => 'SEPA plačilo (na voljo v CM Plus)',
             'en' => 'SEPA payment (available in CM Plus)',
         ],
+
+        'opt_sepa' => [
+            'sl' => 'Bančno nakazilo (SEPA)',
+            'en' => 'SEPA bank transfer',
+        ],
+
         'opt_at_desk' => [
             'sl' => 'Plačilo ob prihodu (na recepciji)',
             'en' => 'Pay on arrival (at reception)',
@@ -553,9 +578,16 @@ $ttStr = $ttTotal > 0 ? cm_fmt_eur($ttTotal) : 'po veljavnem ceniku občine';
   <label for="pm"><?= h(cm_confirm_text('label_payment_method', $lang)) ?></label>
   <select id="pm" name="payment_method" required>
     <option value=""><?= h(cm_confirm_text('opt_choose', $lang)) ?></option>
-    <option value="sepa" disabled><?= h(cm_confirm_text('opt_sepa_disabled', $lang)) ?></option>
+
+    <?php if ($HAS_SEPA): ?>
+      <option value="sepa"><?= h(cm_confirm_text('opt_sepa', $lang)) ?></option>
+    <?php else: ?>
+      <option value="sepa" disabled><?= h(cm_confirm_text('opt_sepa_disabled', $lang)) ?></option>
+    <?php endif; ?>
+
     <option value="at_desk" selected><?= h(cm_confirm_text('opt_at_desk', $lang)) ?></option>
   </select>
+
 
 
 <?php if ($HAS_SEPA): ?>
@@ -614,6 +646,7 @@ async function submitFinalize(ev) {
   const box  = document.getElementById('resultBox');
   const btn  = form.querySelector('button[type="submit"]');
   const originalText = btn ? btn.textContent : null;
+  let success = false; // 👈 NEW  
 
   const formData = new FormData(form);
   const payload  = new URLSearchParams(formData).toString();
@@ -659,7 +692,8 @@ async function submitFinalize(ev) {
       '<b>' + CM_TXT_CONFIRM_OK_TITLE + '</b><br>' +
       '<span class="muted">' + CM_TXT_CONFIRM_OK_BODY + '</span>';
 
-    // optionally: disable form completely
+    // ✅ success -> disable form completely
+    success = true;
     if (btn) {
       btn.disabled = true;
       btn.textContent = CM_TXT_BUTTON_CONFIRMED;
@@ -671,8 +705,9 @@ async function submitFinalize(ev) {
     box.style.display = 'block';
     box.innerHTML =
       '<span class="warn">' + CM_TXT_NETWORK_ERROR + '</span>';
-  } finally {
-    if (btn) {
+ } finally {
+    // ✅ re-enable button ONLY if not successful
+    if (btn && !success) {
       btn.disabled = false;
       if (originalText !== null) btn.textContent = originalText;
     }

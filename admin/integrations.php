@@ -25,6 +25,13 @@ $adminKey = is_file($ADMIN_KEY_FILE)
   ? trim((string)file_get_contents($ADMIN_KEY_FILE))
   : '';
 
+require_once __DIR__ . '/../common/lib/datetime_fmt.php';
+
+// Determine current product tier (free vs plus/pro)
+$tier   = function_exists('cm_get_product_tier') ? cm_get_product_tier() : 'free';
+$isPlus = cm_is_plus_enabled();
+
+
 $CFG = [
   'dataRoot'  => '/app/common/data/json',
   'unitsDir'  => '/app/common/data/json/units',
@@ -56,11 +63,13 @@ $CFG = [
 
   'unit'      => $unit,
   'adminKey'  => $adminKey,
-  // Edition / plan info for JS (CM Free mode)
-  'plan'      => 'free',
-  'edition'   => 'free',
-  'isPlus'    => false,
+   // Edition / plan info for JS (Free vs Plus)
+  'plan'      => $tier,
+  'edition'   => $tier,
+  'isPlus'    => $isPlus,
 ];
+
+
 
 // Content Security Policy
 header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'self';");

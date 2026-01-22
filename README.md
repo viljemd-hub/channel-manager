@@ -188,24 +188,7 @@ Feedback, ideas and criticism are welcome.
 
 ```
 
-### Kaj je konkretno popravljeno
-- odstranjena zavajajoča trditev o “no authentication”
-- dodano “Admin access” poglavje (brez ugibanja; samo: kje je mehanizem in kako ga najdeš)
-- dodani linki do landing/docs
-- Quick start je na vrhu (to je pomembno za prve uporabnike)
-
-Če želiš, ti lahko naslednjič pripravim še:
-- minimalen `LICENSE` (če želiš “res free” za druge),
-- GitHub “Release v1.0.0” opis (da meriš download count),
-- 2 issue template datoteki (bug report + feature request).
-
-Ti samo povej, ali želiš, da je to “open-source” (MIT/Apache) ali “source-available” (bolj kontrolirano).
-```
-# Channel Manager — kratka navodila
-
-Izsek iz INSTALL.txt (povzetek):
-```
- 
+### 
 Channel Manager – CM Free (dev snapshot)
 =======================================
 

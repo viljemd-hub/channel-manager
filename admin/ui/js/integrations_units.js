@@ -20,9 +20,24 @@
     const { CFG, state, dom, helpers } = ctx;
     const { $, escapeHtml } = helpers;
 
-    const diagOut = document.getElementById('diagOut');
+    // diag / domena
+    const diagOut       = document.getElementById('diagOut');
     const baseUrlInput  = document.getElementById('cmBaseUrl');
     const btnSaveBaseUrl = document.getElementById('btnSaveBaseUrl');
+
+    // global settings modal (uporabimo helper $ kot drugje v datoteki)
+    const btnOpenGlobalSettings   = $('#btnOpenGlobalSettings');
+
+    const dlgGlobalSettings       = $('#dlgGlobalSettings');
+    const formGlobalSettings      = $('#formGlobalSettings');
+    const btnGlobalSettingsCancel = $('#btnGlobalSettingsCancel');
+
+    const inGsBaseUrl      = $('#gsBaseUrl');
+    const chkGsEmailEnable = $('#gsEmailEnabled');
+    const inGsFromName     = $('#gsFromName');
+    const inGsFromEmail    = $('#gsFromEmail');
+    const inGsAdminEmail   = $('#gsAdminEmail');
+
     // null = ADD mode, 'A1' = EDIT mode
     let editingUnitId = null;
 
@@ -164,6 +179,124 @@
           `❌ Napaka pri shranjevanju domene: ${err?.message || err}`;
         alert('Napaka pri shranjevanju domene.\n\n' + (err?.message || err));
       }
+    }
+
+
+    // ---------- Global settings (site_settings.json) ----------
+    async function loadGlobalSettingsIntoModal() {
+      if (!dlgGlobalSettings) return;
+
+      const api = CFG.api || {};
+      const url = api.siteSettingsGet || '/app/admin/api/site_settings_get.php';
+
+      try {
+        if (diagOut) diagOut.textContent = 'Nalagam globalne nastavitve…';
+
+        const res = await helpers.safeFetchJson(url, { cache: 'no-store' });
+        if (!res || res.ok === false) {
+          const msg = res?.message || res?.error || 'site_settings_get_failed';
+          console.error('[units] siteSettingsGet failed', res);
+          if (diagOut) diagOut.textContent = `❌ Global settings load failed: ${msg}`;
+          alert('Napaka pri branju globalnih nastavitev.\n\n' + msg);
+          return;
+        }
+
+        const s = res.settings || {};
+        const email = s.email || {};
+
+        // base URL for emails – fallback to current manifest/domain input
+        if (inGsBaseUrl) {
+          let v = s.public_base_url || '';
+          if (!v && baseUrlInput?.value) {
+            v = baseUrlInput.value;
+          }
+          inGsBaseUrl.value = v;
+        }
+
+        if (chkGsEmailEnable) {
+          chkGsEmailEnable.checked = email.enabled !== false;
+        }
+        if (inGsFromName) {
+          inGsFromName.value = email.from_name || '';
+        }
+        if (inGsFromEmail) {
+          inGsFromEmail.value = email.from_email || '';
+        }
+        if (inGsAdminEmail) {
+          inGsAdminEmail.value = email.admin_email || '';
+        }
+      } catch (err) {
+        console.error('[units] loadGlobalSettings error', err);
+        if (diagOut) {
+          diagOut.textContent =
+            `❌ Global settings load error: ${err?.message || err}`;
+        }
+        alert('Napaka pri branju globalnih nastavitev.\n\n' + (err?.message || err));
+      }
+    }
+
+    async function saveGlobalSettings(e) {
+      if (e) e.preventDefault();
+
+      const api = CFG.api || {};
+      const url = api.siteSettingsSave || '/app/admin/api/site_settings_save.php';
+
+      let baseUrlVal = (inGsBaseUrl?.value || '').trim();
+      if (baseUrlVal && !/^https?:\/\//i.test(baseUrlVal)) {
+        baseUrlVal = 'https://' + baseUrlVal.replace(/^\/+/, '');
+        if (inGsBaseUrl) inGsBaseUrl.value = baseUrlVal;
+      }
+
+      const payload = {
+        public_base_url: baseUrlVal,
+        email: {
+          enabled: !!(chkGsEmailEnable?.checked),
+          from_name: (inGsFromName?.value || '').trim(),
+          from_email: (inGsFromEmail?.value || '').trim(),
+          admin_email: (inGsAdminEmail?.value || '').trim(),
+        },
+      };
+
+      try {
+        if (diagOut) diagOut.textContent = 'Shranjujem globalne nastavitve…';
+
+        const res = await helpers.safeFetchJson(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res || res.ok === false) {
+          const msg = res?.message || res?.error || 'site_settings_save_failed';
+          console.error('[units] siteSettingsSave failed', res);
+          if (diagOut) diagOut.textContent = `❌ Global settings save failed: ${msg}`;
+          alert('Napaka pri shranjevanju globalnih nastavitev.\n\n' + msg);
+          return;
+        }
+
+        if (diagOut) diagOut.textContent = '✅ Global settings saved.';
+
+        // keep top baseUrl input in sync for visual consistency
+        if (baseUrlInput && baseUrlVal) {
+          baseUrlInput.value = baseUrlVal;
+        }
+
+        try { dlgGlobalSettings?.close(); } catch (_) {}
+      } catch (err) {
+        console.error('[units] saveGlobalSettings error', err);
+        if (diagOut) {
+          diagOut.textContent =
+            `❌ Global settings save error: ${err?.message || err}`;
+        }
+        alert('Napaka pri shranjevanju globalnih nastavitev.\n\n' + (err?.message || err));
+      }
+    }
+
+    function openGlobalSettingsModal() {
+      if (!dlgGlobalSettings) return;
+      loadGlobalSettingsIntoModal().finally(() => {
+        try { dlgGlobalSettings.showModal(); } catch (_) {}
+      });
     }
 
 
@@ -492,6 +625,25 @@ function syncOnHoldToPublicUI() {
       e.preventDefault();
       saveBaseUrl();
     });
+    btnOpenGlobalSettings?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openGlobalSettingsModal();
+    });
+
+formGlobalSettings?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  saveGlobalSettings(e);
+});
+
+btnGlobalSettingsCancel?.addEventListener('click', (e) => {
+  e.preventDefault();
+  try {
+    dlgGlobalSettings?.close();
+  } catch (_) {
+    console.warn('[global] close() failed on dlgGlobalSettings');
+  }
+});
+
 
 
     // delegate table clicks

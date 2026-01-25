@@ -39,7 +39,13 @@ if ($hasRange) {
         foreach ($STRIP_KEYS as $k) unset($query[$k]);
         if (!$KEEP_UNIT) unset($query['unit']);
 
-        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/app/public/pubcal.php';
+	$reqUri = $_SERVER['REQUEST_URI'] ?? '';
+	$path = parse_url($reqUri, PHP_URL_PATH);
+	if (!$path) {
+	    // Fallback to script name if REQUEST_URI is not available (CLI, unusual env)
+	    $path = $_SERVER['SCRIPT_NAME'] ?? '/pubcal.php';
+	}
+
         $qs   = http_build_query($query);
         $url  = $path . ($qs ? ('?'.$qs) : '');
 
@@ -60,7 +66,9 @@ unset($_SESSION['flash_msg']);
 
 // /var/www/html/app/public/pubcal.php
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host   = $_SERVER['HTTP_HOST'] ?? 'apartmamatevz.duckdns.org';
+$host = $_SERVER['HTTP_HOST'] 
+    ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+
 
 define('PUBLIC_BASE_URL', $scheme . '://' . $host);
 
@@ -139,6 +147,8 @@ $T = [
     'sl' => [
         'title'          => 'Razpoložljivost & cene – Apartma Matevž',
         'brand'          => 'Apartma Matevž',
+        'brand.reservations' => 'Rezervacije',
+        'tagline'        => 'Lastni rezervacijski sistem',
         'nav.today'      => 'Danes',
         'dayuse.label'   => 'Dnevni počitek',
         'legend.dayuse'  => 'Dnevni počitek',
@@ -146,7 +156,6 @@ $T = [
         'btn.clear'      => 'Počisti',
         'btn.confirm'    => 'Potrdi izbiro',
         'footer.note'    => 'Za dodatna vprašanja ali daljša bivanja nas kontaktirajte. Če bi podobno koledarsko rešitev CM Free radi uporabljali tudi za svojo nastanitev, pišite razvijalcu na viljem.d@gmail.com.',
-        'flag.work'      => 'V delu',
         'lang.sl'        => 'Slovenščina',
         'lang.en'        => 'Angleščina',
         'flag.work'      => 'V delu'
@@ -154,6 +163,8 @@ $T = [
     'en' => [
         'title'          => 'Availability & prices – Apartment Matevž',
         'brand'          => 'Apartment Matevž',
+        'brand.reservations' => 'Bookings',
+        'tagline'        => 'Self-hosted booking system',
         'nav.today'      => 'Today',
         'dayuse.label'   => 'Day-use stay',
         'legend.dayuse'  => 'Day-use',
@@ -161,7 +172,6 @@ $T = [
         'btn.clear'      => 'Clear',
         'btn.confirm'    => 'Get offer',
         'footer.note'    => 'For any questions or longer stays, feel free to contact us. If you would like to use this CM Free calendar system for your own property, contact the developer at viljem.d@gmail.com.',
-        'flag.work'      => 'Work in progress',
         'lang.sl'        => 'Slovene',
         'lang.en'        => 'English',
         'flag.work'      => 'Work in progress'
@@ -176,15 +186,91 @@ $t = function(string $key) use ($lang, $T): string {
     return $T[$fallback][$key] ?? $key;
 };
 
+// Product meta (edition + version) for header badges / title.
+require_once __DIR__ . '/../common/lib/datetime_fmt.php';
+
+$cmTier    = 'free';
+$cmVersion = '1.0.0';
+
+try {
+    if (function_exists('cm_get_product_tier')) {
+        $cmTier = cm_get_product_tier(); // "free" | "plus" | "pro"
+    }
+    if (function_exists('cm_get_product_version')) {
+        $cmVersion = cm_get_product_version(); // e.g. "1.0.0"
+    }
+} catch (\Throwable $e) {
+    // Fallback to defaults if anything goes wrong.
+    $cmTier    = 'free';
+    $cmVersion = '1.0.0';
+}
+
+// Suffix for <title> tag (browser tab).
+$cmTitleSuffix = ' – CM Free / Plus v' . $cmVersion;
+if ($cmTier === 'pro') {
+    $cmTitleSuffix = ' – CM Free / Plus / Pro v' . $cmVersion;
+}
 
 // manifest.json obstaja v /app/common/data/json/units/manifest.json
 // (trenutno ga ne potrebujemo nujno za render, ampak ga damo v config)
+
+// --- Build dynamic OCC_URLS and PRICE_URLS from manifest.json (for all units) ---
+
+$UNITS_JSON_BASE_URL = '/app/common/data/json/units'; // URL base for units JSON
+
+$occUrls   = [];
+$priceUrls = [];
+
+$manifestFile = __DIR__ . '/../common/data/json/units/manifest.json';
+if (is_file($manifestFile)) {
+    $raw = @file_get_contents($manifestFile);
+    if ($raw !== false) {
+        $manifest = json_decode($raw, true);
+        if (!empty($manifest['units']) && is_array($manifest['units'])) {
+            foreach ($manifest['units'] as $u) {
+                if (empty($u['id'])) {
+                    continue;
+                }
+                // allow only safe IDs
+                $id = preg_replace('/[^A-Za-z0-9_-]/', '', (string)$u['id']);
+                if ($id === '') {
+                    continue;
+                }
+
+                // optional public/active flags in manifest
+                if (isset($u['public']) && $u['public'] === false) {
+                    continue;
+                }
+                if (isset($u['active']) && $u['active'] === false) {
+                    continue;
+                }
+
+                $occUrls[$id]   = $UNITS_JSON_BASE_URL . '/' . $id . '/occupancy.json';
+                $priceUrls[$id] = $UNITS_JSON_BASE_URL . '/' . $id . '/prices.json';
+            }
+        }
+    }
+}
+
+// Fallback if manifest is missing or empty – keep old A1/A2 behavior
+if (!$occUrls) {
+    $occUrls = [
+        'A1' => $UNITS_JSON_BASE_URL . '/A1/occupancy.json',
+        'A2' => $UNITS_JSON_BASE_URL . '/A2/occupancy.json',
+    ];
+}
+if (!$priceUrls) {
+    $priceUrls = [
+        'A1' => $UNITS_JSON_BASE_URL . '/A1/prices.json',
+        'A2' => $UNITS_JSON_BASE_URL . '/A2/prices.json',
+    ];
+}
 ?>
 <!doctype html>
 <html lang="<?= htmlspecialchars($lang) ?>">
 <head>
   <meta charset="utf-8">
-  <title><?= htmlspecialchars($t('title')) ?></title>
+  <title><?= htmlspecialchars($t('title') . $cmTitleSuffix) ?></title>
 
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
@@ -208,64 +294,150 @@ $t = function(string $key) use ($lang, $T): string {
   .work-flag__img{ width: 28px }
   .work-flag__txt{ font-size:.9rem }
 }
+
+/* --- Edition badge inside brand tagline --- */
+.brand-tagline-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(154,167,181,0.7);
+  padding-bottom: 1px;
+}
+
+.brand-tagline-link:hover {
+  color: #ffffff;
+  border-bottom-style: solid;
+}
+
+.cm-product {
+  white-space: nowrap;
+}
+
+.cm-edition-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 .45rem;
+  margin: 0 .18rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.7);
+  font-size: 1.0rem;
+  line-height: 1.1;
+}
+
+.cm-version {
+  margin-left: .25rem;
+  font-size: 1.0rem;
+  opacity: 0.8;
+}
+
+/* CM Free tagline link v headerju */
+.brand-tagline a{
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.12em;
+}
+.brand-tagline a:hover{
+  text-decoration-style: solid;
+}
+.brand-res a{
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.brand-res a:hover{
+  text-decoration: underline;
+}
+
 </style>
 </head>
 
 <body class="cm-app">
-  <header class="cm-header">
-    <div class="cm-left">
-<div class="brand">
-  <div class="brand-title"><?= htmlspecialchars($t('brand')) ?></div>
-</div>
-<nav class="nav-buttons">
-  <button id="btnPrev" class="nav-btn" aria-label="Prev">&laquo;</button>
-  <button id="btnToday" class="nav-btn"><?= htmlspecialchars($t('nav.today')) ?></button>
-  <button id="btnNext" class="nav-btn" aria-label="Next">&raquo;</button>
-  <div>
-    <span class="work-flag" aria-label="<?= htmlspecialchars($t('flag.work')) ?>">
-      <img class="work-flag__img" src="/slike/kopac.png" alt="">
-      <span class="work-flag__txt"><?= htmlspecialchars($t('flag.work')) ?></span>
-    </span>
-  </div>
-</nav>
+<header class="cm-header">
+  <div class="cm-header-inner">
 
+    <div class="brand">
+      <div class="brand-title">
+        <span class="brand-main"><?= htmlspecialchars($t('brand')) ?></span>
+        <span class="brand-sep">–</span>
+        <span class="brand-res"><?= htmlspecialchars($t('brand.reservations')) ?></span>
+        <span class="brand-sep brand-sep-tagline">–</span>
 
+        <span class="brand-tagline">
+          <a href="https://cmfree.netlify.app/"
+             class="brand-tagline-link"
+             target="_blank"
+             rel="noopener noreferrer">
+            <?= htmlspecialchars($t('tagline')) ?>
+            <span class="brand-sep brand-sep-tagline"> – </span>
+            <span class="cm-product">
+              CM
+              <?php if ($cmTier === 'plus'): ?>
+                Free /
+                <span class="cm-edition-badge">Plus</span>
+              <?php elseif ($cmTier === 'pro'): ?>
+                Free / Plus /
+                <span class="cm-edition-badge">Pro</span>
+              <?php else: ?>
+                <span class="cm-edition-badge">Free</span>
+                / Plus
+              <?php endif; ?>
+              <span class="cm-version">v<?= htmlspecialchars($cmVersion) ?></span>
+            </span>
+          </a>
+        </span>
+      </div>
     </div>
 
-    <div class="cm-right">
-     <!-- DAY USE TOGGLE -->
-<div class="dayuse-toggle" style="display:flex;align-items:center;gap:6px;margin-left:12px;">
-  <input type="checkbox" id="chkDayUse" style="transform:scale(1.2);" />
-  <label for="chkDayUse" style="cursor:pointer;"><?= htmlspecialchars($t('dayuse.label')) ?></label>
-</div>
-  <span id="minNightsBadge"
-        class="minnights-badge"
-        aria-live="polite"></span>
-<select id="unitSelect" class="unit-select" aria-label="Izbira enote">
-  <!-- napolni pubcal.js iz manifest.json -->
-</select>
-<button id="btnClear" class="clear-btn"><?= htmlspecialchars($t('btn.clear')) ?></button>
-<button id="btnConfirm" class="confirm-btn-header"><?= htmlspecialchars($t('btn.confirm')) ?></button>
-<div class="lang-switch" style="text-align:right;margin:0.5rem 1rem;">
-<div class="lang-switch">
-  <button type="button"
-          class="lang-btn lang-sl"
-          data-lang="sl"
-          aria-label="<?= htmlspecialchars($t('lang.sl')) ?>"
-          title="<?= htmlspecialchars($t('lang.sl')) ?>">
-    🇸🇮
-  </button>
-  <button type="button"
-          class="lang-btn lang-en"
-          data-lang="en"
-          aria-label="<?= htmlspecialchars($t('lang.en')) ?>"
-          title="<?= htmlspecialchars($t('lang.en')) ?>">
-    🇬🇧
-  </button>
-</div>
 
+    <!-- Controls row: nav + desni del + jeziki -->
+    <div class="cm-controls-row">
 
-</div>
+      <nav class="nav-buttons">
+        <button id="btnPrev" class="nav-btn" aria-label="Prev">&laquo;</button>
+        <button id="btnToday" class="nav-btn"><?= htmlspecialchars($t('nav.today')) ?></button>
+        <button id="btnNext" class="nav-btn" aria-label="Next">&raquo;</button>
+      </nav>
+
+      <div class="cm-right">
+        <!-- DAY USE TOGGLE -->
+        <div class="dayuse-toggle">
+          <input type="checkbox" id="chkDayUse" />
+          <label for="chkDayUse"><?= htmlspecialchars($t('dayuse.label')) ?></label>
+        </div>
+
+        <span id="minNightsBadge"
+              class="minnights-badge"
+              aria-live="polite"></span>
+
+        <select id="unitSelect" class="unit-select" aria-label="Izbira enote">
+          <!-- napolni pubcal.js iz manifest.json -->
+        </select>
+
+        <button id="btnClear" class="clear-btn"><?= htmlspecialchars($t('btn.clear')) ?></button>
+        <button id="btnConfirm" class="confirm-btn-header"><?= htmlspecialchars($t('btn.confirm')) ?></button>
+
+        <div class="lang-switch">
+          <button type="button"
+                  class="lang-btn lang-sl"
+                  data-lang="sl"
+                  aria-label="<?= htmlspecialchars($t('lang.sl')) ?>"
+                  title="<?= htmlspecialchars($t('lang.sl')) ?>">
+            🇸🇮
+          </button>
+          <button type="button"
+                  class="lang-btn lang-en"
+                  data-lang="en"
+                  aria-label="<?= htmlspecialchars($t('lang.en')) ?>"
+                  title="<?= htmlspecialchars($t('lang.en')) ?>">
+            🇬🇧
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /.cm-controls-row -->
+
+  </div><!-- /.cm-header-inner -->
 
 <script>
   (function () {
@@ -318,23 +490,18 @@ $t = function(string $key) use ($lang, $T): string {
     OFFER_URL: "/app/public/offer.php",
 
     // kje je manifest z enotami (info, opisi ipd.)
-    MANIFEST_URL: "/app/common/data/json/units/manifest.json",
+    MANIFEST_URL: "<?= htmlspecialchars($UNITS_JSON_BASE_URL) ?>/manifest.json",
 
     // min nights politika (za prihodnost)
     ENFORCE_MIN_NIGHTS: <?= $ENFORCE_MIN_NIGHTS ? 'true' : 'false' ?>,
     MIN_NIGHTS: <?= (int)$MIN_NIGHTS ?>,
 
-    // absolutne poti do occupancy/prices za obe enoti
-    OCC_URLS: {
-      A1: "/app/common/data/json/units/A1/occupancy.json",
-      A2: "/app/common/data/json/units/A2/occupancy.json"
-    },
-    PRICE_URLS: {
-      A1: "/app/common/data/json/units/A1/prices.json",
-      A2: "/app/common/data/json/units/A2/prices.json"
-    }
+    // dynamic absolute URLs for occupancy/prices per unit (built in PHP from manifest.json)
+    OCC_URLS: <?= json_encode($occUrls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+    PRICE_URLS: <?= json_encode($priceUrls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>
 
   };
+
 
   // Seed iz URL parametrov, da pri reloadu/povratku vrne isti termin
   window.CM_SEED = {

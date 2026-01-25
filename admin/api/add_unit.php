@@ -170,27 +170,30 @@ try {
     ensure_dir($externalDir);
     ensure_dir($occupancyRawDir);
 
-    // If template was provided and exists, copy selected files first
+    // If template was provided and exists, copy selected files first (optional feature)
     if ($template !== '') {
         $tplDir = $rootUnits . '/' . $template;
-        if (!is_dir($tplDir)) {
-            throw new RuntimeException("Template enota ne obstaja: {$template}");
-        }
 
-        if (!empty($copy['site_settings'])) {
-            copy_file_if_exists($tplDir . '/site_settings.json', $unitDir . '/site_settings.json');
+        if (is_dir($tplDir)) {
+            // Template directory exists → copy what we can
+            if (!empty($copy['site_settings'])) {
+                copy_file_if_exists($tplDir . '/site_settings.json', $unitDir . '/site_settings.json');
+            }
+            if (!empty($copy['prices'])) {
+                copy_file_if_exists($tplDir . '/prices.json', $unitDir . '/prices.json');
+            }
+            if (!empty($copy['special_offers'])) {
+                copy_file_if_exists($tplDir . '/special_offers.json', $unitDir . '/special_offers.json');
+            }
+            if (!empty($copy['occupancy_sources'])) {
+                copy_file_if_exists($tplDir . '/occupancy_sources.json', $unitDir . '/occupancy_sources.json');
+            }
+            // optional: copy day_use.json baseline if exists
+            copy_file_if_exists($tplDir . '/day_use.json', $unitDir . '/day_use.json');
+        } else {
+            // Template is optional in CM Free – if it does not exist, just ignore it
+            $template = '';
         }
-        if (!empty($copy['prices'])) {
-            copy_file_if_exists($tplDir . '/prices.json', $unitDir . '/prices.json');
-        }
-        if (!empty($copy['special_offers'])) {
-            copy_file_if_exists($tplDir . '/special_offers.json', $unitDir . '/special_offers.json');
-        }
-        if (!empty($copy['occupancy_sources'])) {
-            copy_file_if_exists($tplDir . '/occupancy_sources.json', $unitDir . '/occupancy_sources.json');
-        }
-        // optional: copy day_use.json baseline if exists
-        copy_file_if_exists($tplDir . '/day_use.json', $unitDir . '/day_use.json');
     }
 
     // Ensure core files exist (create if missing)

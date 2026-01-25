@@ -40,6 +40,8 @@ $CFG = [
   'api'       => [
     'unitsList'    => '/app/admin/api/units_list.php',
     'addUnit'      => '/app/admin/api/add_unit.php',
+    'siteSettingsGet'  => '/app/admin/api/site_settings_get.php',
+    'siteSettingsSave' => '/app/admin/api/site_settings_save.php',
     'saveUnitMeta' => '/app/admin/api/integrations/save_unit_meta.php',
     'icsPhp'       => '/app/admin/api/integrations/ics.php',
 
@@ -471,7 +473,11 @@ header('X-Frame-Options: SAMEORIGIN');
       <button type="button" id="btnSaveBaseUrl" class="btn small">
         Shrani domeno
       </button>
+      <button type="button" id="btnOpenGlobalSettings" class="btn small">
+        E-mail &amp; URL
+      </button>
     </div>
+
   </div>
 
   <div class="units-summary">
@@ -547,6 +553,89 @@ header('X-Frame-Options: SAMEORIGIN');
 
 
 
+  <!-- Global settings (site_settings.json) -->
+  <dialog id="dlgGlobalSettings" class="modal-root">
+    <form id="formGlobalSettings" class="modal" method="dialog">
+      <header class="modal-header">
+        <h3>Global settings</h3>
+      </header>
+
+      <section class="modal-body form-grid">
+        <p class="muted small">
+          Globalne nastavitve za povezave in e-pošto.
+          Shranjuje se v
+          <code>/app/common/data/json/units/site_settings.json</code>.
+        </p>
+
+        <div class="fld">
+          <label for="gsBaseUrl">Base URL (za povezave v e-mailih)</label>
+          <input
+            type="text"
+            id="gsBaseUrl"
+            class="input"
+            placeholder="https://apartmamatevz.si/app"
+          >
+          <p class="help small">
+            Osnovni URL, ki se uporablja v povezavah v sistemskih e-mailih
+            (potrditve, preklici…). Priporočeno enako kot zgornje polje
+            “Vaša domena (base URL CM)”.
+          </p>
+        </div>
+
+        <fieldset class="fld">
+          <legend class="lbl">E-mail nastavitve</legend>
+
+          <label class="chk">
+            <input type="checkbox" id="gsEmailEnabled">
+            <span>Pošiljanje e-mailov omogočeno</span>
+          </label>
+
+          <div class="fld">
+            <label for="gsFromName">From name</label>
+            <input
+              type="text"
+              id="gsFromName"
+              class="input"
+              placeholder="Apartma Matevž"
+            >
+          </div>
+
+          <div class="fld">
+            <label for="gsFromEmail">From e-mail</label>
+            <input
+              type="email"
+              id="gsFromEmail"
+              class="input"
+              placeholder="info@example.com"
+            >
+          </div>
+
+          <div class="fld">
+            <label for="gsAdminEmail">Admin e-mail (obvestila)</label>
+            <input
+              type="email"
+              id="gsAdminEmail"
+              class="input"
+              placeholder="your.main.mail@example.com"
+            >
+            <p class="help small">
+              Na ta naslov prejmeš obvestila o novih povpraševanjih,
+              potrditvah in drugih dogodkih.
+            </p>
+          </div>
+        </fieldset>
+      </section>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn btn-small" id="btnGlobalSettingsCancel">
+          Prekliči
+        </button>
+        <button type="submit" class="btn btn-small primary">
+          Shrani
+        </button>
+      </footer>
+    </form>
+  </dialog>
 
   <!-- Add Unit modal -->
   <dialog id="dlgAddUnit">
@@ -555,17 +644,6 @@ header('X-Frame-Options: SAMEORIGIN');
 
       <div class="fld">
         <label for="newUnitId">Unit ID (npr. A1)</label>
-		<div class="fld">
- 		 <label for="addUnitTemplate">Template unit</label>
-		  <select id="addUnitTemplate">
-  		  <option value="A2" selected>A2 (test baseline)</option>
- 		   <option value="S1">S1 (test baseline)</option>
- 		   <option value="A1">A1 (prod baseline)</option>
- 		 </select>
-		  <small class="form-text text-muted">
-		    Iz katere enote kopiramo začetne nastavitve (site_settings/prices/offers/occupancy_sources).
-		  </small>
-		</div>
         <input
           type="text"
           id="newUnitId"

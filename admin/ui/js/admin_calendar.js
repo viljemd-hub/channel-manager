@@ -262,6 +262,10 @@
   // Units & settings
   // --------------------------
 
+  // --------------------------
+  // Units & settings
+  // --------------------------
+
   async function loadUnitsIntoSelect() {
     const sel = qs("#admin-unit-select");
     if (!sel) {
@@ -269,29 +273,56 @@
       return null;
     }
 
-    let manifest;
-    try {
-      manifest = await fetchJson(MANIFEST_URL);
-    } catch (e) {
-      console.error("[admin_calendar] Failed to load manifest.json", e);
+    // 1) Manifest
+    const manifest = await safeFetchJson(MANIFEST_URL);
+    if (!manifest || !Array.isArray(manifest.units)) {
+      console.error("[admin_calendar] Invalid or missing manifest.units");
       sel.innerHTML = '<option value="">No units</option>';
       return null;
     }
 
-    const units = Array.isArray(manifest.units) ? manifest.units : [];
+    // 2) Filtriraj veljavne enote (public + active)
+    const units = manifest.units.filter((u) => {
+      if (!u) return false;
+      const id = typeof u === "string" ? u : u.id;
+      if (!id) return false;
+      // Če obstajata polja public/active, ju upoštevamo
+      if (typeof u.public === "boolean" && u.public === false) return false;
+      if (typeof u.active === "boolean" && u.active === false) return false;
+      return true;
+    });
+
     sel.innerHTML = "";
 
     if (!units.length) {
+      console.warn("[admin_calendar] manifest.units is empty after filtering");
       sel.innerHTML = '<option value="">No units</option>';
+      CURRENT_UNIT = null;
+      localStorage.removeItem(LS_UNIT_KEY);
       return null;
     }
 
+    // 3) Preberi zadnjo izbrano enoto iz localStorage
     const stored = localStorage.getItem(LS_UNIT_KEY) || "";
-    let chosen = stored || (units[0] && units[0].id) || units[0];
 
+    // Seznam vseh veljavnih ID-jev
+    const ids = units.map((u) => (typeof u === "string" ? String(u) : String(u.id)));
+
+    // 4) Če stored ni več med ID-ji, ga ignoriramo
+    let chosen = "";
+    if (stored && ids.includes(stored)) {
+      chosen = stored;
+    } else {
+      chosen = ids[0]; // prva veljavna enota iz manifesta
+    }
+
+    // 5) Napolni <select> z enotami, izberi "chosen"
     for (const u of units) {
-      const id = typeof u === "string" ? u : u.id;
-      const label = typeof u === "string" ? u : u.label || u.id;
+      const id = typeof u === "string" ? String(u) : String(u.id);
+      const label = typeof u === "string"
+        ? id
+        : (u.label || u.alias || u.name || id);
+
       const opt = document.createElement("option");
       opt.value = id;
       opt.textContent = label;
@@ -299,13 +330,16 @@
       sel.appendChild(opt);
     }
 
+    // 6) Posodobi globalno stanje + localStorage
     CURRENT_UNIT = chosen;
     localStorage.setItem(LS_UNIT_KEY, CURRENT_UNIT);
 
-    // sync for other modules (if any)
+    // 7) Obvesti ostale module, da se je enota spremenila
     window.dispatchEvent(
       new CustomEvent("cm:unitChanged", { detail: { unit: CURRENT_UNIT } })
     );
+
+    console.log("[admin_calendar] loadUnitsIntoSelect -> CURRENT_UNIT =", CURRENT_UNIT);
 
     return CURRENT_UNIT;
   }

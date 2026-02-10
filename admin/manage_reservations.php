@@ -45,6 +45,9 @@ require_key();
       <a class="btn small" href="/app/admin/integrations.php" title="Integrations">
         Integrations
       </a>
+      <a class="btn small" href="/app/admin/logs.php" title="Logs">
+        Logs
+      </a>
     </div>
   </header>
 

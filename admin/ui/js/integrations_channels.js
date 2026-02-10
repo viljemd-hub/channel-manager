@@ -123,10 +123,11 @@
 
           <td style="white-space:nowrap;">
             <button type="button" class="btn small chSave">Save</button>
-            <button type="button" class="btn small chPull">Pull now</button>
-            <button type="button" class="btn small chApply">Apply</button>
+            <button type="button" class="btn small chPull">Only Pull</button>
+            <button type="button" class="btn small chApply">Pull &amp; Apply</button>
             <button type="button" class="btn small chRemove" title="Remove platform from integrations JSON">Remove</button>
           </td>
+
         </tr>
       `;
     }
@@ -313,9 +314,20 @@ async function apiRemove(unit, platform, noteEl, statusEl) {
       });
 
       btnApply?.addEventListener('click', async () => {
-        const ok = await apiApply(unit, platform, noteEl, statusEl);
-        if (ok) await refresh();
+        // First pull fresh ICS from the remote platform
+        const pulled = await apiPull(unit, platform, noteEl, statusEl);
+        if (!pulled) {
+          // If pull fails, do not apply stale data
+          return;
+        }
+
+        // Then apply ICS to occupancy (this will also clean stale ICS rows)
+        const applied = await apiApply(unit, platform, noteEl, statusEl);
+        if (applied) {
+          await refresh();
+        }
       });
+
 
       btnRemove?.addEventListener('click', async () => {
         if (!confirm(`Remove platform "${platform}" from ${unit} integrations JSON?\n\nThis deletes connections.${platform}.`)) return;

@@ -133,3 +133,7 @@ body.adm-shell.theme-dark {
   color:#e9edf7;
   border:1px solid #2b3242;
 }
+.mr-badge.external {
+  background-color: #8b5cf6; /* ali kar ti paše na dark temo */
+  color: #fff;
+}

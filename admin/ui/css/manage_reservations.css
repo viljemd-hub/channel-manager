@@ -121,6 +121,10 @@
 .mr-btn-raw{
   font-size:.78rem;
 }
+.mr-badge.external {
+  background-color: #8b5cf6; /* ali kar ti paše na dark temo */
+  color: #fff;
+}
 
 /* označena kartica v seznamu */
 .mr-card.selected{

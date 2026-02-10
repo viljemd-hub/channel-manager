@@ -184,6 +184,10 @@
     "";
 
   const badge = buildStatusChip(r);
+    const externalBadge =
+    src === "external"
+      ? ' <span class="mr-badge external">External</span>'
+      : "";
 
   // --- NEW: decide when to show "Re-send accept" ---
   const status = (r.status || "").toLowerCase();
@@ -199,7 +203,7 @@
     '  <header class="mr-header">' +
     '    <div class="mr-title">' +
     '      <span class="mr-id">' + escapeHtml(id) + "</span>" +
-    "      " + badge +
+    "      " + badge + externalBadge +
     "    </div>" +
     '    <div class="mr-unit">' + escapeHtml(unit) + "</div>" +
     "  </header>" +
@@ -308,6 +312,8 @@
       item.phone ||
       item.guest_phone ||
       "";
+    // Review link only makes sense for confirmed reservations with an e-mail
+    const canSendReview = statusNorm === "confirmed" && !!email;
 
     const message =
       // 1) najprej note na guest objektu – TO imaš v JSON
@@ -434,12 +440,18 @@
       amountHtml +
       '  </div>' +
 
-      // NEW: actions row – TT & KEYCARD check-in
+      // Actions row – TT & KEYCARD check-in + review link
       '  <div class="mr-detail-actions" style="margin-top:5px;">' +
       '    <button type="button" class="mr-btn" id="mr-btn-checkin-tt">' +
       '      TT &amp; račun (check-in)' +
       '    </button>' +
+      (canSendReview
+        ? '    <button type="button" class="mr-btn" id="mr-btn-review-link">' +
+          '      Povezava za oceno' +
+          '    </button>'
+        : '') +
       '  </div>' +
+
 
       '  <div class="mr-detail-raw">' +
       '    <button type="button" class="mr-btn mr-btn-raw" id="mr-toggle-raw">Pokaži surovi JSON</button>' +
@@ -473,7 +485,16 @@
         window.open(url, "_blank");
       });
     }
+
+    // Send review link e-mail (only if button exists)
+    const reviewBtn = panel.querySelector("#mr-btn-review-link");
+    if (reviewBtn && id) {
+      reviewBtn.addEventListener("click", function () {
+        handleSendReview(item);
+      });
+    }
   } // ← to je zaključek renderDetail
+
 
 
   async function loadReservations(root) {
@@ -658,6 +679,158 @@
     }
   }
  
+   async function handleSendReview(item) {
+    if (!item || typeof item !== "object") return;
+
+    const id =
+      item.id ||
+      item.res_id ||
+      "";
+
+    if (!id) return;
+
+    const guest =
+      item.guest && typeof item.guest === "object"
+        ? item.guest
+        : {};
+
+    const rawEmail =
+      (guest && guest.email) ||
+      item.email ||
+      item.guest_email ||
+      "";
+
+    const labelEmail = rawEmail || "(neznan naslov)";
+
+    const ok = confirm(
+      "Pošljem gostu povezavo za oceno bivanja"
+        + (rawEmail ? " na " + labelEmail : "")
+        + "?"
+    );
+    if (!ok) return;
+
+    try {
+      const reply = await postJSON(API_BASE + "/send_review_request.php", { id: id });
+      if (!reply || reply.ok === false) {
+        const msg = (reply && (reply.error || reply.message)) || "send_failed";
+        console.error("[manage_reservations] send_review_request failed:", reply);
+        alert("❌ Napaka pri pošiljanju povezave za oceno: " + msg);
+        return;
+      }
+
+      const finalEmail = reply.email || labelEmail;
+      alert("✅ Povezava za oceno je bila poslana na: " + finalEmail);
+} catch (e) {
+  console.error("[manage_reservations] handleSendReview error:", e);
+
+  const emsg = String(e && e.message ? e.message : e);
+
+  if (emsg.includes("HTTP 403")) {
+    alert("ℹ️  This future is oavailable only in PRO version");
+    return;
+  }
+
+  alert("❌ Unexpected error sending review link.");
+}
+
+  }
+
+  // --------------------------
+  // Create external reservation (manual guest)
+  // --------------------------
+  async function openExternalReservationDialog(root) {
+    root = root || document;
+
+    const unitSel = qs("#mr-filter-unit", root);
+    const defaultUnit = unitSel && unitSel.value ? unitSel.value : "";
+
+    // Simple prompt-based UI for now – later can be upgraded to a proper modal
+    const unit = prompt("Unit (e.g. T1)", defaultUnit || "");
+    if (!unit) return;
+
+    const guestName = prompt("Guest name", "");
+    if (!guestName) return;
+
+    const guestEmail = prompt("Guest e-mail", "");
+    if (!guestEmail) return;
+
+    const from = prompt("Arrival date (YYYY-MM-DD)", "");
+    if (!from) return;
+
+    const to = prompt("Departure date (YYYY-MM-DD)", "");
+    if (!to) return;
+
+    const channel = prompt(
+      "Channel (booking.com / airbnb / phone / walk_in / other)",
+      "booking.com"
+    ) || "";
+
+    const totalStr = prompt(
+      "Total amount in EUR (optional – for invoice; leave empty if unknown)",
+      ""
+    );
+    let total = null;
+    if (totalStr && !isNaN(totalStr)) {
+      total = parseFloat(totalStr);
+    }
+
+    // For now we assume language EN for external guests
+    const lang = "en";
+
+    const payload = {
+      unit: unit.trim(),
+      guest_name: guestName.trim(),
+      guest_email: guestEmail.trim(),
+      from: from.trim(),
+      to: to.trim(),
+      channel: channel.trim(),
+      lang: lang
+    };
+    if (total !== null) {
+      payload.total = total;
+    }
+
+    const confirmMsg =
+      "Create external reservation for " +
+      guestName +
+      " in " +
+      unit +
+      " (" +
+      from +
+      " → " +
+      to +
+      ")" +
+      (channel ? " via " + channel : "") +
+      (total !== null ? " with total " + total + " EUR" : "") +
+      "?";
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      const reply = await postJSON(API_BASE + "/create_external_reservation.php", payload);
+      if (!reply || reply.ok === false) {
+        const msg =
+          (reply && (reply.error || reply.message)) ||
+          "create_external_failed";
+        console.error("[manage_reservations] create_external failed:", reply);
+        alert("❌ Napaka pri ustvarjanju external rezervacije: " + msg);
+        return;
+      }
+
+      const id = reply.id || "(unknown ID)";
+      alert("✅ External reservation created: " + id);
+
+      // Reload list to show the new reservation
+      loadReservations(root);
+    } catch (e) {
+      console.error("[manage_reservations] openExternalReservationDialog error:", e);
+      alert("❌ Unexpected error creating external reservation.");
+    }
+  }
+
+
 
   async function handleResend(id) {
     if (!id) return;
@@ -705,6 +878,7 @@
       '    </label>' +
       '    <input id="mr-filter-q" type="search" placeholder="ID / e-mail / ime" />' +
       '    <button class="mr-btn" id="mr-btn-load">Osveži</button>' +
+      '    <button class="mr-btn" id="mr-btn-add-external">Add external</button>' +
       '  </div>' +
       '  <div class="mr-layout">' +
       '    <div class="mr-left">' +
@@ -730,6 +904,12 @@
 
     const btnLoad = qs("#mr-btn-load", host);
     if (btnLoad) btnLoad.addEventListener("click", reload);
+    const btnExternal = qs("#mr-btn-add-external", host);
+    if (btnExternal) {
+      btnExternal.addEventListener("click", function () {
+        openExternalReservationDialog(host);
+      });
+    }
 
     [
       "#mr-filter-unit",

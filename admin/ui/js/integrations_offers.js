@@ -250,7 +250,16 @@
           ${id ? `<tr><th>ID</th><td class="mono">${escapeHtml(id)}</td></tr>` : ''}
           <tr><th>Popust</th><td>${escapeHtml(String(discountObj.value ?? ''))}</td></tr>
           <tr><th>Tip</th><td>${escapeHtml(discountObj.type || 'percent')}</td></tr>
-          <tr><th>Min. noči</th><td>${minNights != null ? escapeHtml(String(minNights)) : '<span class="muted small">ni nastavljeno</span>'}</td></tr>
+<tr>
+  <th>Min. noči</th>
+  <td>
+    ${minNights != null ? escapeHtml(String(minNights)) : '1'}
+    ${(!minNights || Number(minNights) === 1)
+      ? '<div class="muted small">Akcija velja tudi za enonočitvene rezervacije.</div>'
+      : ''
+    }
+  </td>
+</tr>
           <tr><th>Promo koda</th><td>${promoCode ? escapeHtml(String(promoCode)) : '<span class="muted small">ni nastavljeno</span>'}</td></tr>
           <tr><th>Stackable</th><td>${stackable === true ? 'DA' : 'NE'}</td></tr>
           <tr><th>Aktivno</th><td>${active ? 'DA' : 'NE'}</td></tr>
@@ -285,10 +294,13 @@
         // koda za kupon pri offers ni relevantna, zato je ne uporabljamo
         from: from || '',
         to: to || '',
+          // NEW – core business rule
+        min_nights: (minNights != null ? String(minNights) : '1'),
+
+        active,
+        
         percent: initialDiscount.value,
         type: initialDiscount.type || 'percent',
-        min_nights: (minNights != null ? String(minNights) : ''),
-        active,
         description: o.description || '',
       },
       // tu dobimo NAZAJ cel posodobljen objekt (tudi percent iz forme je že v discount/discount_percent)
@@ -303,7 +315,20 @@
         const rawCond = (src.conditions && typeof src.conditions === 'object' && !Array.isArray(src.conditions))
           ? src.conditions
           : {};
+
+        // 1) Osnova: kar je v JSON-u (če editor dela, bo tu že pravilna vrednost)
         let minN = rawCond.min_nights;
+
+        // 2) Varnostni pas: preberi še direktno iz polja v modalu, če obstaja
+        const minEl = document.getElementById('editMinNights');
+        if (minEl && minEl.value !== '') {
+          const fromUi = parseInt(minEl.value, 10);
+          if (Number.isFinite(fromUi) && fromUi > 0) {
+            minN = fromUi;
+          }
+        }
+
+        // 3) Normalizacija
         minN = parseInt(minN, 10);
         if (!Number.isFinite(minN) || minN <= 0) minN = 1;
 

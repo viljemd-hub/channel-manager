@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../common/lib/datetime_fmt.php';
 require_once __DIR__ . '/../common/lib/site_settings.php';
+require_once __DIR__ . '/../common/lib/urls.php';
 
 $cfg = cm_datetime_cfg();
 $tz  = $cfg['timezone'] ?? 'Europe/Ljubljana';
@@ -291,7 +292,8 @@ function cm_call_finalize(string $baseUrl, array $payload): array {
 // $baseUrl is usually ".../app/public" – normalize to ".../app" and call admin/api finalize endpoint.
 $root = rtrim($baseUrl, '/');
 $root = preg_replace('#/public$#', '', $root);
-$url  = $root . '/admin/api/finalize_reservation.php';
+$url  = $root . '/public/api/finalize_reservation.php';
+
 
 
     $opts = [
@@ -389,15 +391,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     // Call on finalize_reservation.php (same logic)
-    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://')
-        . ($_SERVER['HTTP_HOST'] ?? 'localhost')
-        . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+   // Use central helper so it respects site_settings.urls.public_base_url + proxy.
+    $baseUrl = cm_public_url('public'); // e.g. "https://apartmamatevz.si/app/public"
 
     $res = cm_call_finalize($baseUrl, [
         'token'          => $tokenPost,
         'id'             => $idPost,
         'payment_method' => $payment,
-    ]);
+]);
 
     $ok = (bool)($res['ok'] ?? false);
     if (!$ok) {

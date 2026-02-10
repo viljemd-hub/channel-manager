@@ -32,6 +32,8 @@
   const editFrom = $('editFrom');
   const editTo = $('editTo');
   const editActive = $('editActive');
+  const editMinNights = $('editMinNights');
+  const fldMinNights  = $('fldMinNights');
 
   const ta = $('jsonEditTextarea');
   const btnDelete = $('jsonEditDelete');
@@ -77,7 +79,7 @@
       obj.active = isActive;
       obj.enabled = isActive;
 
-      // periods sync (0 or 1 period)
+      // 🔹 periods sync (0 or 1 period)
       const baseFrom = obj.active_from;
       const baseTo = obj.active_to;
       if (baseFrom && baseTo) {
@@ -87,6 +89,18 @@
           obj.periods[0].start = baseFrom;
           obj.periods[0].end = baseTo;
         }
+      }
+
+      // 🔹 MIN NIGHTS – tukaj dejansko zapišemo vrednost iz polja
+      if (editMinNights) {
+        let minN = parseInt(editMinNights.value, 10);
+        if (!Number.isFinite(minN) || minN < 1) minN = 1;
+
+        obj.conditions = (obj.conditions && typeof obj.conditions === 'object')
+          ? obj.conditions
+          : {};
+
+        obj.conditions.min_nights = minN;
       }
     }
 
@@ -108,6 +122,22 @@
     if (editFrom) editFrom.value = fields?.from || '';
     if (editTo) editTo.value = fields?.to || '';
     if (editActive) editActive.checked = !!fields?.active;
+    // 🔹 Min. noči – samo za offers
+    if (current.type === 'offer') {
+      if (fldMinNights) fldMinNights.style.display = '';
+      if (editMinNights) {
+        const fn = fields?.min_nights;
+        editMinNights.value =
+          fn != null && fn !== ''
+            ? String(fn)
+            : '1';
+      }
+    } else {
+      // za promo / druge tipe skrij polje
+      if (fldMinNights) fldMinNights.style.display = 'none';
+    }
+
+
 
     ta.value = JSON.stringify(obj || {}, null, 2);
 

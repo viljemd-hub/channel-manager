@@ -3,6 +3,9 @@
 This repository contains a development snapshot of **CM Free** (PHP/Apache).  
 It is shared **as-is**: developer-friendly, JSON-based, and still evolving.
 
+CM Free is a free-to-use, self-hosted Channel Manager.
+The software is proprietary. Redistribution or commercial resale is not permitted without written permission.
+
 - Landing page / docs: https://apartmamatevz.si/cmfree/ (usage manual: `#details`)
 - Public UI: `/app/public/`
 - Admin UI: `/app/admin/`

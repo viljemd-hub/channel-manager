@@ -1,372 +1,231 @@
-# Channel Manager – CM Free (dev snapshot)
+# CM Free / Plus
 
-This repository contains a development snapshot of **CM Free** (PHP/Apache).  
-It is shared **as-is**: developer-friendly, JSON-based, and still evolving.
+CM Free / Plus is a lightweight, self-hosted reservation and availability manager for small accommodation providers, apartments, holiday rentals and similar small hospitality setups.
 
-CM Free is a free-to-use, self-hosted Channel Manager.
-The software is proprietary. Redistribution or commercial resale is not permitted without written permission.
+It is built around a simple principle:
 
-- Landing page / docs: https://apartmamatevz.si/cmfree/ (usage manual: `#details`)
-- Public UI: `/app/public/`
-- Admin UI: `/app/admin/`
+> Own your calendar, own your data, avoid unnecessary SaaS complexity.
 
----
+CM Free / Plus runs on a classic web stack, stores its state in JSON files, and is designed to be understandable, movable and easy to maintain.
 
-## What CM Free is
+## Live demo
 
-CM Free is a lightweight channel/booking manager built around:
-- **public booking flow** (calendar → offer → inquiry → thankyou),
-- **admin workflow** (inquiries → accept/reject → reservations),
-- JSON storage (no database),
-- optional email sending (msmtp / sendmail integration).
+Demo:
 
----
+http://cmfree.duckdns.org/app/
 
-## Quick start (minimal)
+The demo is hosted on a small local test machine and is intended for quick first impressions, UI testing and feedback.
 
-### 1) Requirements
-- Linux server (Debian/Ubuntu recommended)
-- Apache 2.4
-- PHP 8.1+ with common extensions:
-  - `php-mbstring`, `php-json`, `php-xml`, `php-curl`, `php-zip`
-- `zip` / `unzip` or `tar`
+## Downloads
 
-### 2) Unpack the app
-Unpack under `/var/www/html` so you get `/var/www/html/app`:
+Download page:
 
-```bash
-cd /var/www/html
-sudo tar xzf app_cmfree_*.tar.gz
-# or
-sudo unzip app_cmfree_*.zip
-````
+https://apartmamatevz.si/cmfree/download.html
 
-### 3) Permissions
+Available package types:
 
-Apache must be able to write into JSON + logs:
+### Clean install packages
 
-```bash
-cd /var/www/html
-sudo chown -R www-data:www-data app
-sudo find app -type d -exec chmod 775 {} \;
-sudo find app -type f -exec chmod 664 {} \;
-```
+Use these for real installations.
 
-Make sure these are writable:
+- Clean ZIP: for classic hosting or manual installation.
+- Clean DEB: for Ubuntu/Debian systems.
 
-* `app/common/data/json`
-* `app/common/data/json/units`
-* `app/common/data/json/inquiries`
-* `app/common/data/json/reservations`
-* `app/logs`
+The clean packages do not include:
 
-### 4) Apache
+- common/data/admin_key.txt
+- common/data/json/
+- demo reservations
+- runtime state
 
-Serve as `http://<host>/app`:
+The first-use flow creates the initial admin key and JSON structure.
 
-* DocumentRoot: `/var/www/html`
-* Restart:
+### Demo / showroom packages
 
-```bash
-sudo systemctl restart apache2
-```
+Use these for testing, demonstrations or sandbox installs.
 
-Open:
+Demo packages may include prepared example content or demo state so the system is easier to inspect immediately after installation.
 
-* `http://<server>/app/admin/`
-* `http://<server>/app/public/`
+## Main features
 
----
+CM Free / Plus currently includes:
 
-## Admin access (important)
+- public availability calendar
+- date range selection
+- offer / inquiry flow
+- admin calendar
+- inquiry management
+- reservation management
+- local blocks / hard locks
+- basic unit management
+- first-use setup flow
+- help center and onboarding guides
+- JSON-backed data storage
+- ICS-oriented import/export workflows
+- simple review flow
+- optional graffiti / lightweight engagement widget
+- email sending through system mail transport
 
-Admin pages in this snapshot use an **access-key gate** (`require_key()`), e.g. `admin/admin_calendar.php` includes it.
+## Installation options
 
-* The mechanism lives in: `app/admin/_common.php` (loaded by admin pages).
-* If you hit an access-key screen or redirect, search for the key configuration in that file.
+### Option 1: ZIP / hosting install
 
-Helpful command:
+Use the clean ZIP package if you want to install manually on a hosting account or web server.
 
-```bash
-cd /var/www/html/app
-grep -RIn --color=always "require_key" admin
-```
+Basic idea:
 
-Security note: this is a dev snapshot. If you expose it publicly, protect `/app/admin/` (reverse proxy, IP allowlist, basic auth, VPN, etc.).
+1. Download the clean ZIP.
+2. Extract the app/ folder to your web root.
+3. Make sure app/common/data/ is writable by the web server.
+4. Open /app/admin/.
+5. Complete the first-use setup.
 
----
-
-## Configuration
-
-Most runtime configuration is stored in JSON:
-
-* Global site settings:
-
-  * `app/common/data/json/site_settings.json`
-* Per-unit settings and data:
-
-  * `app/common/data/json/units/<UNIT>/...`
-
-For first use, adjust at least:
-
-* `site_settings.json`:
-
-  * `site.base_url`, default language
-  * `email.*` (if you want mail sending)
-* Create at least one unit (via admin UI or JSON templates):
-
-  * meta + capacity
-  * `prices.json` (flat nightly price is enough)
-  * occupancy can start empty
-
----
-
-## Email (optional)
-
-If your server is not configured for sending email yet:
-
-* disable in `site_settings.json` via `email.enabled=false`,
-* or configure msmtp/sendmail properly, then enable.
-
----
-
-## First-use checklist (demo flow)
-
-1. Open public:
-
-* `http://<server>/app/public/`
-
-2. Submit an inquiry:
-
-* select unit + dates → offer page → submit inquiry
-
-3. Open admin:
-
-* `http://<server>/app/admin/`
-* go to **Inquiries**
-* confirm or reject an inquiry
-
-4. Confirm reservation (guest link, if enabled):
-
-* use the email link to confirm reservation as a guest
-
-This creates:
-
-* `common/data/json/inquiries/YYYY/MM/{pending,accepted,rejected,confirmed}`
-* `common/data/json/reservations/YYYY/<UNIT>/...`
-  and updates occupancy/merged data for the selected unit.
-
-Note: `thankyou.php` uses PRG (Post/Redirect/Get) to prevent duplicate inquiry processing on browser refresh.
-
----
-
-## Data model (no database)
-
-CM Free is intentionally JSON-first:
-
-* easier to inspect and debug,
-* logs are preferred over “magic” UI.
-
----
-
-## Logs / troubleshooting
-
-If something behaves strangely:
-
-* `app/logs/app.log`
-* `/var/log/apache2/error.log`
-
-Tip:
-
-* if you see a 500 error, check Apache error log first.
-
----
-
-## Disclaimer
-
-This is a work-in-progress dev snapshot, shared as-is.
-Expect rough edges, missing documentation, and paths optimized for `/var/www/html/app`.
-
-Feedback, ideas and criticism are welcome.
-
-```
-
-### 
-Channel Manager – CM Free (dev snapshot)
-=======================================
-
-This is a development snapshot of my CM Free app (PHP/Apache).
-
-It is not a polished installer yet, but it should run on a standard Linux LAMP stack.
-Below are minimal steps to get it running on your own test server.
-
-1. Requirements
----------------
-
-- Linux server (Debian/Ubuntu recommended)
-- Apache 2.4
-- PHP 8.1+ with common extensions:
-  - php-mbstring, php-json, php-xml, php-curl, php-zip
-- `zip` / `unzip` or `tar` for unpacking
-
-2. Unpack the app
------------------
-
-Copy the archive to your server and unpack it under /var/www/html:
-
-    cd /var/www/html
-    sudo tar xzf app_cmfree_*.tar.gz
-    # or
-    sudo unzip app_cmfree_*.zip
-
-You should now have:
+Example target path:
 
     /var/www/html/app
 
-3. File ownership & permissions
--------------------------------
+Then open:
 
-Make Apache the owner and give it write access to the data/logs folders:
+    http://your-domain.example/app/admin/
 
-    cd /var/www/html
-    sudo chown -R www-data:www-data app
-    sudo find app -type d -exec chmod 775 {} \;
-    sudo find app -type f -exec chmod 664 {} \;
+### Option 2: DEB / Ubuntu-Debian install
 
-Make sure these directories are writable:
+Use the clean DEB package for Ubuntu/Debian based systems.
 
-    app/common/data/json
-    app/common/data/json/units
-    app/common/data/json/inquiries
-    app/common/data/json/reservations
-    app/logs
+Example:
 
-4. Apache configuration
------------------------
+    sudo apt update
+    sudo apt install ./cmfree_clean_amd64_1.2.1.deb
 
-Simplest option is to serve it as http://your-host/app:
+The DEB package installs the application under:
 
-- Ensure the default vhost DocumentRoot is /var/www/html.
-- Restart Apache:
+    /var/www/html/app
 
-    sudo systemctl restart apache2
+and declares dependencies for:
 
-Then open in a browser:
+- Apache
+- PHP
+- common PHP modules
+- msmtp
+- msmtp-mta
+- unzip
+
+After installation, open:
 
     http://localhost/app/admin/
-    http://localhost/app/public/
 
-5. Initial configuration
-------------------------
+or from another device on the same network:
 
-Most runtime configuration lives in JSON files under:
+    http://SERVER-IP/app/admin/
 
-    app/common/data/json/units/
-    app/common/data/json/site_settings.json
+## First-use setup
 
-For this dev snapshot, you will probably want to:
+The clean package is intentionally shipped without runtime state.
 
-- Adjust `site_settings.json` (emails, language, currency, etc.).
-- Adjust or create unit JSON files under `units/<UNIT>/`.
-- Clear demo data:
-  - `common/data/json/inquiries/*`
-  - `common/data/json/reservations/*`
+On first use, the setup flow creates:
 
-There is no “wizard” yet – configuration is mostly JSON + admin UI.
+- common/data/admin_key.txt
+- common/data/json/instance.json
+- common/data/json/units/manifest.json
+- the first unit
+- per-unit JSON files
+- integration skeletons
 
-6. Disclaimer
--------------
+The admin key is generated automatically if it does not already exist.
 
-This package is a work-in-progress dev snapshot, shared as-is.
-Expect rough edges, missing documentation and hard-coded paths
-(`/var/www/html/app`).
+## Data model
 
-Feedback, ideas and criticism are very welcome. :)
+CM Free / Plus is JSON-backed.
 
+Typical runtime structure:
 
-7. First-use checklist (how to actually start using it)
--------------------------------------------------------
+    common/data/
+    ├── admin_key.txt
+    ├── i18n/
+    └── json/
+        ├── instance.json
+        ├── units/
+        │   ├── manifest.json
+        │   └── <UNIT>/
+        │       ├── prices.json
+        │       ├── occupancy.json
+        │       ├── occupancy_merged.json
+        │       ├── local_bookings.json
+        │       ├── day_use.json
+        │       ├── special_offers.json
+        │       └── site_settings.json
+        ├── integrations/
+        ├── inquiries/
+        └── reservations/
 
-After unpacking the app and fixing permissions, these are the minimal steps
-to get a working demo of CM Free.
+The Git repository does not include private runtime state such as real reservations, admin keys or local JSON data.
 
-1) Open the admin area
+## Email / msmtp
 
-Open in your browser:
+CM Free / Plus can send emails through the system mail transport.
 
-    http://<server>/app/admin/
+The DEB package includes msmtp and msmtp-mta as dependencies, but SMTP credentials still need to be configured for the target system or installation.
 
-There is no authentication in this dev snapshot. The landing page links to
-the main admin sections (calendar, inquiries, integrations, etc.).
+After setup, verify that sendmail compatibility exists:
 
-2) Configure basic site settings
+    which sendmail
+    php -i | grep -i sendmail_path
 
-Edit:
+## ICS and channel workflows
 
-    app/common/data/json/site_settings.json
+CM Free / Plus includes ICS-oriented workflows for calendar interoperability.
 
-and adjust at least:
+The project is designed around a practical separation:
 
-- "site": name, base_url, default language
-- "email": from_email, from_name, admin_email
-- "currency" and formatting (if needed)
+- internal state is managed locally
+- confirmed reservations / hard locks can be exported
+- soft holds and unconfirmed internal states should not be exported as confirmed external availability
 
-If email is not configured on your server, you can temporarily disable sending
-in the "email.enabled" flag or in the admin UI.
+This keeps the system safer when working with external calendars and booking platforms.
 
-3) Create or adjust at least one unit
+## Help center
 
-Either:
+The package includes an internal help center for users and installers.
 
-- Use the admin UI: "Units" → "Add unit" (recommended in this snapshot), or
-- Manually edit JSON under:
+Important admin pages include contextual help and guide support so the system can be used in an “AnyDesk mode” setup, where a remote helper can install, configure or explain the system to a new user.
 
-    app/common/data/json/units/<UNIT>/
+## Project status
 
-For a quick test you only need:
+CM Free / Plus v1.2.1 is a practical release candidate for testing and real-world feedback.
 
-- basic meta (name, capacity),
-- a simple prices.json (flat price per night),
-- occupancy.json can stay empty.
+It is currently suitable for:
 
-4) Check integrations (Autopilot / ICS)
+- demos
+- sandbox installs
+- small self-hosted tests
+- early adopters
+- small accommodation providers who want a lightweight local-first reservation tool
 
-For CM Free, Autopilot is intentionally locked and disabled.
-The "Autopilot – Plus" card in Integrations is only a preview.
+For production use, always test the full flow first:
 
-ICS / Channels cards are present as early UI – you do not need to configure
-them to test the core booking flow.
+- first-use setup
+- public calendar
+- inquiry submission
+- admin acceptance
+- reservation confirmation
+- email sending
+- ICS import/export behavior
+- backups
 
-5) Test the public booking flow
+## Public project links
 
-Open:
+- Demo: http://cmfree.duckdns.org/app/
+- Download page: https://apartmamatevz.si/cmfree/download.html
+- Journal story: https://apartmamatevz.si/journal/posts/2026-05-12-cm-freeplus-rezervacijski-sistem.html
 
-    http://<server>/app/public/
+## Notes
 
-Then:
+This project started as a practical tool for a small independent accommodation business and is developed with real-world testing in mind.
 
-1. Choose a unit and dates in the calendar.
-2. Go to the offer page and submit an inquiry.
-3. Check the admin "Inquiries" section.
-4. Confirm one inquiry (soft-hold) and then use the email link to confirm
-   the reservation as a guest.
-5. Optionally cancel the reservation using the cancel link in the email.
+The goal is not to replace large commercial channel managers, but to provide a small, understandable and self-hosted alternative for simple use cases.
 
-This should create JSON files under:
+## Version
 
-- common/data/json/inquiries/YYYY/MM/{pending,accepted,rejected,confirmed}
-- common/data/json/reservations/YYYY/<UNIT>/
+Current release:
 
-and update the occupancy for the selected unit.
-
-6) Logs for debugging
-
-If something behaves strangely, look at:
-
-    app/logs/app.log
-    /var/log/apache2/error.log
-
-Most API endpoints log at least one line there when something fails.
-
-This snapshot is intentionally "developer-friendly": JSON structure and logs
-are more important than polished UI at this stage.
+    CM Free / Plus v1.2.1

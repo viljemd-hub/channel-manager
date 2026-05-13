@@ -10,13 +10,15 @@
 // /var/www/html/app/admin/api/ics_pull_unit.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php';   // cm_regen_merged_for_unit
 require_once __DIR__ . '/../../common/lib/autopilot.php';      // cm_autopilot_regen_merged_for_unit (če obstaja)
 
-$APP        = '/var/www/html/app';
+$APP        = app_root();
 $ROOT_UNITS = $APP . '/common/data/json/units';
 $CFG_DIR    = $APP . '/common/data/json/integrations';
 $ADMIN_KEY_FILE = $APP . '/common/data/admin_key.txt';

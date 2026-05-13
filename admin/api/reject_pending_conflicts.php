@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/reject_pending_conflicts.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -102,7 +104,7 @@ if (php_sapi_name() !== 'cli'
         exit;
     }
 
-    $appRoot = '/var/www/html/app';
+    $appRoot = app_root();
     $cfg     = cm_datetime_cfg();
 
     $inqRoot = $appRoot . '/common/data/json/inquiries';

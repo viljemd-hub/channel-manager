@@ -9,10 +9,12 @@
 // /var/www/html/app/admin/api/finalize_reservation.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php';
 require_once __DIR__ . '/../../common/lib/site_settings.php';
 require_once __DIR__ . '/../../common/lib/email.php';
-
+require_once __DIR__ . '/../../common/lib/urls.php';
 require_once __DIR__ . '/send_rejected.php';
 require_once __DIR__ . '/../../common/lib/conflict_care.php';
 
@@ -76,7 +78,7 @@ if (!function_exists('cm_json_write')) {
 // -----------------------------------------------------------------------------
 // Paths
 // -----------------------------------------------------------------------------
-$APP        = realpath(__DIR__ . '/../../') ?: __DIR__ . '/../../';
+$APP = app_root();
 $ROOT_JSON  = $APP . '/common/data/json';
 $ROOT_UNITS = $APP . '/common/data/json/units';
 $INQ_ROOT   = $APP . '/common/data/json/inquiries';
@@ -741,18 +743,10 @@ if (!function_exists('cm_random_token')) {
 }
 $res['cancel_token'] = $cancelToken;
 
-// base URL (for PDF + cancel links)
-$scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https://' : 'http://';
-$host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$base   = $scheme . $host . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
-
-// Normalize base URL to app root for public links (cancel/pdf).
-// When called from /admin/api context, base helpers may include "/admin/api".
-// We always want ".../app" here.
-$base = rtrim((string)$base, '/');
-$base = preg_replace('~/(admin/api|admin|public)$~', '', $base);
-
-$res['cancel_link'] = $base . '/public/cancel_reservation.php?token=' . rawurlencode($cancelToken);
+// Build absolute public URLs using central helper (respects site_settings + proxy)
+$res['cancel_link'] = cm_public_url(
+    'public/cancel_reservation.php?token=' . rawurlencode($cancelToken)
+);
 
 // PDF token + link
 if (!function_exists('cm_random_token')) {
@@ -761,7 +755,10 @@ if (!function_exists('cm_random_token')) {
     $pdfToken = cm_random_token(16);
 }
 $res['pdf_token'] = $pdfToken;
-$res['pdf_link']  = $base . '/public/reservation_pdf.php?id=' . rawurlencode($reservationId) . '&token=' . $pdfToken;
+$res['pdf_link']  = cm_public_url(
+    'public/reservation_pdf.php?id=' . rawurlencode($reservationId) .
+    '&token=' . rawurlencode($pdfToken)
+);
 
 // Write reservation in reservations/YYYY/UNIT/ID.json (YYYY from date)
 $ryear  = substr($from, 0, 4);

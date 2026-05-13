@@ -11,9 +11,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/api/_lib/json_io.php';
+require_once __DIR__ . '/api/_lib/paths.php';
 
-$root = '/var/www/html/app';
-$instanceFile = $root . '/common/data/json/instance.json';
+$root = app_root();
+$instanceFile = data_root() . '/instance.json';
 
 $instance = null;
 if (is_file($instanceFile)) {

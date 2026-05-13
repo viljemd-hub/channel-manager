@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/autopilot_precheck.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../common/lib/autopilot.php';

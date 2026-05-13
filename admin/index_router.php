@@ -9,9 +9,10 @@
 
 declare(strict_types=1);
 
-// Admin entry router
-$root = '/var/www/html/app';
-$instanceFile = $root . '/common/data/json/instance.json';
+require_once __DIR__ . '/api/_lib/paths.php';
+
+$root = app_root();
+$instanceFile = data_root() . '/instance.json';
 
 $initialized = false;
 if (is_file($instanceFile)) {

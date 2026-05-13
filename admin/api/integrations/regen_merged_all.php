@@ -10,6 +10,8 @@
 // /var/www/html/app/scripts/regen_merged_all.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 /**
  * Regenerira occupancy_merged.json za vse enote v units/.
  *
@@ -17,7 +19,7 @@ declare(strict_types=1);
  *   php /var/www/html/app/scripts/regen_merged_all.php
  */
 
-$root      = '/var/www/html/app';
+$root      = app_root();
 $unitsRoot = $root . '/common/data/json/units';
 
 require_once $root . '/common/lib/datetime_fmt.php';

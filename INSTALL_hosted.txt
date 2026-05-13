@@ -1,0 +1,9 @@
+This version of CM Free/Plus is upgraded version, 
+and runs even on hosted servers.  
+Unziped package has to be placed on root  as https://your-domain/app/.
+
+For this distribution Hosting must support al least - PHP 8.1+ with common extensions:
+  - php-mbstring, php-json, php-xml, php-curl, php-zip
+- `zip` / `unzip` or `tar` for unpacking
+
+Package also work as standard Linux instalations.

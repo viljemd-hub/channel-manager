@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/offers_get.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -20,7 +22,7 @@ if ($unit === '') {
     exit;
 }
 
-$DATA_ROOT  = '/var/www/html/app/common/data/json';
+$DATA_ROOT  = data_root();
 $UNIT_DIR   = $DATA_ROOT . '/units/' . $unit;
 $OFFERS_FILE = $UNIT_DIR . '/special_offers.json';
 

@@ -10,6 +10,8 @@
 // /app/admin/api/local_block_add.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 require __DIR__ . '/_lib/json_io.php'; // read_json, write_json, require_post_json
 require_once '/var/www/html/app/common/lib/datetime_fmt.php'; // cm_regen_merged_for_unit
 
@@ -60,7 +62,7 @@ if ($fromIn >= $toIn) {
 $from = $fromIn;
 $to   = $toIn;
 
-$root      = '/var/www/html/app';
+$root      = app_root();
 $unitsRoot = $root . '/common/data/json/units';
 $unitDir   = $unitsRoot . '/' . $unit;
 $localFile = $unitDir . '/local_bookings.json';

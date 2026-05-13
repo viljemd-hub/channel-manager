@@ -16,9 +16,10 @@ require_key();
 $tz = new DateTimeZone('Europe/Ljubljana');
 
 // --- paths ---
-$appRoot  = realpath(__DIR__ . '/..') ?: '/var/www/html/app';
-$dataRoot = $appRoot . '/common/data/json';
-$unitsDir = $dataRoot . '/units';
+require_once __DIR__ . '/api/_lib/paths.php';
+
+$dataRoot = data_root();
+$unitsDir = units_root();
 $manifestFile = $unitsDir . '/manifest.json';
 
 // --- tiny helpers (unique names, to avoid collisions) ---

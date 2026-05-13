@@ -8,6 +8,7 @@
  */
 
 declare(strict_types=1);
+require_once __DIR__ . '/_lib/paths.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -49,9 +50,8 @@ if ($id === '') {
     jexit(false, ['error' => 'missing_or_invalid_id']);
 }
 
-// Absolutna pot do app root-a (iz inventory: /var/www/html/app)
-$appRoot   = '/var/www/html/app';
-$unitsRoot = $appRoot . '/common/data/json/units';
+
+$unitsRoot = units_root();
 $unitDir   = $unitsRoot . '/' . $id;
 
 // -------------------------

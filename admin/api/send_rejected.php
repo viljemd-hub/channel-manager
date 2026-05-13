@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 /**
  * Skupni mail helper za “zavrnjeno povpraševanje” (ali odpoved rezervacije).
  *

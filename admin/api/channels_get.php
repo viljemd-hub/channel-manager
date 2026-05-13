@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -19,8 +21,7 @@ if ($unit === '') {
     exit;
 }
 
-$path = "/var/www/html/app/common/data/json/units/{$unit}/occupancy_sources.json";
-
+$path = units_root() . "/{$unit}/occupancy_sources.json";
 if (!is_file($path)) {
     // default “safe skeleton”
     $out = [

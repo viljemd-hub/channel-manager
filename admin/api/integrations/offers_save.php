@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/offers_save.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -19,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$DATA_ROOT = '/var/www/html/app/common/data/json';
+$DATA_ROOT = data_root();
 
 function respond($ok, $payload = [], $code = 200): void {
     http_response_code($code);

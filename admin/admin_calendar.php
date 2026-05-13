@@ -32,7 +32,17 @@ require_key();
 <body class="adm-shell theme-dark calendar-page">
   <header class="adm-header">
     <div class="hdr-left">
-      <h1 class="hdr-title">Admin Calendar/ Upravljanje koledarja</h1>
+<h1 class="hdr-title">
+  Admin Calendar / Upravljanje koledarja
+  <span class="hdr-sep">→</span>
+  <a href="/app/public/pubcal.php"
+     class="hdr-link"
+     target="_blank"
+     rel="noopener noreferrer">
+    Public calendar / Javni koledar
+  </a>
+</h1>
+
  <a class="btn small primary" href="/app/admin/admin_calendar.php" title="Calendar">
        Koledar/Calendar
       </a>
@@ -119,6 +129,9 @@ require_key();
         <button type="button" id="cal-btn-set-offer" class="btn small">Set offer/Dodaj ponudbo</button>
         <button type="button" id="cal-btn-admin-reserve" class="btn small">Admin reserve/rezervacija</button>
         <button type="button" id="cal-btn-clear-selection" class="btn small ghost">Clear/Počisti</button>
+        <a class="btn small ghost" href="/app/admin/help.php">
+        ❓ Help
+        </a>
       </div>
     </section>
 
@@ -161,6 +174,6 @@ require_key();
   <script src="/app/admin/ui/js/calendar_shell.js" defer></script>
   <script type="module" src="/app/admin/ui/js/admin_calendar.js"></script>
   <script src="/app/admin/ui/js/range_select_admin.js" defer></script>
-
+  <script src="/app/admin/ui/js/cm_admin_help.js"></script>
 </body>
 </html>

@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 /**
  * finalize_core.php
  *
@@ -32,7 +34,7 @@ require_once __DIR__ . '/../../common/lib/json.php';
 function cm_autopilot_finalize_core(array $accData, string $acceptedPath, array $cfg): array
 {
     $tz  = $cfg['timezone'] ?? 'Europe/Ljubljana';
-    $APP = '/var/www/html/app';
+    $APP = app_root();
 
     $UNITS_ROOT = $APP . '/common/data/json/units';
     $INQ_ROOT   = $APP . '/common/data/json/inquiries';

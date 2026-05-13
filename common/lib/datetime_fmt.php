@@ -50,6 +50,29 @@ function cm_is_plus_enabled(): bool
     return $tier === 'plus' || $tier === 'pro';
 }
 
+/**
+ * Returns product version string from global site_settings.json.
+ * Source of truth: site_settings.json["product"]["version"].
+ * Falls back to "1.0.0" if not set.
+ */
+function cm_get_product_version(): string
+{
+    $settings = cm_load_settings();
+    $product  = $settings['product'] ?? null;
+
+    $version = '';
+    if (is_array($product) && array_key_exists('version', $product)) {
+        $version = trim((string)$product['version']);
+    }
+
+    if ($version === '') {
+        $version = '1.0.0';
+    }
+
+    return $version;
+}
+
+
 
 function cm_datetime_cfg(): array {
   $s = cm_load_settings();

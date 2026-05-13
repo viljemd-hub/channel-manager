@@ -26,6 +26,8 @@
 
 // /var/www/html/app/admin/api/sync_pending_requests.php
 declare(strict_types=1);
+
+require_once __DIR__ . '/_lib/paths.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function respond($ok, $payload = [], $http = null) {

@@ -39,6 +39,21 @@ function ct_read_json(string $path): ?array {
     return is_array($j) ? $j : null;
 }
 
+
+/**
+ * Minimal JSON writer with atomic replace.
+ */
+function ct_write_json(string $path, array $data): bool {
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if (!is_string($json)) return false;
+
+    $tmp = $path . '.tmp';
+    if (@file_put_contents($tmp, $json . "\n", LOCK_EX) === false) {
+        return false;
+    }
+    return @rename($tmp, $path);
+}
+
 /**
  * Find a reservation JSON by id.
  *
@@ -116,6 +131,122 @@ if ($id === '') {
     }
 }
 
+
+// --- Inline updates (POST) ----------------------------------------------------
+// This page is a calculator, but we allow one safe write-back:
+// update the number of children eligible for 50% TT (7–18) and keep total guests stable.
+if ($error === '' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $action = (string)($_POST['action'] ?? '');
+    if (!in_array($action, ['save_tt_kids712', 'save_tt_keycards'], true)) {
+        echo json_encode(['ok' => false, 'error' => 'Unknown action'], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    $file = (string)($res['_file'] ?? '');
+    if ($file === '' || !is_file($file)) {
+        echo json_encode(['ok' => false, 'error' => 'Reservation file not found'], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+// Accept both: kids06 (0–6) and kids712 (7–18). Keep total guests stable.
+    if ($action === 'save_tt_keycards') {
+        $keycardsRaw = isset($_POST['keycards']) ? (string)$_POST['keycards'] : '0';
+        $keycardsNew = (int)preg_replace('~[^0-9-]~', '', $keycardsRaw);
+        $keycardsNew = max(0, $keycardsNew);
+
+        if (!isset($res['tt']) || !is_array($res['tt'])) {
+            $res['tt'] = [];
+        }
+
+        $res['tt']['keycard_count'] = $keycardsNew;
+        $res['tt']['keycard_updated_at'] = date('c');
+        $res['tt']['keycard_updated_via'] = 'admin/checkin_tt.php';
+
+        unset($res['_file']);
+
+        $ok = ct_write_json($file, $res);
+        if (!$ok) {
+            echo json_encode(['ok' => false, 'error' => 'Write failed'], JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        echo json_encode([
+            'ok' => true,
+            'id' => $id,
+            'keycard_count' => $keycardsNew,
+        ], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    // Accept both: kids06 (0–6) and kids712 (7–18). Keep total guests stable.
+    $kids06NewRaw  = isset($_POST['kids06'])  ? (string)$_POST['kids06']  : null;
+    $kids712NewRaw = isset($_POST['kids712']) ? (string)$_POST['kids712'] : null;
+
+    $curAdults  = (int)($res['adults']  ?? 0);
+    $curKids06  = (int)($res['kids06']  ?? ($res['kids_0_6']  ?? 0));
+    $curKids712 = (int)($res['kids712'] ?? ($res['kids_7_12'] ?? 0));
+
+    $totalGuests = max(0, $curAdults + $curKids06 + $curKids712);
+
+    // If a field is not provided, keep current value.
+    $kids06New = ($kids06NewRaw !== null)
+        ? (int)preg_replace('~[^0-9-]~', '', $kids06NewRaw)
+        : $curKids06;
+
+    $kids712New = ($kids712NewRaw !== null)
+        ? (int)preg_replace('~[^0-9-]~', '', $kids712NewRaw)
+        : $curKids712;
+
+    $kids06New  = max(0, $kids06New);
+    $kids712New = max(0, $kids712New);
+
+    // Clamp: kids06 cannot exceed total guests
+    if ($kids06New > $totalGuests) $kids06New = $totalGuests;
+
+    // Clamp: kids712 cannot exceed remaining (total - kids06)
+    $maxKids712 = max(0, $totalGuests - $kids06New);
+    if ($kids712New > $maxKids712) $kids712New = $maxKids712;
+
+    // Adults = remainder
+    $adultsNew = max(0, $totalGuests - $kids06New - $kids712New);
+
+    // Write back (keep total stable)
+    $res['kids06']  = $kids06New;
+    $res['kids712'] = $kids712New;
+    $res['adults']  = $adultsNew;
+
+    // Keep legacy fields consistent if they exist
+    if (array_key_exists('kids_0_6', $res)) $res['kids_0_6'] = $kids06New;
+    if (array_key_exists('kids_7_12', $res)) $res['kids_7_12'] = $kids712New;
+
+    if (!isset($res['meta']) || !is_array($res['meta'])) $res['meta'] = [];
+    $res['meta']['tt_kids06_updated_at'] = date('c');
+    $res['meta']['tt_kids06_updated_via'] = 'admin/checkin_tt.php';
+    $res['meta']['tt_kids712_updated_at'] = date('c');
+    $res['meta']['tt_kids712_updated_via'] = 'admin/checkin_tt.php';
+
+    // Do not persist helper key
+    unset($res['_file']);
+
+    $ok = ct_write_json($file, $res);
+    if (!$ok) {
+        echo json_encode(['ok' => false, 'error' => 'Write failed'], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    echo json_encode([
+        'ok' => true,
+        'id' => $id,
+        'adults' => $adultsNew,
+        'kids06' => $kids06New,
+        'kids712' => $kids712New,
+        'total_guests' => $totalGuests,
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 // --- Tourist tax defaults & site_settings.json --------------------------------
 
 // Defaults if site_settings.json is missing or incomplete
@@ -160,6 +291,15 @@ $adults    = (int)($res['adults']  ?? 0);
 $kids06    = (int)($res['kids06']  ?? ($res['kids_0_6']  ?? 0));
 $kids712   = (int)($res['kids712'] ?? ($res['kids_7_12'] ?? 0));
 $keycards  = (int)($res['keycards'] ?? 0);
+// Fallback to newer schema (stored under tt.keycard_count)
+if ($keycards <= 0 && isset($res['tt']) && is_array($res['tt']) && isset($res['tt']['keycard_count']) && is_numeric($res['tt']['keycard_count'])) {
+    $keycards = (int)$res['tt']['keycard_count'];
+}
+
+$disabledExemptCount = 0;
+if (isset($res['tt']) && is_array($res['tt']) && isset($res['tt']['disabled_exempt_count']) && is_numeric($res['tt']['disabled_exempt_count'])) {
+    $disabledExemptCount = max(0, (int)$res['tt']['disabled_exempt_count']);
+}
 
 $guestName  = '';
 $guestEmail = '';
@@ -175,8 +315,11 @@ if (isset($res['guest']) && is_array($res['guest'])) {
     $guestPhone = (string)($res['guest_phone'] ?? '');
 }
 
-// Persons subject to TT (adults + children with discounted TT)
-$personsForTt = max(0, $adults + $kids712);
+$totalGuests = max(0, $adults + $kids06 + $kids712);
+// Persons subject to TT before disability exemption
+$personsForTtBase = max(0, $adults + $kids712);
+// Effective TT persons after disability exemption
+$personsForTt = max(0, $personsForTtBase - $disabledExemptCount);
 
 // Accommodation amount – best-effort guess with safe fallback.
 // Primary source: calc.final (final price without TT from pricing engine).
@@ -491,30 +634,85 @@ if (isset($res['payment']) && is_array($res['payment'])) {
     }
 
     /* Print styling */
-    @media print {
-      body {
-        background: #ffffff;
-        color: #111827;
-      }
-      .wrap {
-        margin: 0;
-        padding: 0;
-      }
-      .card {
-        border-radius: 0;
-        border: 0;
-        box-shadow: none;
-        background: #ffffff;
-      }
-      .subtitle,
-      .note,
-      .footer-actions .btn-row button {
-        color: #6b7280;
-      }
-      .footer-actions .btn-row {
-        display: none;
-      }
-    }
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm 10mm;
+  }
+
+  body {
+    background: #ffffff;
+    color: #111827;
+    font-size: 12px;
+  }
+
+  .wrap {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+
+  .card {
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    background: #ffffff;
+    padding: 10px 12px 8px;
+  }
+
+  h1 {
+    margin: 0 0 2px;
+    font-size: 18px;
+  }
+
+  .subtitle {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #6b7280;
+  }
+
+  .meta-grid {
+    gap: 8px 12px;
+    margin-bottom: 10px;
+  }
+
+  .meta-block {
+    padding: 8px 8px;
+  }
+
+  .tt-card,
+  .invoice-card {
+    margin-top: 8px;
+    padding: 8px 10px 8px;
+  }
+
+  .tt-grid,
+  .inv-grid {
+    gap: 8px 12px;
+  }
+
+  .note {
+    margin-top: 6px;
+    font-size: 10px;
+    line-height: 1.25;
+    color: #6b7280;
+  }
+
+  .footer-actions {
+    margin-top: 8px;
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .footer-actions .btn-row {
+    display: none;
+  }
+
+  .footer-actions span {
+    font-size: 10px !important;
+    line-height: 1.2;
+  }
+}
   </style>
 </head>
 <body class="checkin-page">
@@ -570,7 +768,7 @@ if (isset($res['payment']) && is_array($res['payment'])) {
             <div class="meta-row">
               <span class="meta-label">Skupina:</span>
               <span class="meta-value">
-                Odrasli: <?=$adults?> · Otroci 7–12: <?=$kids712?> · Otroci 0–6: <?=$kids06?>
+                Odrasli: <?=$adults?> · Otroci 7–18: <?=$kids712?> · Otroci 0–6: <?=$kids06?> · TT invalid exemption: <?=$disabledExemptCount?>
               </span>
             </div>
           </div>
@@ -579,6 +777,9 @@ if (isset($res['payment']) && is_array($res['payment'])) {
         <div class="tt-card"
              data-adults="<?=$adults?>"
              data-kids712="<?=$kids712?>"
+             data-kids06="<?=$kids06?>"
+             data-disabled-exempt-count="<?=$disabledExemptCount?>"
+             data-total-guests="<?=$totalGuests?>"
              data-child-factor="<?=htmlspecialchars(number_format($childFactor, 3, '.', ''), ENT_QUOTES, 'UTF-8')?>"
              data-nights="<?=$nights?>"
              data-default-rate="<?=htmlspecialchars(number_format($defaultTtRate, 2, '.', ''), ENT_QUOTES, 'UTF-8')?>"
@@ -599,7 +800,22 @@ if (isset($res['payment']) && is_array($res['payment'])) {
                 KEYCARD (št. kartic ob prihodu)
               </label>
               <input type="number" step="1" min="0" id="ttKeycards" value="<?=$keycards?>" />
-            </div>
+<div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap">
+  <div style="flex:1; min-width:160px">
+    <label for="ttKids712">Otroci 7–18 (50% TT)</label>
+    <input type="number" step="1" min="0" id="ttKids712" value="<?=$kids712?>" />
+  </div>
+
+  <div style="flex:1; min-width:160px">
+    <label for="ttKids06">Otroci 0–6 (TT free)</label>
+    <input type="number" step="1" min="0" id="ttKids06" value="<?=$kids06?>" />
+  </div>
+</div>
+
+<div class="note" style="margin-top:8px">
+  Sprememba se zapiše v rezervacijo (samodejno popravi adults, da skupno število gostov ostane enako).
+</div>
+	     </div>
 
             <div class="tt-summary">
               <p>
@@ -665,13 +881,25 @@ if (isset($res['payment']) && is_array($res['payment'])) {
           </div>
         </div>
 
-        <div class="footer-actions">
-          <div>
-            <span style="font-size:11px; color:var(--muted);">
-              Dokument za interni check-in, prijazno razlago gosta in osnovni račun pri plačilu na mestu.
-            </span>
-          </div>
-          <div class="btn-row">
+<div class="footer-actions" style="display:flex; justify-content:space-between; align-items:flex-start;">
+  <div>
+    <span style="font-size:11px; color:var(--muted);">
+      Dokument za interni check-in, prijazno razlago gostu in osnovni račun pri plačilu na mestu.
+    </span>
+    <br>
+    <span style="font-size:11px; color:var(--muted);">
+      *** Več o dogodkih, kulinariki in doživetjih v Radovljici: www.radolca.si
+    </span>
+  </div>
+
+<div style="text-align:right; min-width:220px; padding-left:16px;">
+  <div style="font-size:11px; color:var(--text);">
+    Signature of responsible person:
+  </div>
+  <div style="width:200px; margin-left:auto; border-bottom:1px solid #999; margin-top:36px;"></div>
+</div>
+
+  <div class="btn-row">
             <button type="button" class="btn btn-ghost" onclick="window.close();">
               Zapri
             </button>
@@ -681,130 +909,210 @@ if (isset($res['payment']) && is_array($res['payment'])) {
           </div>
         </div>
 
-        <script>
-          (function () {
-            const card = document.querySelector('.tt-card');
-            if (!card) return;
+<script>
+(function () {
+  const card = document.querySelector('.tt-card');
+  if (!card) return;
 
-            const adults      = parseInt(card.getAttribute('data-adults') || '0', 10) || 0;
-            const kids712     = parseInt(card.getAttribute('data-kids712') || '0', 10) || 0;
-            const childFactor = parseFloat(card.getAttribute('data-child-factor') || '0.5') || 0;
-            const nights      = parseInt(card.getAttribute('data-nights') || '0', 10) || 0;
-            const defaultRate = parseFloat(card.getAttribute('data-default-rate') || '0') || 0;
-            const defaultKeycards = parseInt(card.getAttribute('data-default-keycards') || '0', 10) || 0;
+  const childFactor = parseFloat(card.getAttribute('data-child-factor') || '0.5') || 0;
+  const nights = parseInt(card.getAttribute('data-nights') || '0', 10) || 0;
+  const defaultRate = parseFloat(card.getAttribute('data-default-rate') || '0') || 0;
+  const defaultKeycards = parseInt(card.getAttribute('data-default-keycards') || '0', 10) || 0;
 
-            const invCard = document.querySelector('.invoice-card');
-            const accDefault = invCard
-              ? (parseFloat(invCard.getAttribute('data-acc-default') || '0') || 0)
-              : 0;
-            const paidOnlineDefault = invCard
-              ? invCard.getAttribute('data-paid-online') === '1'
-              : false;
+  function getIntAttr(name) {
+    return parseInt(card.getAttribute(name) || '0', 10) || 0;
+  }
 
-            const rateInput = document.getElementById('ttRate');
-            const keyInput  = document.getElementById('ttKeycards');
-            const baseEl    = document.getElementById('ttBase');
-            const savedEl   = document.getElementById('ttSaved');
-            const payEl     = document.getElementById('ttToPay');
-            const brEl      = document.getElementById('ttBreakdown');
+  const totalGuestsDefault = Math.max(0, getIntAttr('data-total-guests'));
+  const kids06Default = Math.max(0, getIntAttr('data-kids06'));
+  const kids712Default = Math.max(0, getIntAttr('data-kids712'));
+  const disabledExemptCountDefault = Math.max(0, getIntAttr('data-disabled-exempt-count'));
 
-            const accInput      = document.getElementById('invAccommodation');
-            const paidOnlineChk = document.getElementById('invPaidOnline');
-            const accToPayEl    = document.getElementById('invAccToPay');
-            const ttToPayEl     = document.getElementById('invTtToPay');
-            const totalEl       = document.getElementById('invTotal');
+  const invCard = document.querySelector('.invoice-card');
+  const accDefault = invCard ? (parseFloat(invCard.getAttribute('data-acc-default') || '0') || 0) : 0;
+  const paidOnlineDefault = invCard ? invCard.getAttribute('data-paid-online') === '1' : false;
 
-            if (paidOnlineChk && paidOnlineDefault) {
-              paidOnlineChk.checked = true;
-            }
+  const rateInput = document.getElementById('ttRate');
+  const keyInput = document.getElementById('ttKeycards');
+  const kids712Input = document.getElementById('ttKids712');
+  const kids06Input = document.getElementById('ttKids06');
 
-            function fmtEUR(v) {
-              return (v || 0).toFixed(2).replace('.', ',') + ' €';
-            }
+  const baseEl = document.getElementById('ttBase');
+  const savedEl = document.getElementById('ttSaved');
+  const payEl = document.getElementById('ttToPay');
+  const brEl = document.getElementById('ttBreakdown');
 
-            function recalc() {
-              const rateRaw = rateInput && rateInput.value !== '' ? rateInput.value : String(defaultRate);
-              const keyRaw  = keyInput && keyInput.value !== ''  ? keyInput.value  : String(defaultKeycards);
+  const accInput = document.getElementById('invAccommodation');
+  const paidOnlineChk = document.getElementById('invPaidOnline');
+  const accToPayEl = document.getElementById('invAccToPay');
+  const ttToPayEl = document.getElementById('invTtToPay');
+  const totalEl = document.getElementById('invTotal');
 
-              const rate = Math.max(0, parseFloat(rateRaw.replace(',', '.')) || 0);
-              let keycards = Math.max(0, parseInt(keyRaw, 10) || 0);
+  if (paidOnlineChk && paidOnlineDefault) paidOnlineChk.checked = true;
 
-              const nightsCount = Math.max(0, nights);
-              const adultsCount = Math.max(0, adults);
-              const kidsCount   = Math.max(0, kids712);
-              const personsForTt = adultsCount + kidsCount;
+  function fmtEUR(v) {
+    return (v || 0).toFixed(2).replace('.', ',') + ' €';
+  }
 
-              const childRate = rate * childFactor;
+  function recalc() {
+    const rateRaw = rateInput && rateInput.value !== '' ? rateInput.value : String(defaultRate);
+    const keyRaw = keyInput && keyInput.value !== '' ? keyInput.value : String(defaultKeycards);
 
-              const baseAdults = adultsCount * nightsCount * rate;
-              const baseKids   = kidsCount * nightsCount * childRate;
-              const baseTt     = baseAdults + baseKids;
+    const rate = Math.max(0, parseFloat(String(rateRaw).replace(',', '.')) || 0);
+    let keycards = Math.max(0, parseInt(keyRaw, 10) || 0);
 
-              // Each KEYCARD covers TT for exactly one adult-equivalent person.
-              if (keycards > personsForTt) keycards = personsForTt;
+    const nightsCount = Math.max(0, nights);
 
-              const saved = keycards * nightsCount * rate;
-              const toPay = Math.max(0, baseTt - saved);
+    // kids06 / kids712 from inputs (fallback to defaults)
+    let kids06Count = kids06Input && kids06Input.value !== '' ? (parseInt(kids06Input.value, 10) || 0) : kids06Default;
+    let kids712Count = kids712Input && kids712Input.value !== '' ? (parseInt(kids712Input.value, 10) || 0) : kids712Default;
 
-              if (baseEl)  baseEl.textContent  = fmtEUR(baseTt);
-              if (savedEl) savedEl.textContent = fmtEUR(saved);
-              if (payEl)   payEl.textContent   = fmtEUR(toPay);
+    kids06Count = Math.max(0, kids06Count);
+    kids712Count = Math.max(0, kids712Count);
 
-              if (brEl) {
-                if (personsForTt <= 0 || nightsCount <= 0 || rate <= 0) {
-                  brEl.textContent = 'Ni dovolj podatkov za razčlenitev.';
-                } else {
-                  const parts = [];
-                  if (adultsCount > 0) {
-                    const aPart = baseAdults;
-                    parts.push(
-                      adultsCount + ' × ' + nightsCount + ' × ' +
-                      rate.toFixed(2).replace('.', ',') + ' € = ' + fmtEUR(aPart) +
-                      ' (odrasli)'
-                    );
-                  }
-                  if (kidsCount > 0 && childRate > 0) {
-                    const kPart = baseKids;
-                    parts.push(
-                      kidsCount + ' × ' + nightsCount + ' × ' +
-                      childRate.toFixed(2).replace('.', ',') + ' € = ' + fmtEUR(kPart) +
-                      ' (otroci 7–12)'
-                    );
-                  }
-                  let txt = parts.join(' · ');
-                  txt += ' → skupaj ' + fmtEUR(baseTt);
-                  if (keycards > 0) {
-                    txt += ' · pokritih s KEYCARD: ' + keycards + ' oseb';
-                  }
-                  brEl.textContent = txt;
-                }
-              }
+    // clamp to keep total guests stable
+    const totalGuests = totalGuestsDefault;
+    if (kids06Count > totalGuests) kids06Count = totalGuests;
 
-              // --- Invoice section (accommodation + final total) --------------
-              if (invCard) {
-                const accRaw = accInput && accInput.value !== ''
-                  ? accInput.value
-                  : String(accDefault);
+    const maxKids712 = Math.max(0, totalGuests - kids06Count);
+    if (kids712Count > maxKids712) kids712Count = maxKids712;
 
-                let acc = Math.max(0, parseFloat(accRaw.replace(',', '.')) || 0);
-                const paidOnline = !!(paidOnlineChk && paidOnlineChk.checked);
-                const accPayable = paidOnline ? 0 : acc;
+    const adultsCount = Math.max(0, totalGuests - kids06Count - kids712Count);
+    const personsForTtBase = adultsCount + kids712Count; // kids06 are free
+    const disabledExemptCount = Math.min(disabledExemptCountDefault, personsForTtBase);
+    const personsForTt = Math.max(0, personsForTtBase - disabledExemptCount);
 
-                if (accToPayEl) accToPayEl.textContent = fmtEUR(accPayable);
-                if (ttToPayEl)  ttToPayEl.textContent  = fmtEUR(toPay);
-                if (totalEl)    totalEl.textContent    = fmtEUR(accPayable + toPay);
-              }
-            }
+    const childRate = rate * childFactor;
 
-            rateInput && rateInput.addEventListener('input', recalc);
-            keyInput  && keyInput.addEventListener('input', recalc);
+    let exemptLeft = disabledExemptCount;
+    const exemptAdults = Math.min(adultsCount, exemptLeft);
+    exemptLeft -= exemptAdults;
+    const exemptKids712 = Math.min(kids712Count, exemptLeft);
 
-            accInput      && accInput.addEventListener('input', recalc);
-            paidOnlineChk && paidOnlineChk.addEventListener('change', recalc);
+    const ttAdults = Math.max(0, adultsCount - exemptAdults);
+    const ttKids712 = Math.max(0, kids712Count - exemptKids712);
 
-            recalc();
-          })();
-        </script>
+    const baseAdults = ttAdults * nightsCount * rate;
+    const baseKids = ttKids712 * nightsCount * childRate;
+    const baseTt = baseAdults + baseKids;
+
+    if (keycards > personsForTt) keycards = personsForTt;
+
+    const saved = keycards * nightsCount * rate;
+    const toPay = Math.max(0, baseTt - saved);
+
+    if (baseEl) baseEl.textContent = fmtEUR(baseTt);
+    if (savedEl) savedEl.textContent = fmtEUR(saved);
+    if (payEl) payEl.textContent = fmtEUR(toPay);
+
+    if (brEl) {
+      if (personsForTt <= 0 || nightsCount <= 0 || rate <= 0) {
+        brEl.textContent = 'Ni dovolj podatkov za razčlenitev.';
+      } else {
+        const parts = [];
+        if (ttAdults > 0) {
+          parts.push(ttAdults + ' × ' + nightsCount + ' × ' + rate.toFixed(2).replace('.', ',') + ' € = ' + fmtEUR(baseAdults) + ' (odrasli)');
+        }
+        if (ttKids712 > 0 && childRate > 0) {
+          parts.push(ttKids712 + ' × ' + nightsCount + ' × ' + childRate.toFixed(2).replace('.', ',') + ' € = ' + fmtEUR(baseKids) + ' (otroci 7–18)');
+        }
+        if (disabledExemptCount > 0) {
+          parts.push('TT exempt disabled persons: ' + disabledExemptCount);
+        }
+        let txt = parts.join(' · ');
+        txt += ' → skupaj ' + fmtEUR(baseTt);
+        if (keycards > 0) txt += ' · pokritih s KEYCARD: ' + keycards + ' oseb';
+        brEl.textContent = txt;
+      }
+    }
+
+    // invoice totals
+    if (invCard) {
+      const accRaw = accInput && accInput.value !== '' ? accInput.value : String(accDefault);
+      const acc = Math.max(0, parseFloat(String(accRaw).replace(',', '.')) || 0);
+      const paidOnline = !!(paidOnlineChk && paidOnlineChk.checked);
+      const accPayable = paidOnline ? 0 : acc;
+
+      if (accToPayEl) accToPayEl.textContent = fmtEUR(accPayable);
+      if (ttToPayEl) ttToPayEl.textContent = fmtEUR(toPay);
+      if (totalEl) totalEl.textContent = fmtEUR(accPayable + toPay);
+    }
+  }
+
+  let kidsSaveInFlight = false;
+  async function saveChildren() {
+    if (kidsSaveInFlight) return;
+    if (!kids712Input || !kids06Input) return;
+
+    kidsSaveInFlight = true;
+    kids712Input.disabled = true;
+    kids06Input.disabled = true;
+
+    const body = new URLSearchParams();
+    body.set('action', 'save_tt_kids712');
+    body.set('kids712', kids712Input.value || '0');
+    body.set('kids06', kids06Input.value || '0');
+
+    try {
+      const resp = await fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: body.toString()
+      });
+      const j = await resp.json();
+      if (!j || !j.ok) throw new Error((j && j.error) ? j.error : 'Save failed');
+      window.location.reload();
+    } catch (e) {
+      kidsSaveInFlight = false;
+      alert('Neuspešno shranjevanje (otroci): ' + (e && e.message ? e.message : String(e)));
+      kids712Input.disabled = false;
+      kids06Input.disabled = false;
+    }
+  }
+  let keycardSaveInFlight = false;
+  async function saveKeycards() {
+    if (keycardSaveInFlight) return;
+    if (!keyInput) return;
+
+    keycardSaveInFlight = true;
+    keyInput.disabled = true;
+
+    const body = new URLSearchParams();
+    body.set('action', 'save_tt_keycards');
+    body.set('keycards', keyInput.value || '0');
+
+    try {
+      const resp = await fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: body.toString()
+      });
+      const j = await resp.json();
+      if (!j || !j.ok) throw new Error((j && j.error) ? j.error : 'Save failed');
+      window.location.reload();
+    } catch (e) {
+      keycardSaveInFlight = false;
+      alert('Neuspešno shranjevanje (KEYCARD): ' + (e && e.message ? e.message : String(e)));
+      keyInput.disabled = false;
+    }
+  }
+
+  rateInput && rateInput.addEventListener('input', recalc);
+  keyInput && keyInput.addEventListener('input', recalc);
+  kids712Input && kids712Input.addEventListener('input', recalc);
+  kids06Input && kids06Input.addEventListener('input', recalc);
+
+  keyInput && keyInput.addEventListener('change', saveKeycards);
+  kids712Input && kids712Input.addEventListener('change', saveChildren);
+  kids06Input && kids06Input.addEventListener('change', saveChildren);
+
+  accInput && accInput.addEventListener('input', recalc);
+  paidOnlineChk && paidOnlineChk.addEventListener('change', recalc);
+  recalc();
+})();
+
+</script>
+
       <?php endif; ?>
     </div>
   </div>

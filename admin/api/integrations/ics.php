@@ -30,6 +30,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 use App\ICS\IcsBuilder;
 
 require_once __DIR__ . '/../../../common/lib/ics_builder.php';

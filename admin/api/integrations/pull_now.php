@@ -23,6 +23,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 function jexit(array $o, int $code = 200): void {
@@ -45,7 +47,7 @@ if (!preg_match('/^[a-z0-9_]{2,32}$/i', $platform)) {
 }
 
 /* --- ADMIN KEY -------------------------------------------------------- */
-$adminKeyFile = '/var/www/html/app/common/data/admin_key.txt';
+$adminKeyFile = admin_key_path();
 if (!is_file($adminKeyFile)) jexit(['ok' => false, 'error' => 'admin key file not found'], 403);
 $expected = trim((string)@file_get_contents($adminKeyFile));
 if ($expected === '' || !hash_equals($expected, $key)) {
@@ -53,7 +55,7 @@ if ($expected === '' || !hash_equals($expected, $key)) {
 }
 
 /* --- LOAD CONFIG ------------------------------------------------------ */
-$cfgFile = "/var/www/html/app/common/data/json/integrations/{$unit}.json";
+$cfgFile = integrations_root() . "/{$unit}.json";
 if (!is_file($cfgFile)) jexit(['ok' => false, 'error' => 'unit config not found', 'path' => $cfgFile], 404);
 
 $cfg = json_decode((string)@file_get_contents($cfgFile), true);
@@ -82,6 +84,28 @@ if (is_array($u)) {
 
 if ($looksLikeSelf) {
   jexit(['ok' => false, 'error' => 'refusing self-import url', 'ics_url' => $icsUrl], 400);
+}
+
+function classifyIcsEvent(string $platform, string $summary): array {
+  $s = strtolower($summary);
+
+  // BOOKING → always blocked
+  if ($platform === 'booking') {
+    return ['type' => 'blocked'];
+  }
+
+  // AIRBNB
+  if ($platform === 'airbnb') {
+    if (str_contains($s, 'reserved')) {
+      return ['type' => 'booked'];
+    }
+    if (str_contains($s, 'not available')) {
+      return ['type' => 'blocked'];
+    }
+  }
+
+  // SAFE DEFAULT
+  return ['type' => 'blocked'];
 }
 
 /* --- FETCH ICS -------------------------------------------------------- */
@@ -114,7 +138,7 @@ if (strpos((string)$data, 'BEGIN:VCALENDAR') === false) {
 }
 
 /* --- STORE RAW -------------------------------------------------------- */
-$extDir = "/var/www/html/app/common/data/json/units/{$unit}/external";
+$extDir = units_root() . "/{$unit}/external";
 @mkdir($extDir, 0775, true);
 
 $rawPath = "{$extDir}/{$platform}_raw.ics";
@@ -137,20 +161,30 @@ for ($i = 0; $i < count($ranges); $i++) {
   $uid = (string)($uids[$i] ?? '');
   $id  = $uid !== '' ? ("ics:{$platform}:" . $uid) : ("ics:{$platform}:" . substr(sha1($unit.'|'.$platform.'|'.$start.'|'.$end.'|'.$i), 0, 16));
 
-  $events[] = [
-    'id'     => $id,
-    'start'  => $start,
-    'end'    => $end,          // end-exclusive (DTEND)
-    'status' => 'reserved',
-    'lock'   => 'hard',
-    'source' => 'ics',
-    'meta'   => [
-      'platform' => $platform,
-      'summary'  => (string)($r['summary'] ?? ''),
-    ],
-    // convenience (stara koda v UI včasih bere to)
+$summary = (string)($r['summary'] ?? '');
+$cls = classifyIcsEvent($platform, $summary);
+
+$type = $cls['type']; // booked | blocked
+
+$events[] = [
+  'id'     => $id,
+  'start'  => $start,
+  'end'    => $end,
+
+  // 🔥 ključni del
+  'status' => ($type === 'booked') ? 'reserved' : 'blocked',
+  'type'   => $type,
+
+  'lock'   => 'hard',
+  'source' => 'ics',
+
+  'meta'   => [
     'platform' => $platform,
-  ];
+    'summary'  => $summary,
+  ],
+
+  'platform' => $platform,
+];
 }
 
 $norm = [
@@ -167,8 +201,8 @@ if (@file_put_contents($jsonPath, json_encode($norm, JSON_PRETTY_PRINT|JSON_UNES
 }
 
 /* --- REGENERATE MERGED + PUBLISH (PER UNIT) -------------------------- */
-$root      = '/var/www/html/app';
-$unitsRoot = $root . '/common/data/json/units';
+$root      = app_root();
+$unitsRoot = units_root();
 
 $regenOk = null;
 $regenErr = null;

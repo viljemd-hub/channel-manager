@@ -25,9 +25,11 @@
 
 // /var/www/html/app/admin/api/integrations_save.php
 declare(strict_types=1);
+
+require_once __DIR__ . '/_lib/paths.php';
 header('Content-Type: application/json; charset=utf-8');
 
-$root = '/var/www/html/app';
+$root = app_root();
 $connsFile = $root.'/common/data/json/integrations/connections.json';
 
 $raw = file_get_contents('php://input');

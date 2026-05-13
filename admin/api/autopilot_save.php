@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/autopilot_save.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 require __DIR__ . '/_lib/json_io.php';
 
 json_header();
@@ -57,7 +59,7 @@ if (!is_array($ap)) {
     }
 }
 
-$root = '/var/www/html/app/common/data/json/units';
+$root = units_root();
 
 if ($scope === 'unit') {
     if ($unit === '') {

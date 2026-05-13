@@ -48,6 +48,13 @@ require_key();
       <a class="btn small" href="/app/admin/logs.php" title="Logs">
         Logs
       </a>
+      <a class="btn small" href="/app/admin/reviews/admin_reviews.php" title="Reviews">
+       ★ Reviews
+      </a>
+      <a class="btn small ghost"href="#"onclick="CMAdminHelp.resetCurrentPage();
+     location.reload();
+     return false;
+   ">❓ Guide</a>
     </div>
   </header>
 
@@ -58,5 +65,6 @@ require_key();
 
   <!-- JS aplikacija za manage reservations (obstoječa logika) -->
   <script src="/app/admin/ui/js/manage_reservations.js"></script>
+  <script src="/app/admin/ui/js/cm_admin_help.js"></script>
 </body>
 </html>

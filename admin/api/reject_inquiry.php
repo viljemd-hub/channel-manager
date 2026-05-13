@@ -10,6 +10,8 @@
 // /app/admin/api/reject_inquiry.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 require __DIR__ . '/_lib/json_io.php'; // read_json, write_json
 require_once __DIR__ . '/send_rejected.php';
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php'; // za timezone cfg
@@ -181,7 +183,7 @@ function cm_create_manual_reject_coupon(string $appRoot, array $inq, string $tz)
  */
 function reject_inquiry_core(array $inq, string $reasonCode = 'manual_reject'): array
 {
-    $root      = '/var/www/html/app';
+    $root      = app_root();
     $dataRoot  = $root . '/common/data/json';
     $inqRoot   = $dataRoot . '/inquiries';
     $promoFile = $dataRoot . '/units/promo_codes.json';
@@ -327,7 +329,7 @@ if ($id === '') {
 }
 
 // poišči pending JSON po id
-$root     = '/var/www/html/app';
+$root     = app_root();
 $dataRoot = $root . '/common/data/json';
 $inqRoot  = $dataRoot . '/inquiries';
 

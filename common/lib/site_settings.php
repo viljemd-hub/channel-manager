@@ -16,7 +16,7 @@ function _merge_deep(array $a, array $b): array {
   return $a;
 }
 function load_site_settings(string $unit): array {
-  $root = "/var/www/html/app/common/data/json/units";
+  $root = dirname(__DIR__) . '/data/json/units';
   $defaults = [
     "display"    => ["cleaning_separate"=>false],
     "pricing"    => ["cleaning_fee_eur"=>0],

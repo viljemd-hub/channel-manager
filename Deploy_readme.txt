@@ -1,14 +1,43 @@
-# 1) wizard page
-install -m 0644 /path/to/opening_wizard.php /var/www/html/app/admin/opening_wizard.php
+CM PLUS – QUICK DEPLOY (NO GIT)
 
-# 2) api endpoint
-install -m 0644 /path/to/first_use_init.php /var/www/html/app/admin/api/first_use_init.php
+1. UPLOAD
+- Upload entire "app" folder to your server (e.g. public_html/)
+- Final structure must be:
+  public_html/app/admin
+  public_html/app/public
+  public_html/app/common
 
-# 3) ics preview
-install -m 0644 /path/to/ics_preview.php /var/www/html/app/admin/api/integrations/ics_preview.php
+2. OPEN IN BROWSER
+- Public: https://your-domain/app/public/
+- Admin:  https://your-domain/app/admin/
 
-# perms (po tvojem modelu: www-data naj bere/piše common/data)
-sudo chown -R www-data:www-data /var/www/html/app/common/data/json
-sudo find /var/www/html/app/common/data/json -type d -exec chmod 775 {} \;
-sudo find /var/www/html/app/common/data/json -type f -exec chmod 664 {} \;
- 
+3. PERMISSIONS (IMPORTANT)
+Make sure these folders are writable:
+- app/common/data/
+- app/common/data/json/
+- app/logs/
+- app/public/data/
+
+(Recommended: 775)
+
+4. FIRST SETUP
+- Open /app/admin/
+- Set your admin key in:
+  app/common/data/admin_key.txt
+
+- Edit:
+  app/common/data/json/site_settings.json
+  (email, name, etc.)
+
+5. TEST FLOW
+- Open public calendar
+- Send test inquiry
+- Confirm in admin
+- Check email / PDF
+
+6. NOTES
+- Coupon system = WORK IN PROGRESS
+- Reviews system initialized (empty JSON)
+- No database required (JSON-based system)
+
+Developer: viljem.d@gmail.com 

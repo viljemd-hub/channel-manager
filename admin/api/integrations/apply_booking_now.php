@@ -17,6 +17,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 function jexit(array $o, int $code=200){ http_response_code($code); echo json_encode($o, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT); exit; }
@@ -31,7 +33,7 @@ if ($platform==='') jexit(['ok'=>false,'error'=>'missing platform'], 400);
 if (!preg_match('/^[a-z0-9_]{2,32}$/i', $platform)) jexit(['ok'=>false,'error'=>'bad platform token'], 400);
 
 /* --- auth ------------------------------------------------------------- */
-$adminKeyFile = '/var/www/html/app/common/data/admin_key.txt';
+$adminKeyFile = admin_key_path();
 if (!is_file($adminKeyFile)) jexit(['ok'=>false,'error'=>'admin key file not found'], 403);
 $expected = trim((string)@file_get_contents($adminKeyFile));
 if ($expected === '' || !hash_equals($expected, (string)$key)) {
@@ -39,8 +41,8 @@ if ($expected === '' || !hash_equals($expected, (string)$key)) {
 }
 
 /* --- paths ------------------------------------------------------------- */
-$root       = '/var/www/html/app';
-$unitDir    = "$root/common/data/json/units/$unit";
+$root       = app_root();
+$unitDir    = units_root() . "/$unit";
 $occPath    = "$unitDir/occupancy.json";
 $rawPath    = "$unitDir/external/{$platform}_raw.ics";
 $parsedPath = "$unitDir/external/{$platform}_ics.json";
@@ -81,6 +83,51 @@ if (is_file($occPath)) {
   $occ = json_decode((string)@file_get_contents($occPath), true);
   if (!is_array($occ)) $occ = [];
 }
+
+/*
+ * --- sync: drop stale ICS rows for this platform -----------------------
+ *
+ * Če Booking.com (ali druga platforma) iz ICS odstrani nek CLOSED event,
+ * moramo odstraniti tudi ustrezne vrstice iz occupancy.json, sicer ostane
+ * koledar za vedno blokiran.
+ *
+ * Logika:
+ *  - zberemo vse [start|end] pare iz trenutnega ICS ( $events )
+ *  - obdržimo vse ne-ICS vrstice in ICS drugih platform
+ *  - za ICS+hard vrstice te platforme obdržimo samo tiste, katerih range
+ *    še obstaja v zadnjem ICS importu.
+ */
+$currentKeys = [];
+foreach ($events as $e) {
+  $k = $e['start'] . '|' . $e['end'];
+  $currentKeys[$k] = true;
+}
+
+$removedIcs = 0;
+if (!empty($occ)) {
+  $occ = array_values(array_filter($occ, function ($seg) use (&$removedIcs, $platform, $currentKeys) {
+    if (!is_array($seg)) return false;
+
+    $src   = (string)($seg['source'] ?? '');
+    $lock  = (string)($seg['lock'] ?? '');
+    $start = $seg['start'] ?? $seg['from'] ?? null;
+    $end   = $seg['end']   ?? $seg['to']   ?? null;
+    $pl    = $seg['platform'] ?? ($seg['meta']['platform'] ?? '');
+
+    // obravnavamo samo ICS hard-lock vrstice za to platformo
+    if ($src === 'ics' && $lock === 'hard' && $pl === $platform && $start && $end) {
+      $key = $start . '|' . $end;
+      if (!isset($currentKeys[$key])) {
+        // ta range ni več v ICS -> pobriši ga iz occupancy
+        $removedIcs++;
+        return false;
+      }
+    }
+
+    return true;
+  }));
+}
+
 
 /* --- merge: skip exact duplicates only ------------------------------- */
 $added=0; $skipped_same=0;
@@ -128,7 +175,7 @@ if (@file_put_contents($occPath, json_encode($occ, JSON_PRETTY_PRINT|JSON_UNESCA
   jexit(['ok'=>false,'error'=>'write failed','path'=>$occPath], 500);
 }
 
-$unitsRoot = $root . '/common/data/json/units';
+$unitsRoot = units_root();
 $regenOk = function_exists('cm_regen_merged_for_unit') ? cm_regen_merged_for_unit($unitsRoot, $unit) : null;
 
 jexit([
@@ -137,7 +184,9 @@ jexit([
   'platform' => $platform,
   'added' => $added,
   'skipped_same' => $skipped_same,
+  'removed_ics' => $removedIcs,
   'occupancy_path' => $occPath,
   'merged_regen' => $regenOk,
   'total_segments' => count($occ)
 ]);
+

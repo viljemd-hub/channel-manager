@@ -10,6 +10,8 @@
 // /app/admin/api/unit_settings_update.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -34,7 +36,7 @@ $trueVals = ['1', 'true', 'on', 'yes', 'y'];
 $boolVal  = in_array(strtolower((string)$valueRaw), $trueVals, true);
 
 // ---- Paths ------------------------------------------------------------------
-$rootUnits = '/var/www/html/app/common/data/json/units';
+$rootUnits = units_root();
 $unitDir   = $rootUnits . '/' . $unit;
 $unitFile  = $unitDir . '/site_settings.json';
 

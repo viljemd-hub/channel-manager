@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 /**
  * /app/admin/api/unit_settings_get.php
  *
@@ -55,7 +57,7 @@ if ($unit === '') {
     exit;
 }
 
-$rootUnits = '/var/www/html/app/common/data/json/units';
+$rootUnits = units_root();
 $unitDir   = $rootUnits . '/' . $unit;
 $unitFile  = $unitDir . '/site_settings.json';
 
@@ -105,6 +107,44 @@ $monthRender = null;
 if (isset($current['month_render'])) {
     $monthRender = $intVal($current['month_render'], 12);
 }
+
+// weekly / long stay discounts (optional, top-level)
+$weeklyThreshold   = null;
+$weeklyDiscountPct = null;
+$longThreshold     = null;
+$longDiscountPct   = null;
+
+if (array_key_exists('weekly_threshold', $current)) {
+    $wt = $intVal($current['weekly_threshold'], 0);
+    if ($wt > 0 && $wt <= 365) {
+        $weeklyThreshold = $wt;
+    }
+}
+
+if (array_key_exists('weekly_discount_pct', $current)) {
+    $wd = $intVal($current['weekly_discount_pct'], 0);
+    if ($wd > 0 && $wd <= 100) {
+        $weeklyDiscountPct = $wd;
+    }
+}
+
+if (array_key_exists('long_threshold', $current)) {
+    $lt = $intVal($current['long_threshold'], 0);
+    if ($lt > 0 && $lt <= 365) {
+        $longThreshold = $lt;
+    }
+}
+
+if (array_key_exists('long_discount_pct', $current)) {
+    $ld = $intVal($current['long_discount_pct'], 0);
+    if ($ld > 0 && $ld <= 100) {
+        $longDiscountPct = $ld;
+    }
+}
+
+// block_departure_day flag (still useful elsewhere)
+$blockDeparture = $boolVal($current['block_departure_day'] ?? null, false);
+
 
 // block_departure_day flag (still useful elsewhere)
 $blockDeparture = $boolVal($current['block_departure_day'] ?? null, false);
@@ -221,6 +261,19 @@ $out = [
     ],
  'block_departure_day' => $blockDeparture,
 ];
+// weekly / long stay discounts – only include if set
+if ($weeklyThreshold !== null) {
+    $out['weekly_threshold'] = $weeklyThreshold;
+}
+if ($weeklyDiscountPct !== null) {
+    $out['weekly_discount_pct'] = $weeklyDiscountPct;
+}
+if ($longThreshold !== null) {
+    $out['long_threshold'] = $longThreshold;
+}
+if ($longDiscountPct !== null) {
+    $out['long_discount_pct'] = $longDiscountPct;
+}
 
 // NOVO: capacity, če obstaja v JSON
 if ($capacity !== null) {

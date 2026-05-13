@@ -8,11 +8,12 @@
  */
 
 declare(strict_types=1);
+require_once __DIR__ . '/_lib/paths.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-$manifestPath = '/var/www/html/app/common/data/json/units/manifest.json';
+$manifestPath = units_root() . '/manifest.json';
 
 $units = [];
 

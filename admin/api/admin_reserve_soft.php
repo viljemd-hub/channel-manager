@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/admin_reserve_soft.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -20,7 +22,7 @@ require_once __DIR__ . '/send_accept_link.php'; // cm_send_accept_link()
 $cfg = cm_datetime_cfg();
 $tz  = $cfg['timezone'] ?? 'Europe/Ljubljana';
 
-$APP      = '/var/www/html/app';
+$APP      = app_root();
 $INQ_ROOT = $APP . '/common/data/json/inquiries';
 
 function respond(bool $ok, array $payload = [], int $status = 200): void {
@@ -172,7 +174,7 @@ $occArr[] = [
 cm_json_write($occPath, $occArr);
 // Regenerate merged immediately after soft-hold write
 if (function_exists('cm_regen_merged_for_unit')) {
-    $unitsRoot = '/var/www/html/app/common/data/json/units';
+    $unitsRoot = units_root();
     cm_regen_merged_for_unit($unitsRoot, $unit);
 }
 

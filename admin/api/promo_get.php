@@ -10,10 +10,12 @@
 // /var/www/html/app/admin/api/promo_get.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-$DATA_ROOT  = '/var/www/html/app/common/data/json';
+$DATA_ROOT  = data_root();
 $PROMO_FILE = $DATA_ROOT . '/units/promo_codes.json';
 
 function respond(bool $ok, array $payload = [], int $code = 200): void {

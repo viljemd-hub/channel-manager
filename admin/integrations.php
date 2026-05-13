@@ -14,13 +14,15 @@ header('X-Content-Type-Options: nosniff');
 // Preberi unit iz query (opcijsko predizbran)
 $unit = isset($_GET['unit']) ? preg_replace('/[^A-Za-z0-9_-]/','', $_GET['unit']) : '';
 
-$DATA_ROOT   = '/var/www/html/app/common/data/json';
-$UNITS_DIR   = $DATA_ROOT . '/units';
+require_once __DIR__ . '/api/_lib/paths.php';
+
+$DATA_ROOT   = data_root();
+$UNITS_DIR   = units_root();
 $MANIFEST    = $UNITS_DIR . '/manifest.json';
 $HAS_MANIFEST = file_exists($MANIFEST);
 
 // Preberi admin_key za integracijske API-je (ICS IN, pull_now, apply_booking_now)
-$ADMIN_KEY_FILE = '/var/www/html/app/common/data/admin_key.txt';
+$ADMIN_KEY_FILE = admin_key_path();
 $adminKey = is_file($ADMIN_KEY_FILE)
   ? trim((string)file_get_contents($ADMIN_KEY_FILE))
   : '';
@@ -1079,6 +1081,21 @@ header('X-Frame-Options: SAMEORIGIN');
             <input type="date" id="editTo">
           </div>
         </div>
+  	<div class="field" id="fldMinNights">
+	  <label for="editMinNights">Min. noči</label>
+ 	 <input
+	    type="number"
+ 	   id="editMinNights"
+ 	   min="1"
+	    max="60"
+	    step="1"
+ 	   placeholder="1"
+ 	 >
+	  <p class="muted small">
+  	  Minimalno število nočitev za veljavnost akcije.
+ 	   Če pustiš prazno, velja tudi za 1 noč.
+ 	 </p>
+       </div>
 
         <div class="field checkbox">
           <label>
@@ -1109,6 +1126,7 @@ header('X-Frame-Options: SAMEORIGIN');
       </p>
     </form>
   </dialog>
+<script src="/app/admin/ui/js/cm_admin_help.js"></script>
 
 <script src="/app/admin/ui/js/integrations_core.js?v=1"></script>
 
@@ -1122,9 +1140,9 @@ header('X-Frame-Options: SAMEORIGIN');
 <script src="/app/admin/ui/js/integrations_promo.js?v=1"></script>
 <script src="/app/admin/ui/js/integrations_offers.js?v=1"></script>
 <script src="/app/admin/ui/js/integrations_autopilot.js?v=2"></script>
+
 </body>
 </html>
 
 
-</body>
-</html>
+

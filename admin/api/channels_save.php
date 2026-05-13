@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -58,7 +60,7 @@ $out = [
     'suppressions' => array_values($suppressions),
 ];
 
-$dir = "/var/www/html/app/common/data/json/units/{$unit}";
+$dir = units_root() . "/{$unit}";
 if (!is_dir($dir)) {
     http_response_code(404);
     echo json_encode(['ok'=>false,'error'=>'unit_not_found']);

@@ -20,6 +20,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 function jexit(array $o, int $code = 200): void {
@@ -55,7 +57,7 @@ if (!preg_match('/^[a-z0-9_]{2,32}$/i', $platform)) {
   jexit(['ok' => false, 'error' => 'bad platform token', 'platform' => $platform], 400);
 }
 
-$adminKeyFile = '/var/www/html/app/common/data/admin_key.txt';
+$adminKeyFile = admin_key_path();
 if (!is_file($adminKeyFile)) jexit(['ok' => false, 'error' => 'admin key file not found'], 403);
 
 $expected = trim((string)@file_get_contents($adminKeyFile));

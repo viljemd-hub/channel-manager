@@ -9,6 +9,7 @@
 
 declare(strict_types=1);
 require_once __DIR__ . '/_common.php';
+require_once __DIR__ . '/api/_lib/paths.php';
 require_key();
 
 $now    = new DateTimeImmutable('now', new DateTimeZone('Europe/Ljubljana'));
@@ -17,8 +18,7 @@ $m      = $_GET['m'] ?? $now->format('m');
 $status = $_GET['status'] ?? 'pending'; // "pending", "accepted", "rejected"
 
 ensure_dirs($y, $m);
-
-$INQ_ROOT = $_SERVER['DOCUMENT_ROOT'] . '/app/common/data/json/inquiries';
+$INQ_ROOT = inquiries_root();
 
 // Preprosta lokalna funkcija za branje JSON-ov iz podmape (pending/accepted/rejected)
 function cm_load_inquiries(string $root, string $y, string $m, string $subdir): array {

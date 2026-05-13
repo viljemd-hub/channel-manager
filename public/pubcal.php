@@ -124,6 +124,51 @@ if (is_file($UNIT_SETTINGS_FILE)) {
     }
 }
 
+// --------- BRAND NAME (iz manifest.json units[*].label) ---------
+$brandName = 'Apartma Matevž'; // varna privzeta vrednost
+
+$manifestBrandFile = __DIR__ . '/../common/data/json/units/manifest.json';
+if (is_file($manifestBrandFile)) {
+    $rawBrand = @file_get_contents($manifestBrandFile);
+    if ($rawBrand !== false) {
+        $cfgBrand = json_decode($rawBrand, true);
+        if (is_array($cfgBrand) && !empty($cfgBrand['units']) && is_array($cfgBrand['units'])) {
+
+            foreach ($cfgBrand['units'] as $unitRow) {
+                // Če je enota označena kot ne-javna, jo preskočimo
+                if (isset($unitRow['public']) && $unitRow['public'] === false) {
+                    continue;
+                }
+
+                $candidate = null;
+
+                // 1) poskusi units[*].label
+                if (!empty($unitRow['label']) && is_string($unitRow['label'])) {
+                    $candidate = trim($unitRow['label']);
+                }
+                // 2) fallback: alias
+                elseif (!empty($unitRow['alias']) && is_string($unitRow['alias'])) {
+                    $candidate = trim($unitRow['alias']);
+                }
+                // 3) fallback: name
+                elseif (!empty($unitRow['name']) && is_string($unitRow['name'])) {
+                    $candidate = trim($unitRow['name']);
+                }
+
+                if ($candidate !== null && $candidate !== '') {
+                    $brandName = $candidate;
+                    break; // prva javna enota določi brand
+                }
+            }
+        }
+    }
+}
+
+if ($brandName === '') {
+    $brandName = 'Apartma Matevž';
+}
+
+
 // prioriteta: per-unit > global > default 1
 if ($unitMin !== null && $unitMin > 0) {
     $MIN_NIGHTS = $unitMin;
@@ -145,8 +190,8 @@ if (!in_array($lang, $supportedLangs, true)) {
 // 2) enostavna tabela prevodov za to stran
 $T = [
     'sl' => [
-        'title'          => 'Razpoložljivost & cene – Apartma Matevž',
-        'brand'          => 'Apartma Matevž',
+        'title'          => 'Razpoložljivost & cene – ' . $brandName,
+        'brand'          => $brandName,
         'brand.reservations' => 'Rezervacije',
         'tagline'        => 'Lastni rezervacijski sistem',
         'nav.today'      => 'Danes',
@@ -155,14 +200,14 @@ $T = [
         'legend.offers'  => 'Posebne ponudbe',
         'btn.clear'      => 'Počisti',
         'btn.confirm'    => 'Potrdi izbiro',
-        'footer.note'    => 'Za dodatna vprašanja ali daljša bivanja nas kontaktirajte. Če bi podobno koledarsko rešitev CM Free radi uporabljali tudi za svojo nastanitev, pišite razvijalcu na viljem.d@gmail.com.',
+        'footer.note'    => 'Za dodatna vprašanja ali daljša bivanja ter če bi želeli takšen sistem CM Free uporabljati tudi za svojo nastanitev, pišite razvijalcu na viljem.d@gmail.com.',
         'lang.sl'        => 'Slovenščina',
         'lang.en'        => 'Angleščina',
         'flag.work'      => 'V delu'
     ],
     'en' => [
-        'title'          => 'Availability & prices – Apartment Matevž',
-        'brand'          => 'Apartment Matevž',
+        'title'          => 'Availability & prices – ' . $brandName,
+        'brand'          => $brandName,
         'brand.reservations' => 'Bookings',
         'tagline'        => 'Self-hosted booking system',
         'nav.today'      => 'Today',
@@ -170,7 +215,7 @@ $T = [
         'legend.dayuse'  => 'Day-use',
         'legend.offers'  => 'Special offers',
         'btn.clear'      => 'Clear',
-        'btn.confirm'    => 'Get offer',
+        'btn.confirm'    => 'Check offer',
         'footer.note'    => 'For any questions or longer stays, feel free to contact us. If you would like to use this CM Free calendar system for your own property, contact the developer at viljem.d@gmail.com.',
         'lang.sl'        => 'Slovene',
         'lang.en'        => 'English',
@@ -178,6 +223,7 @@ $T = [
     ],
 
 ];
+
 
 // 3) helper za prevod na tej strani
 $t = function(string $key) use ($lang, $T): string {
@@ -345,6 +391,15 @@ if (!$priceUrls) {
   text-decoration: none;
   cursor: pointer;
 }
+.brand-res-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-res-link:hover {
+  text-decoration: underline;
+}
+
 .brand-res a:hover{
   text-decoration: underline;
 }
@@ -360,9 +415,9 @@ if (!$priceUrls) {
       <div class="brand-title">
         <span class="brand-main"><?= htmlspecialchars($t('brand')) ?></span>
         <span class="brand-sep">–</span>
-        <span class="brand-res"><?= htmlspecialchars($t('brand.reservations')) ?></span>
+  <a href="/index.html" class="brand-res brand-res-link">🏠
+    <?= htmlspecialchars($t('brand.reservations')) ?>  </a>  
         <span class="brand-sep brand-sep-tagline">–</span>
-
         <span class="brand-tagline">
           <a href="https://cmfree.netlify.app/"
              class="brand-tagline-link"

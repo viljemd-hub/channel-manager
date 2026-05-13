@@ -24,3 +24,16 @@ app.zip
 
 # Git meta
 .git/
+
+# Runtime data / generated local state
+common/data/admin_key.txt
+common/data/json/
+common/logs/
+public/data/logs/
+public/data/
+logs/
+_reports/
+*.zip
+*.deb
+*.tar.gz
+*.bak_*

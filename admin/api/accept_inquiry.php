@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 /**
  * accept_inquiry.php
  *
@@ -30,7 +32,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php';
 require_once __DIR__ . '/send_accept_link.php';
 
-$APP           = '/var/www/html/app';
+$APP           = app_root();
 $INQ_ROOT      = $APP . '/common/data/json/inquiries';
 // pending index – še vedno uporabljamo “stari” globalni path
 $PENDING_INDEX = $APP . '/common/data/json/pending_requests.json';

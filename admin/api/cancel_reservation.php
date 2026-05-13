@@ -10,6 +10,8 @@
 //-/var/www/html/app/admin/api/cancel_reservation.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
@@ -22,7 +24,7 @@ require_once __DIR__ . '/../../common/lib/email.php';
 $cfg = cm_datetime_cfg();
 $tz  = $cfg['timezone'] ?? 'Europe/Ljubljana';
 
-$APP        = '/var/www/html/app';
+$APP        = app_root();
 $INQ_ROOT   = $APP . '/common/data/json/inquiries';
 $RES_ROOT   = $APP . '/common/data/json/reservations';
 $UNITS_ROOT = $APP . '/common/data/json/units';

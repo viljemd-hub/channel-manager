@@ -8,6 +8,7 @@
  */
 
 declare(strict_types=1);
+require_once __DIR__ . '/_lib/paths.php';
 
 // ---------- Helpers ----------
 function send_json_error(string $code, string $message, int $httpStatus = 400, array $extra = []): void {
@@ -77,7 +78,7 @@ if (!preg_match('~^https?://~i', $baseUrl)) {
     $baseUrl = 'https://' . ltrim($baseUrl, '/');
 }
 
-$manifestPath = '/var/www/html/app/common/data/json/units/manifest.json';
+$manifestPath = units_root() . '/manifest.json';
 
 $manifest = read_json_file($manifestPath);
 if (!is_array($manifest)) {

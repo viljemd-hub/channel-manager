@@ -23,7 +23,7 @@ require_once __DIR__ . '/../../common/lib/email.php';
 
 
 // Canonical roots (same pattern as finalize_reservation.php)
-$APP        = '/var/www/html/app';
+$APP        = app_root();
 $DATA_ROOT  = $APP . '/common/data/json';
 $ROOT_UNITS = $APP . '/common/data/json/units';
 

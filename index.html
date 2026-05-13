@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CM Free / CM Plus</title>
+  <meta name="description" content="CM Free / CM Plus – lightweight booking and occupancy management for apartments and holiday rentals.">
+
+  <style>
+    :root {
+      --bg: #050b16;
+      --panel: #08111f;
+      --panel2: #0d1b30;
+      --line: #16365d;
+      --text: #e7eefc;
+      --muted: #93a7c7;
+      --accent: #4da3ff;
+      --green: #2ad17d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(77,163,255,0.15), transparent 35%),
+        radial-gradient(circle at bottom left, rgba(42,209,125,0.12), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(11,24,45,0.95), rgba(5,12,22,0.98));
+      padding: 48px;
+      box-shadow: 0 0 60px rgba(0,0,0,0.45);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(77,163,255,0.06), transparent 40%),
+        linear-gradient(-120deg, rgba(42,209,125,0.05), transparent 45%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(77,163,255,0.12);
+      border: 1px solid rgba(77,163,255,0.25);
+      color: #9dccff;
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(42px, 7vw, 72px);
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+
+    .sub {
+      max-width: 760px;
+      font-size: 20px;
+      line-height: 1.6;
+      color: var(--muted);
+      margin-bottom: 36px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 22px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #001325;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 32px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(7,16,29,0.92);
+      padding: 24px;
+      transition: 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(77,163,255,0.35);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 20px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .section {
+      margin-top: 52px;
+    }
+
+    .section-title {
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.7;
+    }
+
+    .terminal {
+      margin-top: 28px;
+      background: #03070d;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      overflow-x: auto;
+      font-family: monospace;
+      color: #b8ffca;
+      line-height: 1.8;
+    }
+
+    .footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      color: #7487a4;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(42,209,125,0.1);
+      border: 1px solid rgba(42,209,125,0.2);
+      color: #8ff3bd;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 700px) {
+      .hero {
+        padding: 30px 22px;
+      }
+
+      .sub {
+        font-size: 17px;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="badge">CM Free / CM Plus • Lightweight Hospitality Management</div>
+
+    <h1>Simple booking management.<br>Without SaaS chaos.</h1>
+
+    <div class="sub">
+      CM Free / CM Plus is a lightweight booking and occupancy management system for apartments,
+      holiday rentals and small hospitality businesses. No database. No monthly subscriptions.
+      Just fast, understandable and portable booking management.
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="/app/admin/admin_calendar.php">Open Admin Calendar</a>
+      <a class="btn btn-secondary" href="/app/public/">Open Public Calendar</a>
+      <a class="btn btn-secondary" href="/app/admin/help_editor.php">Guide Editor</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">Why CM Free?</div>
+    <div class="section-sub">
+      Designed for small apartment owners who want full control over their reservations,
+      occupancy and integrations — without depending on expensive cloud systems.
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="tag">JSON Based</div>
+        <h3>No database required</h3>
+        <p>
+          All reservations, occupancy and integrations are stored as portable JSON files.
+          Easy backups. Easy migration. Easy recovery.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="tag">Fast UI</div>
+        <h3>Visual calendar workflow</h3>
+        <p>
+          Built around a fullscreen occupancy calendar with layered views, fast editing,
+          reservation management and onboarding help.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="tag">Self Hosted</div>
+        <h3>Your data stays yours</h3>
+        <p>
+          Run locally, on VPS, mini PC, Ubuntu node or shared hosting.
+          No forced SaaS lock-in.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="tag">AnyDesk Mode</div>
+        <h3>Made for real people</h3>
+        <p>
+          Interactive onboarding guides help non-technical users learn the system directly
+          inside the real interface.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">Minimal Ubuntu deployment</div>
+    <div class="section-sub">
+      CM Free / CM Plus works even on lightweight Ubuntu mini-PC deployments.
+      Perfect for small hospitality offices and local installations.
+    </div>
+
+    <div class="terminal">
+sudo apt update<br>
+sudo apt install apache2 php libapache2-mod-php php-json php-mbstring php-curl php-xml unzip -y<br>
+<br>
+sudo cp -a ~/Downloads/app /var/www/html/<br>
+sudo chown -R www-data:www-data /var/www/html/app
+    </div>
+  </section>
+
+  <div class="footer">
+    <div>CM Free / CM Plus</div>
+    <div>Lightweight booking & occupancy management</div>
+  </div>
+
+</div>
+
+</body>
+</html>

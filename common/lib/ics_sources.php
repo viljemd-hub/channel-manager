@@ -15,10 +15,13 @@ final class IcsSources {
   private string $dataRoot;
   private string $domain;
 
-  public function __construct(string $dataRoot = '/var/www/html/app/common/data/json', string $domain = 'apartma.local') {
-    $this->dataRoot = rtrim($dataRoot, '/');
-    $this->domain   = $domain;
+public function __construct(?string $dataRoot = null, string $domain = 'apartma.local') {
+  if ($dataRoot === null) {
+    $dataRoot = dirname(__DIR__) . '/data/json';
   }
+  $this->dataRoot = rtrim($dataRoot, '/');
+  $this->domain   = $domain;
+}
 
   /**
    * Vrne seznam rezervacij za enoto kot [ [id, unit, from, to], ... ]

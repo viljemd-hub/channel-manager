@@ -26,6 +26,8 @@
  */
 
 declare(strict_types=1);
+
+require_once __DIR__ . '/_lib/paths.php';
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php';
@@ -33,7 +35,7 @@ require_once __DIR__ . '/../../common/lib/datetime_fmt.php';
 $cfg  = cm_datetime_cfg();
 $mode = $cfg['output_mode'];
 
-$APP = '/var/www/html/app';
+$APP = app_root();
 $INQ = $APP . '/common/data/json/inquiries';
 
 $statusFilter = $_GET['status'] ?? ''; // "", "pending", "accepted_soft_hold", "rejected", ...

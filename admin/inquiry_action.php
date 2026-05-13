@@ -51,7 +51,7 @@ $y = substr($id, 0, 4);
 $m = substr($id, 4, 2);
 
 // …/inquiries/Y/M/accepted|rejected
-$newDir = sprintf('%s/%s/%s/%s', dirname(dirname($p)), $y, $m, $j['status']);
+$newDir = dirname(dirname($p)) . '/' . $j['status'];
 if (!is_dir($newDir)) {
   @mkdir($newDir, 0755, true);
 }

@@ -10,6 +10,8 @@
 // /var/www/html/app/admin/api/autopilot_get.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 require __DIR__ . '/_lib/json_io.php';
 require_once __DIR__ . '/../../common/lib/autopilot.php';
 
@@ -17,7 +19,7 @@ json_header();
 
 $unit = isset($_GET['unit']) ? trim((string)$_GET['unit']) : '';
 
-$root      = '/var/www/html/app/common/data/json/units';
+$root      = units_root();
 $globalFile = $root . '/site_settings.json';
 
 $globalJson = read_json($globalFile);

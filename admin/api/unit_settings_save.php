@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lib/paths.php';
+
 /**
  * /app/admin/api/unit_settings_save.php
  *
@@ -316,7 +318,7 @@ if ($hasDayUseEnabled && $dayUseEnabled === true) {
 // ---------------------------------------------------------------------
 // Load existing settings JSON for this unit and merge
 // ---------------------------------------------------------------------
-$baseDir = '/var/www/html/app/common/data/json/units';
+$baseDir = units_root();
 $unitDir = $baseDir . '/' . $unit;
 $file    = $unitDir . '/site_settings.json';
 

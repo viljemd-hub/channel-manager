@@ -85,7 +85,8 @@ require_key();
       </div>
     </section>
   </main>
-
-  <script type="module" src="/app/admin/ui/js/inquiries_admin.js"></script>
+<script type="module" src="/app/admin/ui/js/inquiries_admin.js"></script>
+<script src="/app/admin/ui/js/cm_admin_help.js"></script>
+</body>
 </body>
 </html>

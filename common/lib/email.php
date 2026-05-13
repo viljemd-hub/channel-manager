@@ -212,6 +212,27 @@ function cm_send_email(array $opts): bool {
 }
 
 /**
+ * Fallback sender for shared hosting: PHP mail().
+ *
+ * @param array<int,string> $envelopeRecipients
+ * @return array{ok:bool,error?:string}
+ */
+function cm_send_php_mail_envelope(array $envelopeRecipients, string $headers, string $body, string $subject): array {
+  $recipients = cm_email_filter_valid($envelopeRecipients);
+  if (!$recipients) {
+    return ['ok' => false, 'error' => 'no_recipients'];
+  }
+
+  $to = implode(', ', $recipients);
+
+  // mail() expects Subject separately, so remove Subject header if present.
+  $headers = preg_replace('/^Subject:.*\r?\n/m', '', $headers) ?? $headers;
+
+  $ok = @mail($to, cm_email_clean_header_value($subject), $body, $headers);
+
+  return $ok ? ['ok' => true] : ['ok' => false, 'error' => 'php_mail_failed'];
+}
+/**
  * Same as cm_send_email(), but returns debug info.
  *
  * @return array{ok:bool,error?:string,code?:int,stderr?:string,stdout?:string}
@@ -294,5 +315,32 @@ function cm_send_email_ex(array $opts): array {
   $envelope = array_merge($to, $cc, $bcc);
 
   // IMPORTANT: we do NOT add "Bcc:" header, by design.
+$method = strtolower((string)($opts['method'] ?? 'auto'));
+
+if ($method === 'php_mail') {
+  return cm_send_php_mail_envelope($envelope, $headers, $body, $subject);
+}
+
+if ($method === 'msmtp') {
   return cm_send_msmtp_envelope($envelope, $headers, $body);
+}
+
+// auto: first try msmtp, then fallback to PHP mail()
+$msmtp = cm_send_msmtp_envelope($envelope, $headers, $body);
+if (!empty($msmtp['ok'])) {
+  return $msmtp;
+}
+
+$mail = cm_send_php_mail_envelope($envelope, $headers, $body, $subject);
+if (!empty($mail['ok'])) {
+  $mail['fallback_from'] = $msmtp['error'] ?? 'msmtp_failed';
+  return $mail;
+}
+
+return [
+  'ok' => false,
+  'error' => 'all_mail_methods_failed',
+  'msmtp_error' => $msmtp['error'] ?? null,
+  'php_mail_error' => $mail['error'] ?? null,
+];
 }

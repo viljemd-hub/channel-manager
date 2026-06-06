@@ -419,7 +419,7 @@ if (!$priceUrls) {
     <?= htmlspecialchars($t('brand.reservations')) ?>  </a>  
         <span class="brand-sep brand-sep-tagline">–</span>
         <span class="brand-tagline">
-          <a href="https://cmfree.netlify.app/"
+          <a href="https://apartmamatevz.si/cmfree/"
              class="brand-tagline-link"
              target="_blank"
              rel="noopener noreferrer">

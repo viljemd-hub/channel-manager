@@ -126,6 +126,7 @@ require_key();
         <button type="button" id="cal-btn-block" class="btn small">Block/Blokiraj</button>
         <button type="button" id="cal-btn-unblock" class="btn small">Unblock/Odblokiraj</button>
         <button type="button" id="cal-btn-set-price" class="btn small">Set price/Nastavi ceno</button>
+        <button type="button" id="cal-btn-copy-prices" class="btn small">Copy prices/Kopiraj cene</button>
         <button type="button" id="cal-btn-set-offer" class="btn small">Set offer/Dodaj ponudbo</button>
         <button type="button" id="cal-btn-admin-reserve" class="btn small">Admin reserve/rezervacija</button>
         <button type="button" id="cal-btn-clear-selection" class="btn small ghost">Clear/Počisti</button>

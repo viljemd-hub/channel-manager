@@ -189,6 +189,20 @@ The package includes an internal help center for users and installers.
 
 Important admin pages include contextual help and guide support so the system can be used in an “AnyDesk mode” setup, where a remote helper can install, configure or explain the system to a new user.
 
+## License and editions
+
+CM Free is released under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+
+Copyright © 2026 Viljem Dvojmoč.
+
+This public repository contains the CM Free distribution source.
+
+CM Plus upgrade packages, private customer-specific upgrade material, and CM PRO are separate editions and are not included in this repository or license unless explicitly stated.
+
+CM Plus may be provided as a separate upgrade package. CM PRO is a separate commercial/professional edition and is not a module bundle or automatic upgrade from CM Free.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+
 ## Project status
 
 CM Free / Plus v1.2.1 is a practical release candidate for testing and real-world feedback.

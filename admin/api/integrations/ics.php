@@ -17,7 +17,7 @@
  *   - mode=blocked : hard reservations + hard blocks (+ optional extras)
  *
  * Data source (SSOT):
- *   /app/common/data/json/units/<UNIT>/occupancy_merged.json
+ *   common/data/json/units/<UNIT>/occupancy_merged.json
  *
  * Auth keys (per unit), priority:
  *   1) integrations/<UNIT>.json export.ics.booked.key / export.ics.blocked.key
@@ -30,13 +30,14 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/_lib/paths.php';
+require_once __DIR__ . '/../_lib/paths.php';
 
 use App\ICS\IcsBuilder;
 
-require_once __DIR__ . '/../../../common/lib/ics_builder.php';
+require_once app_root() . '/common/lib/ics_builder.php';
 
 header('Content-Type: text/calendar; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
 
 function bad(int $code, string $msg): void {
   http_response_code($code);
@@ -137,7 +138,7 @@ $extras = array_key_exists('extras', $_GET) ? (($_GET['extras'] === '1') ? 1 : 0
 
 // -------------------- AUTH CONFIG --------------------
 
-$cfgPath = "/var/www/html/app/common/data/json/integrations/{$unit}.json";
+$cfgPath = integrations_root() . "/{$unit}.json";
 $cfg = read_json($cfgPath);
 if (!$cfg) bad(404, "Unit not configured: {$unit}");
 
@@ -149,7 +150,7 @@ if ($extras === -1) $extras = 0;
 
 // -------------------- LOAD MERGED --------------------
 
-$mergedPath = "/var/www/html/app/common/data/json/units/{$unit}/occupancy_merged.json";
+$mergedPath = units_root() . "/{$unit}/occupancy_merged.json";
 $segments = read_json($mergedPath);
 if (!is_array($segments)) $segments = [];
 

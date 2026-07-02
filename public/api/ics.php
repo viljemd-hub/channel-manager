@@ -8,25 +8,49 @@
  */
 
 /**
- * Public token-protected ICS OUT endpoint for external channels.
+ * Public token-protected ICS OUT endpoint.
  *
- * New public URLs:
- *   /app/public/api/ics.php?unit=A1&channel=airbnb&key=...
- *   /app/public/api/ics.php?unit=A1&channel=booking&key=...
+ * Business model:
+ *   - CM is the source of truth.
+ *   - Each external platform is an OUT connector with its own tokens.
+ *   - Each connector can expose two feed modes:
+ *       mode=booked  -> hard reservations only
+ *       mode=blocked -> hard reservations + hard admin blocks
  *
- * Compatibility while admin UI catches up:
- *   /app/public/api/ics.php?unit=A1&mode=blocked&key=...  -> airbnb-style feed
- *   /app/public/api/ics.php?unit=A1&mode=booked&key=...   -> booking-style feed
+ * Preferred URLs:
+ *   /app/public/api/ics.php?unit=A1&connector=airbnb&mode=booked&key=...
+ *   /app/public/api/ics.php?unit=A1&connector=airbnb&mode=blocked&key=...
+ *   /app/public/api/ics.php?unit=A1&connector=booking&mode=booked&key=...
+ *   /app/public/api/ics.php?unit=A1&connector=booking&mode=blocked&key=...
+ *
+ * Preferred config in integrations/<UNIT>.json:
+ *   {
+ *     "connections": { ... ICS IN ... },
+ *     "connectors": {
+ *       "airbnb": {
+ *         "out": {
+ *           "enabled": true,
+ *           "label": "Airbnb",
+ *           "booked":  { "enabled": true, "key": "..." },
+ *           "blocked": { "enabled": true, "key": "..." }
+ *         }
+ *       }
+ *     }
+ *   }
+ *
+ * Legacy fallback without connector remains supported:
+ *   /app/public/api/ics.php?unit=A1&mode=booked&key=...
+ *   /app/public/api/ics.php?unit=A1&mode=blocked&key=...
+ *
+ * Legacy key priority:
+ *   1) export.ics.booked.key / export.ics.blocked.key
+ *   2) keys.reservations_out / keys.calendar_out
  *
  * Data source:
  *   /var/www/html/app/common/data/json/units/<UNIT>/occupancy_merged.json
  *
- * Key priority:
- *   1) integrations/<UNIT>.json export.ics.<channel>.key
- *   2) integrations/<UNIT>.json export.ics.booked / blocked key, for mode compatibility
- *   3) integrations/<UNIT>.json keys.reservations_out / calendar_out legacy keys
- *
- * No PII is exported.
+ * Privacy:
+ *   - No guest PII is exported.
  */
 
 declare(strict_types=1);
@@ -66,17 +90,10 @@ function cm_ics_valid_ymd(?string $s): bool {
     return is_string($s) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $s) === 1;
 }
 
-function cm_ics_stable_uid(string $unit, string $channel, array $seg): string {
-    $id = $seg['id'] ?? null;
-    if (is_string($id) && $id !== '') {
-        return 'cm:' . $unit . ':' . $channel . ':' . sha1($id) . '@cm.local';
-    }
-    $status = (string)($seg['status'] ?? '');
-    $start  = (string)($seg['start'] ?? '');
-    $end    = (string)($seg['end'] ?? '');
-    $source = (string)($seg['source'] ?? '');
-    $reason = (string)($seg['reason'] ?? $seg['kind'] ?? '');
-    return 'cm:' . $unit . ':' . $channel . ':' . sha1($status . '|' . $start . '|' . $end . '|' . $source . '|' . $reason) . '@cm.local';
+function cm_ics_slug(?string $s): string {
+    $s = trim((string)$s);
+    if ($s === '') return '';
+    return preg_match('/^[A-Za-z0-9_-]{1,64}$/', $s) ? $s : '';
 }
 
 function cm_ics_block_kind(array $seg): string {
@@ -86,31 +103,101 @@ function cm_ics_block_kind(array $seg): string {
     return 'blocked';
 }
 
-function cm_ics_bool_from_settings(array $settings, string $key, bool $default): bool {
-    if (!array_key_exists($key, $settings)) return $default;
-    return (bool)$settings[$key];
+function cm_ics_stable_uid(string $unit, string $scope, array $seg): string {
+    $id = $seg['id'] ?? null;
+    if (is_string($id) && $id !== '') {
+        return 'cm:' . $unit . ':' . $scope . ':' . sha1($id) . '@cm.local';
+    }
+    $status = (string)($seg['status'] ?? '');
+    $start  = (string)($seg['start'] ?? '');
+    $end    = (string)($seg['end'] ?? '');
+    $source = (string)($seg['source'] ?? '');
+    $reason = (string)($seg['reason'] ?? $seg['kind'] ?? '');
+    return 'cm:' . $unit . ':' . $scope . ':' . sha1($status . '|' . $start . '|' . $end . '|' . $source . '|' . $reason) . '@cm.local';
 }
 
-function cm_ics_expected_key(array $cfg, string $channel, ?string $legacyMode): ?string {
+function cm_ics_feed_summary(array $seg): string {
+    $status = strtolower((string)($seg['status'] ?? ''));
+    if ($status === 'reserved') return 'Reserved';
+
+    return match (cm_ics_block_kind($seg)) {
+        'cleaning' => 'Cleaning',
+        'maintenance' => 'Maintenance',
+        default => 'Blocked',
+    };
+}
+
+function cm_ics_connector_out(array $cfg, string $connector): ?array {
+    if ($connector === '') return null;
+
+    // Preferred CM Free structure: connectors.<name>.out
+    $top = $cfg['connectors'][$connector]['out'] ?? null;
+    if (is_array($top)) return $top;
+
+    // Tolerant fallback for early experiments: export.ics.connectors.<name>.out
+    $nested = $cfg['export']['ics']['connectors'][$connector]['out'] ?? null;
+    if (is_array($nested)) return $nested;
+
+    return null;
+}
+
+function cm_ics_bool_enabled(array $cfg, string $key, bool $default = true): bool {
+    if (!array_key_exists($key, $cfg)) return $default;
+    return (bool)$cfg[$key];
+}
+
+function cm_ics_expected_key(array $cfg, string $mode, string $connector, array &$meta): ?string {
+    $meta = [
+        'source' => 'legacy',
+        'connector' => $connector,
+        'label' => $connector,
+    ];
+
+    if ($connector !== '') {
+        $out = cm_ics_connector_out($cfg, $connector);
+        if (!$out) {
+            cm_ics_bad(404, "ICS connector not configured: {$connector}");
+        }
+
+        if (!cm_ics_bool_enabled($out, 'enabled', true)) {
+            cm_ics_bad(403, "ICS connector disabled: {$connector}");
+        }
+
+        $modeCfg = $out[$mode] ?? null;
+        if (!is_array($modeCfg)) {
+            cm_ics_bad(404, "ICS connector mode not configured: {$connector}/{$mode}");
+        }
+
+        if (!cm_ics_bool_enabled($modeCfg, 'enabled', true)) {
+            cm_ics_bad(403, "ICS connector mode disabled: {$connector}/{$mode}");
+        }
+
+        $k = $modeCfg['key'] ?? null;
+        if (!is_string($k) || $k === '') {
+            cm_ics_bad(403, "ICS connector key missing: {$connector}/{$mode}");
+        }
+
+        $meta = [
+            'source' => 'connector',
+            'connector' => $connector,
+            'label' => (is_string($out['label'] ?? null) && trim((string)$out['label']) !== '')
+                ? trim((string)$out['label'])
+                : $connector,
+        ];
+        return $k;
+    }
+
+    // Legacy mode-based export. Keep this until old URLs are rotated away.
     $exp = $cfg['export']['ics'] ?? null;
     if (is_array($exp)) {
-        $channelKey = $exp[$channel]['key'] ?? null;
-        if (is_string($channelKey) && $channelKey !== '') return $channelKey;
-
-        if ($legacyMode === 'booked') {
-            $legacyKey = $exp['booked']['key'] ?? null;
-            if (is_string($legacyKey) && $legacyKey !== '') return $legacyKey;
-        }
-        if ($legacyMode === 'blocked') {
-            $legacyKey = $exp['blocked']['key'] ?? null;
-            if (is_string($legacyKey) && $legacyKey !== '') return $legacyKey;
-        }
+        $legacyKey = $exp[$mode]['key'] ?? null;
+        if (is_string($legacyKey) && $legacyKey !== '') return $legacyKey;
     }
 
     $keys = $cfg['keys'] ?? [];
     if (!is_array($keys)) $keys = [];
 
-    if ($channel === 'booking') {
+    if ($mode === 'booked') {
         $k = $keys['reservations_out'] ?? null;
         return (is_string($k) && $k !== '') ? $k : null;
     }
@@ -120,87 +207,17 @@ function cm_ics_expected_key(array $cfg, string $channel, ?string $legacyMode): 
     return (is_string($k) && $k !== '') ? $k : null;
 }
 
-function cm_ics_should_export_soft_to_booking(array $seg): bool {
-    $export = $seg['export'] ?? null;
-    if ($export === true) return true;
-
-    foreach (['export_to_ics', 'export_booking_to_ics', 'export_to_booking_ics'] as $key) {
-        if (($seg[$key] ?? false) === true) return true;
-    }
-
-    $meta = $seg['meta'] ?? [];
-    if (is_array($meta)) {
-        foreach (['export_to_ics', 'export_booking_to_ics', 'export_to_booking_ics'] as $key) {
-            if (($meta[$key] ?? false) === true) return true;
-        }
-    }
-
-    return false;
-}
-
-function cm_ics_event_summary(string $channel, array $seg): ?string {
-    $status = strtolower((string)($seg['status'] ?? ''));
-    $lock   = strtolower((string)($seg['lock'] ?? ''));
-
-    $isReserved = ($status === 'reserved');
-    $isBlocked  = ($status === 'blocked');
-    $isHard     = ($lock === 'hard');
-    $isSoft     = ($lock === 'soft');
-
-    if ($channel === 'airbnb') {
-        // Airbnb policy: hard rows become BOOKED; soft rows become CLOSED/BLOCKED.
-        if ($isHard && $isReserved) return 'Reserved';
-        if ($isHard && $isBlocked)  return match (cm_ics_block_kind($seg)) {
-            'cleaning' => 'Cleaning',
-            'maintenance' => 'Maintenance',
-            default => 'Blocked',
-        };
-        if ($isSoft && ($isReserved || $isBlocked)) return 'Blocked';
-        return null;
-    }
-
-    // Booking policy: hard rows become BOOKED; soft rows only when explicitly export-enabled.
-    if ($isHard && ($isReserved || $isBlocked)) {
-        return $isReserved ? 'Reserved' : match (cm_ics_block_kind($seg)) {
-            'cleaning' => 'Cleaning',
-            'maintenance' => 'Maintenance',
-            default => 'Blocked',
-        };
-    }
-
-    if ($isSoft && ($isReserved || $isBlocked) && cm_ics_should_export_soft_to_booking($seg)) {
-        return 'Reserved';
-    }
-
-    return null;
-}
-
-$unit = $_GET['unit'] ?? '';
+$unit = cm_ics_slug($_GET['unit'] ?? '');
+$connector = cm_ics_slug($_GET['connector'] ?? '');
 $key = $_GET['key'] ?? '';
-$channelRaw = $_GET['channel'] ?? '';
-$legacyModeRaw = $_GET['mode'] ?? '';
+$modeRaw = strtolower((string)($_GET['mode'] ?? 'blocked'));
+$mode = ($modeRaw === 'booked') ? 'booked' : 'blocked';
 
-if (!is_string($unit) || !preg_match('/^[A-Za-z0-9_-]+$/', $unit)) {
+if ($unit === '') {
     cm_ics_bad(400, 'Bad or missing unit.');
 }
 if (!is_string($key) || $key === '') {
     cm_ics_bad(400, 'Missing key.');
-}
-
-$legacyMode = is_string($legacyModeRaw) ? strtolower($legacyModeRaw) : '';
-$channel = is_string($channelRaw) ? strtolower($channelRaw) : '';
-
-if ($channel === '') {
-    if ($legacyMode === 'booked') $channel = 'booking';
-    elseif ($legacyMode === 'blocked') $channel = 'airbnb';
-}
-
-if (!in_array($channel, ['airbnb', 'booking'], true)) {
-    cm_ics_bad(400, 'Bad or missing channel. Use channel=airbnb or channel=booking.');
-}
-
-if (!in_array($legacyMode, ['booked', 'blocked'], true)) {
-    $legacyMode = null;
 }
 
 $dataRoot = '/var/www/html/app/common/data/json';
@@ -210,21 +227,21 @@ if (!$cfg) {
     cm_ics_bad(404, "Unit not configured: {$unit}");
 }
 
-$expectedKey = cm_ics_expected_key($cfg, $channel, $legacyMode);
+$keyMeta = [];
+$expectedKey = cm_ics_expected_key($cfg, $mode, $connector, $keyMeta);
 if (!$expectedKey || !hash_equals($expectedKey, (string)$key)) {
     cm_ics_bad(403, 'Forbidden: bad key.');
 }
 
-$unitDir = $dataRoot . "/units/{$unit}";
-$settings = cm_ics_read_json($unitDir . '/site_settings.json') ?? [];
-$exportCleanBefore = cm_ics_bool_from_settings($settings, 'export_clean_before_to_ics', true);
-$exportCleanAfter  = cm_ics_bool_from_settings($settings, 'export_clean_after_to_ics', true);
-
-$segments = cm_ics_read_json($unitDir . '/occupancy_merged.json');
+$mergedPath = $dataRoot . "/units/{$unit}/occupancy_merged.json";
+$segments = cm_ics_read_json($mergedPath);
 if (!is_array($segments)) $segments = [];
 
-$title = strtoupper($channel) . " availability {$unit}";
-$builder = new IcsBuilder('-//ChannelManager//Public ICS OUT 1.0//EN', $title);
+$scope = ($connector !== '') ? $connector . '-' . $mode : 'legacy-' . $mode;
+$titlePrefix = ($connector !== '') ? strtoupper((string)$keyMeta['label']) . ' ' : '';
+$title = $titlePrefix . (($mode === 'booked') ? "Booked {$unit}" : "Booked+Blocked {$unit}");
+
+$builder = new IcsBuilder('-//ChannelManager//Public ICS OUT 2.0//EN', $title);
 $builder->begin();
 
 foreach ($segments as $seg) {
@@ -234,23 +251,26 @@ foreach ($segments as $seg) {
     $end   = $seg['end'] ?? null;
     if (!cm_ics_valid_ymd($start) || !cm_ics_valid_ymd($end)) continue;
 
-    $kind = cm_ics_block_kind($seg);
-    if ($kind === 'cleaning') {
-        $id = (string)($seg['id'] ?? '');
-        $isBefore = str_contains($id, 'clean-before') || (($seg['meta']['cleaning_position'] ?? '') === 'before');
-        $isAfter  = str_contains($id, 'clean-after')  || (($seg['meta']['cleaning_position'] ?? '') === 'after');
-        if ($isBefore && !$exportCleanBefore) continue;
-        if ($isAfter && !$exportCleanAfter) continue;
+    $status = strtolower((string)($seg['status'] ?? ''));
+    $lock   = strtolower((string)($seg['lock'] ?? ''));
+
+    if ($lock !== 'hard') continue;
+
+    $isReserved = ($status === 'reserved');
+    $isBlocked  = ($status === 'blocked');
+
+    if ($mode === 'booked') {
+        if (!$isReserved) continue;
+    } else {
+        if (!$isReserved && !$isBlocked) continue;
+        if (($seg['export'] ?? null) === false) continue;
     }
 
-    $summary = cm_ics_event_summary($channel, $seg);
-    if ($summary === null) continue;
-
     $builder->addAllDayEvent([
-        'summary' => $summary,
+        'summary' => cm_ics_feed_summary($seg),
         'start' => $start,
         'end' => $end,
-        'uid' => cm_ics_stable_uid($unit, $channel, $seg),
+        'uid' => cm_ics_stable_uid($unit, $scope, $seg),
     ]);
 }
 

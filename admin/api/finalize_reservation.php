@@ -9,14 +9,13 @@
 // /var/www/html/app/admin/api/finalize_reservation.php
 declare(strict_types=1);
 
-require_once __DIR__ . '/_lib/paths.php';
-
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php';
 require_once __DIR__ . '/../../common/lib/site_settings.php';
 require_once __DIR__ . '/../../common/lib/email.php';
 require_once __DIR__ . '/../../common/lib/urls.php';
 require_once __DIR__ . '/send_rejected.php';
 require_once __DIR__ . '/../../common/lib/conflict_care.php';
+require_once __DIR__ . '/finalize_core.php';
 
 
 /**
@@ -78,7 +77,7 @@ if (!function_exists('cm_json_write')) {
 // -----------------------------------------------------------------------------
 // Paths
 // -----------------------------------------------------------------------------
-$APP = app_root();
+$APP        = realpath(__DIR__ . '/../../') ?: __DIR__ . '/../../';
 $ROOT_JSON  = $APP . '/common/data/json';
 $ROOT_UNITS = $APP . '/common/data/json/units';
 $INQ_ROOT   = $APP . '/common/data/json/inquiries';
@@ -807,8 +806,24 @@ if (!cm_json_write($confirmedPath, $res)) {
 // Remove the old accepted file
 @unlink($accFile);
 
-// Update occupancy (local + merged) – existing logic
-// ... your occupancy / merged regeneration helpers remain here ...
+// Finalize occupancy through shared core:
+// - remove previous soft-hold rows for this reservation,
+// - write hard reservation block,
+// - write clean_before / clean_after blocks,
+// - regenerate occupancy_merged if helper exists,
+// - rewrite confirmed snapshot.
+$core = cm_autopilot_finalize_core($res, $accFile, $cfg);
+
+if (empty($core['ok'])) {
+    respond(false, [
+        'error' => $core['error'] ?? 'finalize_core_failed',
+        'core'  => $core,
+    ], 500);
+}
+
+if (isset($core['reservation']) && is_array($core['reservation'])) {
+    $res = $core['reservation'];
+}
 
 try {
     $unitCC = (string)($res['unit'] ?? '');

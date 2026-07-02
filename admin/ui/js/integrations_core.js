@@ -9,6 +9,13 @@
 /**
  * integrations_core.js
  * Core runtime + shared context + ready event
+ *
+ * ICS OUT model:
+ *  - legacy/global URLs remain visible: mode=booked / mode=blocked
+ *  - if integrations/<UNIT>.json contains connectors.<name>.out,
+ *    the ICS export card also shows per-connector URLs:
+ *      connector=<name>&mode=booked
+ *      connector=<name>&mode=blocked
  */
 (() => {
   'use strict';
@@ -38,9 +45,139 @@
   function readConfig() {
     const el = document.getElementById('integrations-root');
     if (!el) throw new Error('#integrations-root missing');
-    // podpira tako data-config kot dataset.config
     const raw = el.getAttribute('data-config') || el.dataset.config || '{}';
     return JSON.parse(raw);
+  }
+
+  function normalizePublicIcsPath(path) {
+    const p = String(path || '').trim();
+    if (!p) return '/app/public/api/ics.php';
+
+    // Old Free/Plus admin endpoint is not suitable for external channels because /admin/ may be protected.
+    if (p.includes('/app/admin/api/integrations/ics.php')) {
+      return '/app/public/api/ics.php';
+    }
+
+    return p;
+  }
+
+  function connectorEntries(cfg) {
+    const root = cfg?.connectors;
+    if (!root || typeof root !== 'object') return [];
+
+    return Object.entries(root)
+      .filter(([name, c]) => name && c && typeof c === 'object' && c.out && typeof c.out === 'object')
+      .map(([name, c]) => ({ name, out: c.out }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function outModeKey(out, mode) {
+    const m = out?.[mode];
+    if (!m || typeof m !== 'object') return '';
+    if (m.enabled === false) return '';
+    return String(m.key || '').trim();
+  }
+
+  function outEnabled(out) {
+    return !(out && out.enabled === false);
+  }
+
+  function ensureConnectorBox() {
+    let box = document.getElementById('icsConnectorsOutBox');
+    if (box) return box;
+
+    const card = document.getElementById('card-ics');
+    const body = card?.querySelector('.card-body');
+    if (!body) return null;
+
+    box = document.createElement('div');
+    box.id = 'icsConnectorsOutBox';
+    box.className = 'note small';
+    box.style.marginTop = '16px';
+    body.appendChild(box);
+    return box;
+  }
+
+  function shortModeLabel(mode) {
+    return mode === 'booked' ? 'Booked only' : 'Booked & Blocked';
+  }
+
+  function buildUrl(base, unit, mode, key, connector = '') {
+    if (!key) return '';
+    const parts = [
+      `unit=${encodeURIComponent(unit)}`,
+    ];
+    if (connector) parts.push(`connector=${encodeURIComponent(connector)}`);
+    parts.push(`mode=${encodeURIComponent(mode)}`);
+    parts.push(`key=${encodeURIComponent(key)}`);
+    return `${base}?${parts.join('&')}`;
+  }
+
+  function renderConnectorBox(connectors, base, unit) {
+    const box = ensureConnectorBox();
+    if (!box) return;
+
+    if (!connectors.length) {
+      box.innerHTML = `
+        <p class="muted tiny">
+          Connector OUT seznam še ni nastavljen. Trenutno delujeta zgornja legacy URL-ja.
+        </p>
+      `;
+      return;
+    }
+
+    const rows = [];
+    for (const { name, out } of connectors) {
+      const label = String(out.label || name);
+      const enabled = outEnabled(out);
+      const bookedKey = outModeKey(out, 'booked');
+      const blockedKey = outModeKey(out, 'blocked');
+      const bookedUrl = enabled ? buildUrl(base, unit, 'booked', bookedKey, name) : '';
+      const blockedUrl = enabled ? buildUrl(base, unit, 'blocked', blockedKey, name) : '';
+
+      rows.push(`
+        <div class="ics-connector-row" style="border-top:1px solid rgba(255,255,255,.12); padding-top:10px; margin-top:10px;">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+            <strong>${escapeHtml(label)}</strong>
+            <code>${escapeHtml(name)}</code>
+            <span class="pill tiny ${enabled ? 'success' : 'error'}">${enabled ? 'enabled' : 'disabled'}</span>
+          </div>
+
+          <div class="row" style="margin:6px 0;">
+            <div class="row-col">
+              <div class="lbl">${shortModeLabel('booked')}</div>
+              <code class="code-url">${bookedUrl ? escapeHtml(bookedUrl) : '—'}</code>
+              <small class="ics-status" data-ics-status-for="${escapeHtml(name)}-booked"></small>
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn small" data-ics-copy-url="${escapeHtml(bookedUrl)}" ${bookedUrl ? '' : 'disabled'}>Kopiraj URL</button>
+              <button type="button" class="btn small" data-ics-test-url="${escapeHtml(bookedUrl)}" data-ics-test-status="${escapeHtml(name)}-booked" ${bookedUrl ? '' : 'disabled'}>Testiraj</button>
+            </div>
+          </div>
+
+          <div class="row" style="margin:6px 0;">
+            <div class="row-col">
+              <div class="lbl">${shortModeLabel('blocked')}</div>
+              <code class="code-url">${blockedUrl ? escapeHtml(blockedUrl) : '—'}</code>
+              <small class="ics-status" data-ics-status-for="${escapeHtml(name)}-blocked"></small>
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn small" data-ics-copy-url="${escapeHtml(blockedUrl)}" ${blockedUrl ? '' : 'disabled'}>Kopiraj URL</button>
+              <button type="button" class="btn small" data-ics-test-url="${escapeHtml(blockedUrl)}" data-ics-test-status="${escapeHtml(name)}-blocked" ${blockedUrl ? '' : 'disabled'}>Testiraj</button>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    box.innerHTML = `
+      <hr class="sep" />
+      <p><strong>ICS OUT connectorji</strong></p>
+      <p class="muted tiny">
+        Vsak connector ima svoj par tokenov. Če kanal odstraniš, blokiraš ali rotiraš, ostali kanali ostanejo odprti.
+      </p>
+      ${rows.join('')}
+    `;
   }
 
   /* ---------------- core state ---------------- */
@@ -50,9 +187,8 @@
   const state = {
     units: [],
     currentUnit: CFG.unit || '',
-    manifest: null,          // <-- tu bomo shranili manifest.json
+    manifest: null,
   };
-
 
   /* ---------------- DOM ---------------- */
   const dom = {
@@ -80,12 +216,9 @@
   }
 
   async function loadUnitsList() {
-    const manifestUrl = CFG.manifest; // <-- manifest.json
-    let data;
+    const manifestUrl = CFG.manifest;
+    const data = await safeFetchJson(manifestUrl);
 
-    data = await safeFetchJson(manifestUrl);
-
-    // shrani cel manifest za kasnejšo uporabo (npr. base_url)
     state.manifest = (data && typeof data === 'object') ? data : null;
 
     const arr = Array.isArray(data?.units) ? data.units : [];
@@ -93,12 +226,10 @@
       .map(u => ({
         id: u.id || u.unit || '',
         label: u.alias || u.label || u.name || (u.id || ''),
-        raw: u
+        raw: u,
       }))
       .filter(u => u.id);
 
-
-    // select unit: najprej CFG.unit, potem LS, potem prva
     let desired = state.currentUnit || loadLastUnit();
     if (!desired || !state.units.some(x => x.id === desired)) {
       desired = state.units.length ? state.units[0].id : '';
@@ -106,7 +237,6 @@
     state.currentUnit = desired;
     saveLastUnit(desired);
 
-    // napolni select (tudi če Units modul še ni initan)
     if (dom.unitSelect) {
       dom.unitSelect.innerHTML = '';
       for (const u of state.units) {
@@ -119,163 +249,96 @@
     }
   }
 
-async function loadIcsExportKeys(unit) {
-  if (!unit) return { booked: '', blocked: '' };
+  async function loadIcsExportConfig(unit) {
+    if (!unit) return { cfg: null, booked: '', blocked: '', connectors: [] };
 
-  try {
-    const url = `/app/common/data/json/integrations/${encodeURIComponent(unit)}.json?_=${Date.now()}`;
-    const cfg = await safeFetchJson(url);
+    try {
+      const url = `/app/common/data/json/integrations/${encodeURIComponent(unit)}.json?_=${Date.now()}`;
+      const cfg = await safeFetchJson(url);
 
-    // NEW format (preferred)
-    const exp = cfg?.export?.ics || {};
-    if (exp.booked?.key || exp.blocked?.key) {
+      const exp = cfg?.export?.ics || {};
+      const legacy = cfg?.keys || {};
+
       return {
-        booked: exp.booked?.key || '',
-        blocked: exp.blocked?.key || '',
+        cfg,
+        booked: exp.booked?.key || legacy.reservations_out || '',
+        blocked: exp.blocked?.key || legacy.calendar_out || '',
+        connectors: connectorEntries(cfg),
       };
-    }
-
-    // LEGACY fallback (A1)
-    const legacy = cfg?.keys || {};
-    return {
-      booked: legacy.reservations_out || '',
-      blocked: legacy.calendar_out || '',
-    };
-  } catch (e) {
-    console.warn('[ICS OUT] cannot load export keys for unit', unit, e);
-    return { booked: '', blocked: '' };
-  }
-}
-
-
-async function refreshIcsUrls() {
-  const unit = getCurrentUnit();
-
-  // reset
-  if (!unit) {
-    if (dom.icsBookedUrlEl) dom.icsBookedUrlEl.textContent = '—';
-    if (dom.icsBlockedUrlEl) dom.icsBlockedUrlEl.textContent = '—';
-
-    dom.openIcsBooked && dom.openIcsBooked.removeAttribute('href');
-    dom.openIcsBlocked && dom.openIcsBlocked.removeAttribute('href');
-
-    if (dom.openIcsBooked) dom.openIcsBooked.removeAttribute('data-ics-url');
-    if (dom.openIcsBlocked) dom.openIcsBlocked.removeAttribute('data-ics-url');
-
-    if (dom.icsBookedStatusEl) {
-      dom.icsBookedStatusEl.textContent = '';
-      dom.icsBookedStatusEl.className = 'ics-status';
-    }
-    if (dom.icsBlockedStatusEl) {
-      dom.icsBlockedStatusEl.textContent = '';
-      dom.icsBlockedStatusEl.className = 'ics-status';
-    }
-
-    return;
-  }
-
-  const keys = await loadIcsExportKeys(unit);
-
-  // -----------------------------
-  // Domena iz manifest.json (če obstaja)
-  // -----------------------------
-  let domain = '';
-
-  const mf = state.manifest;
-  if (mf && typeof mf === 'object') {
-    // predlagana struktura:
-    // { "base_url": "https://apartma-matevz.si", ... }
-    // ali: { "meta": { "base_url": "https://..." } }
-    const meta = (mf.meta && typeof mf.meta === 'object') ? mf.meta : null;
-
-    const cand =
-      (typeof mf.base_url === 'string' && mf.base_url.trim()) ? mf.base_url.trim() :
-      (meta && typeof meta.base_url === 'string' && meta.base_url.trim()) ? meta.base_url.trim() :
-      (typeof mf.domain === 'string' && mf.domain.trim()) ? mf.domain.trim() :
-      (meta && typeof meta.domain === 'string' && meta.domain.trim()) ? meta.domain.trim() :
-      '';
-
-    if (cand) {
-      domain = cand.replace(/\/+$/, ''); // brez trailing /
+    } catch (e) {
+      console.warn('[ICS OUT] cannot load export config for unit', unit, e);
+      return { cfg: null, booked: '', blocked: '', connectors: [] };
     }
   }
 
-  // če v manifestu ni domene → fallback na placeholder
-  if (!domain) {
-    domain = 'https://{YOUR_DOMAIN}';
+  function currentDomain() {
+    let domain = '';
+    const mf = state.manifest;
+    if (mf && typeof mf === 'object') {
+      const meta = (mf.meta && typeof mf.meta === 'object') ? mf.meta : null;
+      const cand =
+        (typeof mf.base_url === 'string' && mf.base_url.trim()) ? mf.base_url.trim() :
+        (meta && typeof meta.base_url === 'string' && meta.base_url.trim()) ? meta.base_url.trim() :
+        (typeof mf.domain === 'string' && mf.domain.trim()) ? mf.domain.trim() :
+        (meta && typeof meta.domain === 'string' && meta.domain.trim()) ? meta.domain.trim() :
+        '';
+      if (cand) domain = cand.replace(/\/+$/, '');
+    }
+    if (!domain) domain = 'https://{YOUR_DOMAIN}';
+    return domain;
   }
 
-  // Pot do ics.php iz CFG – običajno relativna, npr. "/app/admin/api/integrations/ics.php"
-  const icsPath = CFG.api.icsPhp || '/app/admin/api/integrations/ics.php';
+  function currentIcsBasePath() {
+    const icsPath = normalizePublicIcsPath(CFG.api?.icsPhp || '/app/public/api/ics.php');
+    return icsPath.startsWith('http') ? icsPath : currentDomain() + icsPath;
+  }
 
-  // Če je v CFG.api.icsPhp že absoluten URL (za PRO/scenarije), ga pusti pri miru
-  const icsBasePath = icsPath.startsWith('http')
-    ? icsPath
-    : domain + icsPath;
+  function setLegacyLink(kind, url) {
+    const isBooked = kind === 'booked';
+    const urlEl = isBooked ? dom.icsBookedUrlEl : dom.icsBlockedUrlEl;
+    const openEl = isBooked ? dom.openIcsBooked : dom.openIcsBlocked;
+    const statusEl = isBooked ? dom.icsBookedStatusEl : dom.icsBlockedStatusEl;
 
-  const base = `${icsBasePath}?unit=${encodeURIComponent(unit)}`;
-
-  // Booked only feed – ICS OUT expects mode=booked
-  const bookedUrl = keys.booked
-    ? `${base}&mode=booked&key=${encodeURIComponent(keys.booked)}`
-    : '';
-
-  // Calendar feed – booked + blocked (mode=blocked)
-  const blockedUrl = keys.blocked
-    ? `${base}&mode=blocked&key=${encodeURIComponent(keys.blocked)}`
-    : '';
-
-
-
-  if (dom.icsBookedUrlEl) dom.icsBookedUrlEl.textContent = bookedUrl || '—';
-  if (dom.icsBlockedUrlEl) dom.icsBlockedUrlEl.textContent = blockedUrl || '—';
-
-  if (dom.openIcsBooked) {
-    if (bookedUrl) {
-      dom.openIcsBooked.setAttribute('href', bookedUrl);
-      dom.openIcsBooked.setAttribute('data-ics-url', bookedUrl);
-    } else {
-      dom.openIcsBooked.removeAttribute('href');
-      dom.openIcsBooked.removeAttribute('data-ics-url');
+    if (urlEl) urlEl.textContent = url || '—';
+    if (openEl) {
+      if (url) {
+        openEl.setAttribute('href', url);
+        openEl.setAttribute('data-ics-url', url);
+      } else {
+        openEl.removeAttribute('href');
+        openEl.removeAttribute('data-ics-url');
+      }
+    }
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.className = 'ics-status';
     }
   }
 
-  if (dom.openIcsBlocked) {
-    if (blockedUrl) {
-      dom.openIcsBlocked.setAttribute('href', blockedUrl);
-      dom.openIcsBlocked.setAttribute('data-ics-url', blockedUrl);
-    } else {
-      dom.openIcsBlocked.removeAttribute('href');
-      dom.openIcsBlocked.removeAttribute('data-ics-url');
+  async function refreshIcsUrls() {
+    const unit = getCurrentUnit();
+
+    if (!unit) {
+      setLegacyLink('booked', '');
+      setLegacyLink('blocked', '');
+      const box = ensureConnectorBox();
+      if (box) box.innerHTML = '';
+      return;
     }
+
+    const cfg = await loadIcsExportConfig(unit);
+    const basePath = currentIcsBasePath();
+
+    const bookedUrl = buildUrl(basePath, unit, 'booked', cfg.booked);
+    const blockedUrl = buildUrl(basePath, unit, 'blocked', cfg.blocked);
+
+    setLegacyLink('booked', bookedUrl);
+    setLegacyLink('blocked', blockedUrl);
+    renderConnectorBox(cfg.connectors, basePath, unit);
   }
 
-  // clear previous status when unit/keys change
-  if (dom.icsBookedStatusEl) {
-    dom.icsBookedStatusEl.textContent = '';
-    dom.icsBookedStatusEl.className = 'ics-status';
-  }
-  if (dom.icsBlockedStatusEl) {
-    dom.icsBlockedStatusEl.textContent = '';
-    dom.icsBlockedStatusEl.className = 'ics-status';
-  }
-}
-
-  /**
-   * Test ICS URL (booked/blocked) and show status in the UI.
-   * kind = "booked" | "blocked"
-   */
-  async function testIcsUrl(kind) {
-    const statusEl =
-      kind === 'booked' ? dom.icsBookedStatusEl : dom.icsBlockedStatusEl;
-    const openEl =
-      kind === 'booked' ? dom.openIcsBooked : dom.openIcsBlocked;
-
-    if (!openEl) return;
-
-    const url = openEl.getAttribute('data-ics-url') || openEl.getAttribute('href') || '';
-
-    if (!url || url === '—') {
+  async function testUrl(url, statusEl) {
+    if (!url) {
       if (statusEl) {
         statusEl.textContent = 'URL ni nastavljen.';
         statusEl.className = 'ics-status error';
@@ -290,7 +353,6 @@ async function refreshIcsUrls() {
 
     try {
       const res = await fetch(url, { method: 'GET' });
-
       if (statusEl) {
         if (res.ok) {
           statusEl.textContent = `Link OK (HTTP ${res.status})`;
@@ -301,7 +363,7 @@ async function refreshIcsUrls() {
         }
       }
     } catch (e) {
-      console.warn('[ICS OUT] testIcsUrl error', e);
+      console.warn('[ICS OUT] testUrl error', e);
       if (statusEl) {
         statusEl.textContent = 'Napaka pri povezavi';
         statusEl.className = 'ics-status error';
@@ -309,6 +371,12 @@ async function refreshIcsUrls() {
     }
   }
 
+  async function testIcsUrl(kind) {
+    const statusEl = kind === 'booked' ? dom.icsBookedStatusEl : dom.icsBlockedStatusEl;
+    const openEl = kind === 'booked' ? dom.openIcsBooked : dom.openIcsBlocked;
+    const url = openEl?.getAttribute('data-ics-url') || openEl?.getAttribute('href') || '';
+    await testUrl(url, statusEl);
+  }
 
   function onUnitChange() {
     state.currentUnit = dom.unitSelect?.value || '';
@@ -316,11 +384,10 @@ async function refreshIcsUrls() {
 
     refreshIcsUrls();
 
-    // ob menjavi enote: osveži kartice, ki so per-unit
     window.CM_INTEGRATIONS?.Channels?.refresh?.();
     window.CM_INTEGRATIONS?.Promo?.load?.();
     window.CM_INTEGRATIONS?.Offers?.load?.();
-    window.CM_INTEGRATIONS?.Autopilot?.loadGlobal?.(); // global, ampak lahko pustiš
+    window.CM_INTEGRATIONS?.Autopilot?.loadGlobal?.();
   }
 
   /* ---------------- context ---------------- */
@@ -347,42 +414,60 @@ async function refreshIcsUrls() {
 
     dom.unitSelect?.addEventListener('change', onUnitChange);
 
-    // signal modulom: core je pripravljen
     window.dispatchEvent(new Event('cm-integrations-ready'));
   })();
 
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-copy-target]');
-  if (!btn) return;
+  document.addEventListener('click', (e) => {
+    const copyBtn = e.target.closest('[data-copy-target]');
+    if (copyBtn) {
+      const sel = copyBtn.getAttribute('data-copy-target');
+      const el = sel ? document.querySelector(sel) : null;
+      const text = (el?.value || el?.textContent || '').trim();
+      if (!text || text === '—') return;
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          const old = copyBtn.textContent;
+          copyBtn.textContent = 'Kopirano ✓';
+          setTimeout(() => copyBtn.textContent = old || 'Kopiraj URL', 1200);
+        })
+        .catch(() => alert('Kopiranje ni uspelo'));
+      return;
+    }
 
-  const sel = btn.getAttribute('data-copy-target');
-  const el = sel ? document.querySelector(sel) : null;
-  if (!el) return;
+    const copyUrlBtn = e.target.closest('[data-ics-copy-url]');
+    if (copyUrlBtn) {
+      const text = copyUrlBtn.getAttribute('data-ics-copy-url') || '';
+      if (!text) return;
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          const old = copyUrlBtn.textContent;
+          copyUrlBtn.textContent = 'Kopirano ✓';
+          setTimeout(() => copyUrlBtn.textContent = old || 'Kopiraj URL', 1200);
+        })
+        .catch(() => alert('Kopiranje ni uspelo'));
+      return;
+    }
 
-  const text = (el.value || el.textContent || '').trim();
+    const testBtn = e.target.closest('[data-ics-test-url]');
+    if (testBtn) {
+      const url = testBtn.getAttribute('data-ics-test-url') || '';
+      const statusKey = testBtn.getAttribute('data-ics-test-status') || '';
+      const statusEl = statusKey ? document.querySelector(`[data-ics-status-for="${CSS.escape(statusKey)}"]`) : null;
+      testUrl(url, statusEl);
+    }
+  });
 
-  if (!text || text === '—') return;
+  document.getElementById('btnRefreshICS')?.addEventListener('click', () => {
+    refreshIcsUrls();
+  });
 
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      btn.textContent = 'Kopirano ✓';
-      setTimeout(() => btn.textContent = 'Kopiraj URL', 1200);
-    })
-    .catch(() => alert('Kopiranje ni uspelo'));
-});
-document.getElementById('btnRefreshICS')?.addEventListener('click', () => {
-  refreshIcsUrls();
-});
+  document.getElementById('openIcsBooked')?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    testIcsUrl('booked');
+  });
 
-document.getElementById('openIcsBooked')?.addEventListener('click', (ev) => {
-  ev.preventDefault();
-  testIcsUrl('booked');
-});
-
-document.getElementById('openIcsBlocked')?.addEventListener('click', (ev) => {
-  ev.preventDefault();
-  testIcsUrl('blocked');
-});
-
-
+  document.getElementById('openIcsBlocked')?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    testIcsUrl('blocked');
+  });
 })();

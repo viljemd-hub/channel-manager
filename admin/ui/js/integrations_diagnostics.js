@@ -12,9 +12,20 @@
 (() => {
   'use strict';
 
+  function loadIcsOutModuleOnce() {
+    if (document.querySelector('script[data-cm-ics-out-module="1"]')) return;
+    const s = document.createElement('script');
+    s.src = '/app/admin/ui/js/integrations_ics_out.js?v=1';
+    s.defer = true;
+    s.dataset.cmIcsOutModule = '1';
+    document.body.appendChild(s);
+  }
+
   function boot() {
     const ctx = window.CM_INTEGRATIONS;
     if (!ctx) return;
+
+    loadIcsOutModuleOnce();
 
     const { helpers, state, getCurrentUnit, CFG } = ctx;
     const { $ } = helpers;

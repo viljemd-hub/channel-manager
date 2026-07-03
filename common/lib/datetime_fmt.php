@@ -391,7 +391,29 @@ if ($enabled === true || $statusOk || in_array($status, ['enabled','active','ok'
  * Prebere ICS LAB external sloj: units/<UNIT>/external/<platform>_ics.json in vrne segmente.
  * Pričakovan format: { unit, platform, fetched_at, count, events:[...] }.
  */
-function cm_external_ics_segments(string $unitDir, string $platform): array {
+function cm_integration_in_policy(string $root, string $unit, string $platform): array {
+  $cfgPath = $root . "/common/data/json/integrations/{$unit}.json";
+  $cfg = cm_json_read_object($cfgPath);
+
+  $conn = $cfg['connections'][$platform] ?? [];
+  if (!is_array($conn)) $conn = [];
+
+  $in = $conn['in'] ?? [];
+  if (!is_array($in)) $in = [];
+
+  return [
+    'import_reservations' => array_key_exists('import_reservations', $in) ? (bool)$in['import_reservations'] : true,
+    'import_blocks'       => array_key_exists('import_blocks', $in) ? (bool)$in['import_blocks'] : false,
+  ];
+}
+
+/**
+ * Prebere ICS LAB external sloj: units/<UNIT>/external/<platform>_ics.json in vrne segmente.
+ * CM master contract:
+ *   - reservations are imported by default
+ *   - external blocks are ignored by default
+ */
+function cm_external_ics_segments(string $unitDir, string $platform, array $policy = []): array {
   $path = $unitDir . "/external/{$platform}_ics.json";
   $obj = cm_json_read_object($path);
   if (!$obj) return [];
@@ -399,19 +421,188 @@ function cm_external_ics_segments(string $unitDir, string $platform): array {
   $events = $obj['events'] ?? [];
   if (!is_array($events)) return [];
 
+  $importReservations = (bool)($policy['import_reservations'] ?? true);
+  $importBlocks       = (bool)($policy['import_blocks'] ?? false);
+
   $out = [];
   foreach ($events as $ev) {
     if (!is_array($ev)) continue;
 
-    // standardiziraj minimalno: source=ics + platform hint
     if (!isset($ev['source'])) $ev['source'] = 'ics';
+    if (!isset($ev['lock'])) $ev['lock'] = 'hard';
     if (!isset($ev['meta']) || !is_array($ev['meta'])) $ev['meta'] = [];
     if (!isset($ev['meta']['platform'])) $ev['meta']['platform'] = $platform;
 
     $norm = cm_occ_normalize_segment($ev);
-    if ($norm) $out[] = $norm;
+    if (!$norm) continue;
+
+    $status = strtolower((string)($norm['status'] ?? ''));
+
+    if ($status === 'reserved' && !$importReservations) continue;
+    if ($status === 'blocked' && !$importBlocks) continue;
+
+    $out[] = $norm;
   }
+
   return $out;
+}
+
+function cm_ymd_add_days(string $ymd, int $days): ?string {
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ymd)) return null;
+  try {
+    return (new DateTimeImmutable($ymd . 'T00:00:00'))
+      ->modify(($days >= 0 ? '+' : '') . $days . ' days')
+      ->format('Y-m-d');
+  } catch (Exception $e) {
+    return null;
+  }
+}
+
+function cm_unit_cleaning_policy(string $unitDir): array {
+  $global = cm_load_settings();
+  $unitSettings = cm_json_read_object($unitDir . '/site_settings.json');
+
+  $cfg = [];
+
+  foreach ([$global, $unitSettings] as $src) {
+    if (!is_array($src)) continue;
+
+    if (isset($src['cleaning']) && is_array($src['cleaning'])) {
+      $cfg = array_merge($cfg, $src['cleaning']);
+    }
+
+    if (isset($src['auto_block']) && is_array($src['auto_block'])) {
+      if (array_key_exists('before_arrival', $src['auto_block'])) {
+        $cfg['before_arrival'] = $src['auto_block']['before_arrival'];
+      }
+      if (array_key_exists('after_departure', $src['auto_block'])) {
+        $cfg['after_departure'] = $src['auto_block']['after_departure'];
+      }
+    }
+
+    foreach ([
+      'block_departure_day',
+      'auto_departure_block',
+      'clean_after',
+      'clean_before',
+      'cleaning_day_before'
+    ] as $k) {
+      if (array_key_exists($k, $src)) $cfg[$k] = $src[$k];
+    }
+  }
+
+  return [
+    'after'  => (bool)(
+      $cfg['clean_after']
+      ?? $cfg['after_departure']
+      ?? $cfg['block_departure_day']
+      ?? $cfg['auto_departure_block']
+      ?? false
+    ),
+    'before' => (bool)(
+      $cfg['clean_before']
+      ?? $cfg['before_arrival']
+      ?? $cfg['cleaning_day_before']
+      ?? false
+    ),
+  ];
+}
+
+function cm_is_generated_cleaning_segment(array $seg): bool {
+  $meta = $seg['meta'] ?? [];
+  return is_array($meta) && (($meta['generated_by'] ?? '') === 'cm_occ_add_cleaning_state_for_unit');
+}
+
+function cm_is_external_segment(array $seg): bool {
+  $source = strtolower((string)($seg['source'] ?? ''));
+  $id = (string)($seg['id'] ?? '');
+  $meta = $seg['meta'] ?? [];
+
+  return $source === 'ics'
+    || str_starts_with($id, 'ics:')
+    || (is_array($meta) && isset($meta['platform']));
+}
+
+function cm_occ_add_cleaning_state_for_unit(array $segments, string $unitDir, string $unit): array {
+  $policy = cm_unit_cleaning_policy($unitDir);
+  if (!$policy['before'] && !$policy['after']) return $segments;
+
+  $add = [];
+
+  foreach ($segments as $seg) {
+    if (!is_array($seg)) continue;
+
+    $status = strtolower((string)($seg['status'] ?? ''));
+    $lock   = strtolower((string)($seg['lock'] ?? 'hard'));
+    $start  = (string)($seg['start'] ?? '');
+    $end    = (string)($seg['end'] ?? '');
+
+    if ($status !== 'reserved') continue;
+    if ($lock !== 'hard') continue;
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) continue;
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) continue;
+
+    $parentId = (string)($seg['id'] ?? sha1($unit . '|' . $start . '|' . $end . '|' . ($seg['source'] ?? '')));
+    $parentSource = (string)($seg['source'] ?? '');
+
+    $parentPlatform = '';
+    $meta = $seg['meta'] ?? [];
+    if (is_array($meta)) $parentPlatform = (string)($meta['platform'] ?? '');
+
+    if ($policy['before']) {
+      $beforeStart = cm_ymd_add_days($start, -1);
+      $beforeEnd = $start;
+
+      if ($beforeStart) {
+        $add[] = [
+          'id' => 'clean-before:' . $unit . ':' . sha1($parentId . '|before|' . $beforeStart . '|' . $beforeEnd),
+          'start' => $beforeStart,
+          'end' => $beforeEnd,
+          'status' => 'blocked',
+          'lock' => 'hard',
+          'source' => 'cm',
+          'reason' => 'cleaning',
+          'kind' => 'cleaning',
+          'export' => true,
+          'meta' => [
+            'generated_by' => 'cm_occ_add_cleaning_state_for_unit',
+            'cleaning_position' => 'before',
+            'parent_id' => $parentId,
+            'parent_source' => $parentSource,
+            'parent_platform' => $parentPlatform,
+          ],
+        ];
+      }
+    }
+
+    if ($policy['after']) {
+      $afterStart = $end;
+      $afterEnd = cm_ymd_add_days($end, 1);
+
+      if ($afterEnd) {
+        $add[] = [
+          'id' => 'clean-after:' . $unit . ':' . sha1($parentId . '|after|' . $afterStart . '|' . $afterEnd),
+          'start' => $afterStart,
+          'end' => $afterEnd,
+          'status' => 'blocked',
+          'lock' => 'hard',
+          'source' => 'cm',
+          'reason' => 'cleaning',
+          'kind' => 'cleaning',
+          'export' => true,
+          'meta' => [
+            'generated_by' => 'cm_occ_add_cleaning_state_for_unit',
+            'cleaning_position' => 'after',
+            'parent_id' => $parentId,
+            'parent_source' => $parentSource,
+            'parent_platform' => $parentPlatform,
+          ],
+        ];
+      }
+    }
+  }
+
+  return array_merge($segments, $add);
 }
 
 /**
@@ -491,12 +682,17 @@ foreach ($local as $seg) {
 }
 
   // 2) existing occupancy (admin/local/current) – lahko legacy
-  $occ = cm_json_read_array($unitDir . '/occupancy.json');
-  foreach ($occ as $seg) {
-    if (!is_array($seg)) continue;
-    $norm = cm_occ_normalize_segment($seg);
-    if ($norm) $segments[] = $norm;
-  }
+$occ = cm_json_read_array($unitDir . '/occupancy.json');
+foreach ($occ as $seg) {
+  if (!is_array($seg)) continue;
+
+  // occupancy.json is also a published view; do not re-ingest stale external/generated rows.
+  if (cm_is_external_segment($seg)) continue;
+  if (cm_is_generated_cleaning_segment($seg)) continue;
+
+  $norm = cm_occ_normalize_segment($seg);
+  if ($norm) $segments[] = $norm;
+}
 
   // 3) ICS LAB inbound external layer – enabled platforms from integrations config
   $plats = cm_integrations_enabled_platforms($root, $unit);
@@ -508,10 +704,15 @@ foreach ($local as $seg) {
     }
   }
 
-  foreach ($plats as $p) {
-    $icsSegs = cm_external_ics_segments($unitDir, $p);
-    foreach ($icsSegs as $s) $segments[] = $s;
-  }
+foreach ($plats as $p) {
+  $policy = cm_integration_in_policy($root, $unit, (string)$p);
+  $icsSegs = cm_external_ics_segments($unitDir, (string)$p, $policy);
+  foreach ($icsSegs as $s) $segments[] = $s;
+}
+
+// CM master operational state:
+// after ICS IN reservations are loaded, add cleaning blocks for this unit.
+$segments = cm_occ_add_cleaning_state_for_unit($segments, $unitDir, $unit);
 
   // sort
   usort($segments, function($a, $b) {

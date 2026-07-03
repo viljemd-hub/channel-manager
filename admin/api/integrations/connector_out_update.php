@@ -88,7 +88,7 @@ if ($unit === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $unit)) jexit(['ok'=>false
 if ($connector === '' || !preg_match('/^[a-z0-9_-]{2,64}$/i', $connector)) jexit(['ok'=>false, 'error'=>'bad_connector'], 400);
 if (!in_array($action, ['add','toggle','rotate','delete','update_label'], true)) jexit(['ok'=>false, 'error'=>'bad_action'], 400);
 
-$adminKeyFile = admin_key_path();
+$adminKeyFile = '/var/www/html/app/common/data/admin_key.txt';
 if (!is_file($adminKeyFile)) jexit(['ok'=>false, 'error'=>'admin_key_missing'], 403);
 $expected = trim((string)@file_get_contents($adminKeyFile));
 if ($expected === '' || !hash_equals($expected, $key)) jexit(['ok'=>false, 'error'=>'forbidden'], 403);

@@ -26,7 +26,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/_lib/paths.php';
+require_once __DIR__ . '/../_lib/paths.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -55,8 +55,6 @@ function save_json_atomic(string $path, array $data): bool {
   if ($ok === false) { @unlink($tmp); return false; }
   if (!@rename($tmp, $path)) { @unlink($tmp); return false; }
 
-  @chmod($path, 0664);
-  @chgrp($path, 'apartma');
   return true;
 }
 

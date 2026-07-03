@@ -27,7 +27,7 @@
 
   function init() {
     const ctx = window.CM_INTEGRATIONS;
-    if (!ctx) return;
+    if (!ctx || ctx.IcsOut) return;
 
     const CFG = ctx.CFG || {};
     const getCurrentUnit = ctx.getCurrentUnit;
@@ -242,9 +242,7 @@
       }
 
       const t = ev.target.closest('[data-ics-out-test]');
-      if (t) {
-        test(t.dataset.icsOutTest || '', t.dataset.status || '');
-      }
+      if (t) test(t.dataset.icsOutTest || '', t.dataset.status || '');
     });
 
     document.getElementById('btnRefreshICS')?.addEventListener('click', () => render());
@@ -253,5 +251,6 @@
     render();
   }
 
-  window.addEventListener('cm-integrations-ready', init);
+  if (window.CM_INTEGRATIONS) init();
+  else window.addEventListener('cm-integrations-ready', init, { once: true });
 })();

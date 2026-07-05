@@ -8,6 +8,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_common.php';
 require_key();
+
+require_once __DIR__ . '/../common/lib/version_info.php';
+$cmBuildInfo = cm_get_build_info();
 ?>
 <!doctype html>
 <html lang="sl">
@@ -109,6 +112,15 @@ require_key();
       flex-wrap:wrap;
       gap:10px;
       margin-top:14px;
+    }
+    .help-version{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:4px;
+      margin-top:14px;
+      font-size:.9em;
+      opacity:.8;
     }
     .help-note{
       border-left:4px solid #57a6ff;
@@ -307,6 +319,16 @@ require_key();
         <a class="btn primary" href="/app/admin/admin_calendar.php">Start with Calendar</a>
         <a class="btn" href="/app/admin/integrations.php">Open Integrations</a>
       </div>
+
+      <p class="help-version">
+        <?php if ($cmBuildInfo['commit_date']): ?>
+          Last updated: <?php echo h(substr($cmBuildInfo['commit_date'], 0, 10)); ?>
+        <?php else: ?>
+          Last updated: unknown
+        <?php endif; ?>
+        &nbsp;·&nbsp;
+        <a class="btn small" href="https://apartmamatevz.si/cmfree/download.html" target="_blank" rel="noopener">Check for updates</a>
+      </p>
     </section>
 
     <section class="help-grid">

@@ -537,7 +537,13 @@ function cm_occ_add_cleaning_state_for_unit(array $segments, string $unitDir, st
     $start  = (string)($seg['start'] ?? '');
     $end    = (string)($seg['end'] ?? '');
 
-    if ($status !== 'reserved') continue;
+    $segMeta = $seg['meta'] ?? [];
+    $isExternalReservationBlock = $status === 'blocked'
+      && is_array($segMeta)
+      && isset($segMeta['reservation_id'])
+      && (string)($seg['source'] ?? '') === 'admin';
+
+    if ($status !== 'reserved' && !$isExternalReservationBlock) continue;
     if ($lock !== 'hard') continue;
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) continue;
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) continue;

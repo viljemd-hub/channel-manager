@@ -624,6 +624,35 @@
     return { start, end, type, status };
   }
 
+  // A merged-occupancy segment counts as "a real reservation" for click/highlight
+  // purposes if its status already says so, OR if it's a known case where the
+  // source can't express that distinction but the segment is still a genuine
+  // guest stay:
+  //  - Booking.com ICS never distinguishes reservations from host blocks (every
+  //    VEVENT is "CLOSED - Not available"), so every booking-sourced blocked
+  //    segment is treated as reservation-like (2026-07-06 incident).
+  //  - Manually-recorded external reservations (legacy admin flow) are stored
+  //    as local_bookings admin_block entries carrying meta.reservation_id.
+  function isReservationLikeRow(row) {
+    const status = String(row.status || row.type || "");
+    if (status === "reserved" || status === "confirmed" || status === "booked") {
+      return true;
+    }
+
+    const source = String(row.source || "");
+    const platform = String((row.meta && row.meta.platform) || row.platform || "");
+    const meta = row.meta || {};
+
+    if (status === "blocked" && source === "ics" && platform === "booking") {
+      return true;
+    }
+    if (status === "blocked" && source === "admin" && meta && meta.reservation_id) {
+      return true;
+    }
+
+    return false;
+  }
+
   async function loadOccupancyMap(unit) {
     const url = `${UNITS_BASE}/${unit}/occupancy_merged.json?v=${Date.now()}`;
     let data;
@@ -675,12 +704,9 @@ async function loadOccupancyMetaMap(unit) {
     const nr = normalizeRangeRow(row);
     if (!nr) continue;
 
+    if (!isReservationLikeRow(row)) continue;
+
     const status = row.status || row.type || "";
-    const isHard =
-      status === "reserved" || status === "confirmed" || status === "booked";
-
-    if (!isHard) continue;
-
     const meta = {
       status: String(status),
       source: String(row.source || ""),
@@ -1169,21 +1195,21 @@ async function loadOccupancyMetaMap(unit) {
         const s = String(occ);
         el.dataset.occStatus = s;
 
-        if (s === "reserved" || s === "confirmed" || s === "booked") {
+        // reservation-like (own reservations OR external/ICS reservations
+        // whose source can't natively express reserved-vs-block, see
+        // isReservationLikeRow) → full hard-lock, click-to-select/info-panel
+        const meta = occMetaMap[d];
+        if (meta) {
           el.classList.add("reserved");
           lockKind = "hard_lock";
           statusLabel = "Reservation (hard-lock)";
-       // NEW: meta za info panel (iz occupancy_merged)
-	const meta = occMetaMap[d];
-	if (meta) {
-	  el.dataset.occStatus   = meta.status || s;
-	  el.dataset.occSource   = meta.source || "";
-	  el.dataset.occPlatform = meta.platform || "";
-	  el.dataset.occLock     = meta.lock || "";
-	  el.dataset.occId       = meta.id || "";
-	  el.dataset.occSummary  = meta.summary || "";
-	}
 
+          el.dataset.occStatus   = meta.status || s;
+          el.dataset.occSource   = meta.source || "";
+          el.dataset.occPlatform = meta.platform || "";
+          el.dataset.occLock     = meta.lock || "";
+          el.dataset.occId       = meta.id || "";
+          el.dataset.occSummary  = meta.summary || "";
         } else if (
           s === "blocked" ||
           s === "cleaning" ||

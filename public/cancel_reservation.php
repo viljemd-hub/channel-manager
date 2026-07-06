@@ -423,8 +423,17 @@ function cm_cancel_remove_occupancy_by_id(string $unitsRoot, string $unit, strin
             $out[] = $row;
             continue;
         }
-        if (($row['id'] ?? null) === $reservationId) {
+
+        $meta = $row['meta'] ?? [];
+        $belongsToReservation =
+            (($row['id'] ?? null) === $reservationId) ||
+            (is_array($meta) && (($meta['reservation_id'] ?? null) === $reservationId)) ||
+            (is_array($meta) && (($meta['parent_reservation_id'] ?? null) === $reservationId));
+
+        if ($belongsToReservation) {
             // Skip this row – it belongs to the cancelled reservation
+            // (main segment, or a linked cleaning-buffer segment that carries
+            // its own id and only references the reservation via meta)
             $changed = true;
             continue;
         }

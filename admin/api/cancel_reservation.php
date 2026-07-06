@@ -222,8 +222,11 @@ function cm_send_admin_cancel_email(array $resv, string $reason, string $tz): vo
 
 
 /**
- * Odstrani vse occupancy zapise, kjer 'id' == $reservationId,
- * za dano enoto v /units/<UNIT>/occupancy.json.
+ * Odstrani vse occupancy zapise te rezervacije za dano enoto v
+ * /units/<UNIT>/occupancy.json - tako glavni segment ('id' == $reservationId)
+ * kot tudi vse pripadajoče čiščenje-buffer zapise, ki se nanj sklicujejo
+ * prek meta.reservation_id / meta.parent_reservation_id (ti imajo svoj
+ * lasten 'id', npr. "<res>-clean-before", zato jih exact-id match ne zajame).
  */
 function remove_occupancy_by_id(string $unitsRoot, string $unit, string $reservationId): void {
     $path = rtrim($unitsRoot,'/') . "/{$unit}/occupancy.json";
@@ -233,7 +236,14 @@ function remove_occupancy_by_id(string $unitsRoot, string $unit, string $reserva
     $out = [];
     foreach ($occ as $row) {
         if (!is_array($row)) { $out[] = $row; continue; }
-        if (($row['id'] ?? null) === $reservationId) {
+
+        $meta = $row['meta'] ?? [];
+        $belongsToReservation =
+            (($row['id'] ?? null) === $reservationId) ||
+            (is_array($meta) && (($meta['reservation_id'] ?? null) === $reservationId)) ||
+            (is_array($meta) && (($meta['parent_reservation_id'] ?? null) === $reservationId));
+
+        if ($belongsToReservation) {
             // preskoči vse segmente te rezervacije (reserved, clean-before, clean-after, soft-hold ...)
             continue;
         }
@@ -271,6 +281,16 @@ if (isset($_POST['reason'])) {
     $reason = trim((string)$bodyJ['reason']);
 } else {
     $reason = trim((string)($_GET['reason'] ?? ''));
+}
+
+// token (opcijski, samo za "guest ima cancel_token" proxy vejo): POST > JSON > GET
+$token = '';
+if (isset($_POST['token'])) {
+    $token = trim((string)$_POST['token']);
+} elseif (is_array($bodyJ) && array_key_exists('token', $bodyJ)) {
+    $token = trim((string)$bodyJ['token']);
+} else {
+    $token = trim((string)($_GET['token'] ?? ''));
 }
 
 

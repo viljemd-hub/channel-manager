@@ -78,7 +78,10 @@ body.adm-shell.theme-dark {
 }
 
 /* Badgesi */
-.mr-badge{ border:1px solid var(--mr-border) !important; color:var(--mr-text); }
+/* Neutral fallback background so any status without a specific modifier
+   class below (e.g. an unmapped/future status string) stays readable
+   instead of white-text-on-leftover-light-background. */
+.mr-badge{ border:1px solid var(--mr-border) !important; color:var(--mr-text); background:#1a2028 !important; }
 .mr-badge.hard{ background:#0e2a1d !important; border-color:#1f5a3f !important; }
 .mr-badge.soft{ background:#2a240e !important; border-color:#6b5b17 !important; }
 .mr-badge.cancelled{ background:#2b1316 !important; border-color:#7a2b35 !important; }

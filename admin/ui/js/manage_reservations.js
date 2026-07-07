@@ -310,9 +310,14 @@
     if (hard && s === "confirmed") {
       cls += " hard";
       label = "Confirmed";
-    } else if (s === "cancelled") {
+    } else if (s.indexOf("cancelled") === 0) {
+      // Covers every cancellation variant (cancelled, cancelled_unpaid,
+      // cancelled_admin, cancelled_guest, ...) - previously only the exact
+      // string "cancelled" got styled, everything else silently fell
+      // through to the unstyled base badge (white-on-white in dark mode).
       cls += " cancelled";
-      label = "Cancelled";
+      const reason = s === "cancelled" ? "" : s.slice("cancelled".length).replace(/^_/, "");
+      label = reason ? "Cancelled (" + reason + ")" : "Cancelled";
     } else if (soft) {
       cls += " soft";
       label = "Soft-hold";

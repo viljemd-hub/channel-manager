@@ -153,6 +153,7 @@ $status = isset($_GET['status']) ? strtolower(trim((string)$_GET['status'])) : '
 $source = isset($_GET['source']) ? strtolower(trim((string)$_GET['source'])) : '';
 $q      = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
 $includeSoft = !empty($_GET['include_soft_hold']);
+$includeBlocks = !empty($_GET['include_blocks']);
 
 if ($status !== 'confirmed' && $status !== 'cancelled' && $status !== 'all') {
   $status = 'confirmed';
@@ -391,8 +392,15 @@ if (is_dir($UNITS) && ($status === 'confirmed' || $status === 'all')) {
         if (!mr_overlaps_ym($start, $end, $ym)) continue;
       }
 
-      // Source filter – local_block
-      if ($source && $source !== 'local_block') continue;
+      // Source filter – local_block. These are plain admin blocks, not
+      // reservations - hidden by default (same pattern as include_soft_hold)
+      // unless the admin explicitly asks for them, either via the source
+      // filter or the "Vključi blokade" checkbox.
+      if ($source) {
+        if ($source !== 'local_block') continue;
+      } elseif (!$includeBlocks) {
+        continue;
+      }
       // q filter v praksi ne bo našel local block (nima id/email/name)
 
       $id = sprintf('LOCAL-%s-%s-%s', $unitDir, $start, $end);

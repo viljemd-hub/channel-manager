@@ -709,6 +709,29 @@
     }
   } // ← renderDetail
 
+  // Visually select a reservation card by ID and render its details in the
+  // right-hand panel - shared by manual clicks and the ?id= calendar deep-link.
+  function selectCardById(id, root) {
+    if (!id) return;
+
+    const list = qs("#mr-list", root);
+    if (!list) return;
+
+    const card = list.querySelector(
+      '.mr-card[data-id="' + String(id).replace(/"/g, "") + '"]'
+    );
+    if (!card) return;
+
+    qsa(".mr-card.selected", list).forEach(function (c) {
+      c.classList.remove("selected");
+    });
+    card.classList.add("selected");
+    card.scrollIntoView({ block: "nearest" });
+
+    const item = LAST_ITEMS_BY_ID[id] || null;
+    renderDetail(item, root);
+  }
+
   async function loadReservations(root) {
     const unitSel = qs("#mr-filter-unit", root);
     const ym = qs("#mr-filter-ym", root);
@@ -716,6 +739,7 @@
     const statusSel = qs("#mr-filter-status", root);
     const sourceSel = qs("#mr-filter-source", root);
     const softCheckbox = qs("#mr-filter-soft", root);
+    const blocksCheckbox = qs("#mr-filter-blocks", root);
     const qInput = qs("#mr-filter-q", root);
     const info = qs("#mr-info", root);
     const list = qs("#mr-list", root);
@@ -728,6 +752,8 @@
     if (sourceSel && sourceSel.value) params.source = sourceSel.value;
     if (softCheckbox && softCheckbox.checked)
       params.include_soft_hold = "1";
+    if (blocksCheckbox && blocksCheckbox.checked)
+      params.include_blocks = "1";
     if (qInput && qInput.value) params.q = qInput.value.trim();
 
     // Info vrstica – kaj je trenutno prikazano
@@ -807,20 +833,19 @@
         card.addEventListener("click", function (ev) {
           // ignoriraj klike na gumbe znotraj kartice
           if (ev.target.closest("button")) return;
-
-          const id = card.getAttribute("data-id");
-          if (!id) return;
-
-          // vizualno označi izbrano kartico
-          qsa(".mr-card.selected", list).forEach(function (c) {
-            c.classList.remove("selected");
-          });
-          card.classList.add("selected");
-
-          const item = LAST_ITEMS_BY_ID[id] || null;
-          renderDetail(item, root);
+          selectCardById(card.getAttribute("data-id"), root);
         });
       });
+
+      // Deep-link iz koledarja (?id=<reservationId>) → samodejno označi in
+      // prikaži isto kartico, kot bi jo admin izbral ročno. Tiho ne naredi
+      // nič, če ID ni v trenutno prikazanem (filtriranem) seznamu.
+      const deepLinkId = new URLSearchParams(window.location.search).get(
+        "id"
+      );
+      if (deepLinkId) {
+        selectCardById(deepLinkId, root);
+      }
     } catch (e) {
       console.error(
         "[manage_reservations] loadReservations failed:",
@@ -1379,6 +1404,10 @@ async function handleResend(id) {
       '      <input id="mr-filter-soft" type="checkbox" />' +
       "      Vključi Soft-hold" +
       "    </label>" +
+      '    <label class="mr-check">' +
+      '      <input id="mr-filter-blocks" type="checkbox" />' +
+      "      Vključi blokade" +
+      "    </label>" +
       '    <input id="mr-filter-q" type="search" placeholder="ID / e-mail / ime" />' +
       '    <button class="mr-btn" id="mr-btn-load">Osveži</button>' +
       '    <button class="mr-btn" id="mr-btn-add-external">Add external</button>' +
@@ -1418,7 +1447,8 @@ async function handleResend(id) {
       "#mr-filter-year",
       "#mr-filter-status",
       "#mr-filter-source",
-      "#mr-filter-soft"
+      "#mr-filter-soft",
+      "#mr-filter-blocks"
     ].forEach(function (sel) {
       const el = qs(sel, host);
       if (el) el.addEventListener("change", reload);

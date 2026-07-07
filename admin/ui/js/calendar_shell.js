@@ -416,6 +416,23 @@ function clearLocalRange(from, toInclusive) {
     }
   }
 
+  // Deep-link from the calendar's info bar straight to the reservation's
+  // detail/tools page, so the admin doesn't have to search by ID there.
+  function setOpenReservationLink(id) {
+    const linkEl = qs("#cal-open-reservation");
+    if (!linkEl) return;
+
+    if (!id) {
+      linkEl.style.display = "none";
+      linkEl.removeAttribute("href");
+      return;
+    }
+
+    linkEl.href =
+      "/app/admin/manage_reservations.php?id=" + encodeURIComponent(id);
+    linkEl.style.display = "";
+  }
+
   function describeAdminBlockSelection(sel) {
     if (!sel || !sel.from || !sel.to) return "";
     const nights = nightsBetween(sel.from, sel.to);
@@ -1946,6 +1963,7 @@ function rangeAllHardLock(fromIso, toIso) {
 async function updateSelectionMeta() {
     if (!currentSelection || !currentSelection.from || !currentSelection.to) {
         setSelectionMeta("");
+        setOpenReservationLink(null);
         return;
     }
 
@@ -1961,11 +1979,13 @@ async function updateSelectionMeta() {
             if (info && info.id) {
                 const daysLabel = info.nights + " dni";
                 setSelectionMeta(`${desc} | ${daysLabel} | ID: ${info.id}${info.guestName ? ' | Gost: ' + info.guestName : ''}`);
+                setOpenReservationLink(info.id);
                 return;
             }
         }
 
         setSelectionMeta(desc);
+        setOpenReservationLink(null);
         return;
     }
 
@@ -1979,9 +1999,12 @@ async function updateSelectionMeta() {
             setSelectionMeta(
                 `Reservation (hard-lock) | ${from} → ${to} | ${nights} dni | ID: ${info.id}${info.guestName ? ' | Gost: ' + info.guestName : ''}`
             );
+            setOpenReservationLink(info.id);
             return;
         }
     }
+
+    setOpenReservationLink(null);
 
     let txt = `${nights} night${nights === 1 ? "" : "s"}`;
 

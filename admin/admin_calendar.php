@@ -119,6 +119,7 @@ require_key();
       <div class="cal-selection-info">
         <span id="cal-selection-label">No selection/Ni izbora</span>
         <span id="cal-selection-meta" class="cal-selection-meta"></span>
+        <a id="cal-open-reservation" class="btn small" style="display:none;">Odpri rezervacijo &rarr;</a>
       </div>
       <div class="cal-command-actions">
 

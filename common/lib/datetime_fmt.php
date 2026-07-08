@@ -543,7 +543,17 @@ function cm_occ_add_cleaning_state_for_unit(array $segments, string $unitDir, st
       && isset($segMeta['reservation_id'])
       && (string)($seg['source'] ?? '') === 'admin';
 
-    if ($status !== 'reserved' && !$isExternalReservationBlock) continue;
+    // Booking.com's ICS export never distinguishes reservations from host
+    // blocks (every VEVENT is "CLOSED - Not available", status=blocked) -
+    // treat every booking-sourced blocked segment as reservation-like too,
+    // same reasoning as the 2026-07-06 double-booking incident fix. Without
+    // this, single-day gaps between consecutive Booking segments never get
+    // a cleaning buffer, which then leaks into the outbound ICS feed.
+    $isBookingIcsBlock = $status === 'blocked'
+      && (string)($seg['source'] ?? '') === 'ics'
+      && strtolower((string)($segMeta['platform'] ?? ($seg['platform'] ?? ''))) === 'booking';
+
+    if ($status !== 'reserved' && !$isExternalReservationBlock && !$isBookingIcsBlock) continue;
     if ($lock !== 'hard') continue;
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) continue;
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) continue;

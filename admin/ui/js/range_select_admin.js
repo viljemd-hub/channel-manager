@@ -224,7 +224,7 @@
   // Event handlers
   // --------------------------
 
-  function handleMouseDown(event) {
+  function handlePointerDown(event) {
     const cell = closestDayCell(event.target);
     if (!cell) return;
 
@@ -237,6 +237,18 @@
     const date = parseISODate(iso);
     if (!date) return;
 
+    // Touch pointers get "implicit capture" on the cell they started on,
+    // which would make every later pointermove keep reporting that same
+    // cell instead of the one under the finger. Release it so pointermove
+    // behaves like mouseover across the whole calendar grid.
+    if (event.pointerId != null && cell.hasPointerCapture && cell.hasPointerCapture(event.pointerId)) {
+      try {
+        cell.releasePointerCapture(event.pointerId);
+      } catch (e) {
+        // ignore - not all pointer types support this
+      }
+    }
+
     isDragging = true;
     anchorDate = date;
     hoverDate = date;
@@ -246,13 +258,14 @@
     applySelectionClasses(range);
     updateSelectionInfo(range);
 
-    event.preventDefault(); // brez text selectiona
+    event.preventDefault(); // brez text selectiona / brez scroll-a na dotik
   }
 
-  function handleMouseEnter(event) {
+  function handlePointerMove(event) {
     if (!isDragging) return;
 
-    const cell = closestDayCell(event.target);
+    const targetEl = document.elementFromPoint(event.clientX, event.clientY);
+    const cell = closestDayCell(targetEl);
     if (!cell) return;
 
     const iso = cell.getAttribute("data-date");
@@ -270,7 +283,7 @@
     updateSelectionInfo(range);
   }
 
-  function handleMouseUp() {
+  function handlePointerUp() {
     if (!isDragging) return;
 
     isDragging = false;
@@ -285,7 +298,7 @@
     updateSelectionInfo(range);
     dispatchRangeSelected(range);
 
-    // prvi click po tem mouseUpu ignoriramo, da ne resetira enodnevnega selectiona
+    // prvi click po tem pointerUpu ignoriramo, da ne resetira enodnevnega selectiona
     suppressClickOnce = true;
   }
 
@@ -344,9 +357,10 @@ function handleClick(event) {
     const calendar = qs(calendarRootSelector);
     if (!calendar) return;
 
-    calendar.addEventListener("mousedown", handleMouseDown);
-    calendar.addEventListener("mouseover", handleMouseEnter);
-    document.addEventListener("mouseup", handleMouseUp);
+    calendar.addEventListener("pointerdown", handlePointerDown);
+    calendar.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
+    document.addEventListener("pointercancel", handlePointerUp);
 
     calendar.addEventListener("click", function (e) {
       if (suppressClickOnce) {

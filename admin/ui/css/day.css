@@ -20,6 +20,7 @@
   position:relative; box-sizing:border-box;
   border:1px solid #1b2736; min-height:44px; padding:4px 6px;
   border-radius:10px; background:#0f1520;
+  touch-action:none; /* allow drag-select on touch instead of page scroll */
 }
 .day .num{font-weight:600;opacity:.9}
 .day .price{position:absolute;right:6px;bottom:4px;font-size:12px;opacity:.85}

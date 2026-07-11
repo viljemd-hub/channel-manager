@@ -322,9 +322,14 @@ async function fetchReservationInfoForSelection() {
       return;
     }
 
-    labelEl.textContent = from + " → " + to;
+    // "to" here is the last selected NIGHT (inclusive) - core CM logic
+    // counts nights, not the departure day. For display, show the actual
+    // departure date (to + 1) alongside the night count so the arrow
+    // isn't mistaken for the checkout date itself.
     const n = typeof nights === "number" ? nights : nightsBetween(from, to);
-    metaEl.textContent = n + " night" + (n === 1 ? "" : "s");
+    const departureDate = addDaysISO(to, 1);
+    labelEl.textContent = from + " → " + departureDate + " | " + n + " Noči";
+    metaEl.textContent = "";
   }
 
   async function postJson(url, payload) {
@@ -1996,8 +2001,15 @@ async function updateSelectionMeta() {
     if (isHard) {
         const info = await fetchReservationInfoForSelection();
         if (info && info.id) {
+            // Show the reservation's own from/to (checkout date, exclusive
+            // of the last night) rather than the calendar selection's
+            // to (last occupied night, inclusive) - avoids an apparent
+            // "one night short" mismatch against the reservation record.
+            const displayFrom = info.from || from;
+            const displayTo = info.to || to;
+            const displayNights = info.nights || nights;
             setSelectionMeta(
-                `Reservation (hard-lock) | ${from} → ${to} | ${nights} dni | ID: ${info.id}${info.guestName ? ' | Gost: ' + info.guestName : ''}`
+                `Reservation (hard-lock) | ${displayFrom} → ${displayTo} | ${displayNights} dni | ID: ${info.id}${info.guestName ? ' | Gost: ' + info.guestName : ''}`
             );
             setOpenReservationLink(info.id);
             return;

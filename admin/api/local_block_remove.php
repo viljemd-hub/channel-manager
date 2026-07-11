@@ -74,6 +74,17 @@ foreach ($data as $row) {
         continue;
     }
 
+    // Zaščita: admin_block, ki predstavlja pravo zunanjo rezervacijo
+    // (meta.reservation_id, glej create_external_reservation.php legacy tok)
+    // se NIKOLI ne sme tiho odstraniti/skrajšati prek navadnega "unblock"
+    // klika - to bi izbrisalo zaščito pravega gosta brez opozorila. Admin
+    // mora tako rezervacijo preklicati prek pravega "cancel" toka.
+    $rowMeta = $row['meta'] ?? [];
+    if (is_array($rowMeta) && !empty($rowMeta['reservation_id'])) {
+        $out[] = $row;
+        continue;
+    }
+
     $s = $row['start'] ?? null;
     $e = $row['end']   ?? null;
     if (!$s || !$e) {

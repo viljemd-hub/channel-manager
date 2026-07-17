@@ -74,9 +74,47 @@
   let MIN_NIGHTS = cfg.MIN_NIGHTS || 1;
 // === DAY USE (Dnevni počitek) ===================================
 
+  function syncDayUseCheckboxAvailability(){
+    const chk = document.getElementById("chkDayUse");
+    if (!chk) return;
+
+    const wrap  = chk.closest(".dayuse-toggle");
+    const label = document.querySelector('label[for="chkDayUse"]');
+    const tFn   = (window.t || (k => k));
+    const available = DAY_USE_SETTINGS.enabled === true;
+
+    chk.disabled = !available;
+    const tip = available ? "" : tFn("cal_dayuse_unavailable");
+    chk.title = tip;
+    if (label) label.title = tip;
+    if (wrap) wrap.classList.toggle("dayuse-disabled", !available);
+
+    if (!available && chk.checked) {
+      chk.checked  = false;
+      DAY_USE_MODE = false;
+      S.start = null;
+      S.end   = null;
+      repaintSelection(false);
+      render();
+      updateInfoPanel();
+      updateMinNightsBadge();
+      clearSolidFill();
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.classList.remove("dimmed");
+      }
+    }
+  }
+
   function updateMinNightsBadge(){
     const badge = document.getElementById("minNightsBadge");
     if (!badge) return;
+
+    if (DAY_USE_MODE) {
+      badge.style.display = "none";
+      badge.textContent = "";
+      return;
+    }
 
     const n = Number(MIN_NIGHTS) || 1;
     const tFn = (window.t || (k => k));
@@ -938,10 +976,12 @@ if (isDayUseEligible(iso)) {
         }
       });
 
-      // checkout day highlight
-      const checkoutEl = document.querySelector(`.day[data-ymd="${checkoutY}"]`);
-      if(checkoutEl){
-        checkoutEl.classList.add("sel-checkout");
+      // checkout day highlight (day_use: en sam dan, ni pravega "odhoda" naslednji dan)
+      if (!DAY_USE_MODE) {
+        const checkoutEl = document.querySelector(`.day[data-ymd="${checkoutY}"]`);
+        if(checkoutEl){
+          checkoutEl.classList.add("sel-checkout");
+        }
       }
 
       if(triggerSolidDelay){
@@ -1437,6 +1477,7 @@ if (DAY_USE_MODE && DAY_USE_SETTINGS.enabled) {
     if(unitSelect) unitSelect.value=currentUnit;
 
     await updateMonthsAheadForUnit(currentUnit);
+    syncDayUseCheckboxAvailability();
 
     await loadDataCurrent(); // rerender for new unit
 
@@ -1668,6 +1709,7 @@ async function loadDataCurrent(){
         repaintSelection();
         render(); // da nariše pikice
         updateInfoPanel();
+        updateMinNightsBadge(); // v day_use "Min. noči" ne velja
 
         // prej: skrij / pokaži glavni "Potrdi" gumb
         // zdaj: gumb vedno ostane, v day_use je samo zatemnjen in nekliken
@@ -1687,10 +1729,12 @@ async function loadDataCurrent(){
         DAY_USE_MODE = true;
         btnConfirm.disabled = true;
         btnConfirm.classList.add("dimmed");
+        updateMinNightsBadge();
       }
     }
 
-
+    // enota morda ne ponuja day-use → onemogoči/skrij kljukico
+    syncDayUseCheckboxAvailability();
 
 
     repaintSelection(true);

@@ -489,6 +489,15 @@ body.cm-app {
   transform: scale(1.1);
 }
 
+.dayuse-toggle.dayuse-disabled {
+  opacity: 0.5;
+}
+
+.dayuse-toggle.dayuse-disabled #chkDayUse,
+.dayuse-toggle.dayuse-disabled label {
+  cursor: not-allowed;
+}
+
 .lang-switch {
   display: flex;
   align-items: center;

@@ -141,5 +141,15 @@
     position:static; /* na mobilnih naj ne bo sticky */
     top:auto;
   }
+  .mr-toolbar{
+    flex-wrap:wrap;
+  }
+  .mr-toolbar select,
+  .mr-toolbar input[type="month"],
+  .mr-toolbar input[type="search"]{
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+  }
 }
 

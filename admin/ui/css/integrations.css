@@ -129,7 +129,12 @@ body.theme-dark {
   display:grid; grid-template-columns: repeat(auto-fit,minmax(600px,1fr));
   gap:16px; padding:16px;
 }
-.card { background:#0e1d2d; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow: 0 4px 18px rgba(0,0,0,.25); }
+.card { background:#0e1d2d; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow: 0 4px 18px rgba(0,0,0,.25); min-width:0; }
+@media (max-width: 640px){
+  .cards-grid{
+    grid-template-columns: 1fr;
+  }
+}
 .card-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.06); }
 .card-body { padding:14px 16px; }
 .pill.neutral { background:#102739; color:#a6c8ff; border:1px solid rgba(166,200,255,.25); border-radius:999px; padding:4px 10px; font-size:12px; }
@@ -351,6 +356,7 @@ dialog::backdrop { background:rgba(0,0,0,.4); }
 .scroll-box {
   max-height: 260px;    /* prilagodljivo */
   overflow-y: auto;
+  overflow-x: auto;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 6px;
   padding: 8px;

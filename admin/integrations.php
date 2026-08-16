@@ -15,6 +15,7 @@ header('X-Content-Type-Options: nosniff');
 $unit = isset($_GET['unit']) ? preg_replace('/[^A-Za-z0-9_-]/','', $_GET['unit']) : '';
 
 require_once __DIR__ . '/api/_lib/paths.php';
+require_once __DIR__ . '/_common.php'; // defines h() - used below for the CM Connector status pill
 
 $DATA_ROOT   = data_root();
 $UNITS_DIR   = units_root();
@@ -28,6 +29,7 @@ $adminKey = is_file($ADMIN_KEY_FILE)
   : '';
 
 require_once __DIR__ . '/../common/lib/datetime_fmt.php';
+require_once __DIR__ . '/../common/lib/cm_connector.php';
 
 // Determine current product tier (free vs plus/pro)
 $tier   = function_exists('cm_get_product_tier') ? cm_get_product_tier() : 'free';
@@ -352,6 +354,34 @@ header('X-Frame-Options: SAMEORIGIN');
         </div>
         <div class="card-body">
           <pre id="diagOut" class="pre">—</pre>
+        </div>
+      </article>
+
+      <!-- CM ekosistem / Connectivity -->
+      <article class="card" id="card-cm-connector">
+        <div class="card-hdr">
+          <div class="card-hdr-left">
+            <h2>CM ekosistem / Connectivity</h2>
+          </div>
+          <div class="card-hdr-right">
+            <?php
+              $cmConnectorStatus = 'off';
+              $cmConnectorLabel = 'Ni povezano';
+              if (function_exists('cm_connector_status')) {
+                $s = cm_connector_status();
+                if ($s['activation_status'] === 'connected') { $cmConnectorStatus = 'ok'; $cmConnectorLabel = 'Povezano'; }
+                elseif ($s['activation_status'] === 'pending_local') { $cmConnectorStatus = 'off'; $cmConnectorLabel = 'V teku'; }
+              }
+            ?>
+            <span class="status-pill <?= h($cmConnectorStatus) ?>"><?= h($cmConnectorLabel) ?></span>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="muted small">
+            Opcijski most do centralnega CM Relay servisa za prihodnji Booking.com / Airbnb sync.
+            Deluje samo po izrecni aktivaciji - CM sam ostane popolnoma samostojen tudi brez nje.
+          </p>
+          <a class="btn small" href="cm_connector.php">Odpri &rarr;</a>
         </div>
       </article>
 

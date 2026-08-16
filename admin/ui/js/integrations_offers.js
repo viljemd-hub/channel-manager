@@ -601,11 +601,24 @@
       });
   }
 
-  // isti vzorec kot promo modul
-  if (window.CM_INTEGRATIONS) {
+  // core.js konca async loadUnitsList() SELE po network fetchu manifest.json,
+  // in ta modul se lahko naloži (svoj loceni <script src>) BODISI preden
+  // BODISI potem, ko se to zgodi - zato ni dovolj preveriti "ali ctx obstaja"
+  // (obstaja skoraj vedno takoj), ampak dejansko zastavico ctx.ready.
+  // special_offers.json je per-unit (za razliko od globalnega promo_codes.json),
+  // zato ta modul BREZ pravilne enote ne sme poskusati renderati.
+  if (ctx.ready) {
     onReady();
   } else {
     window.addEventListener('cm-integrations-ready', onReady, { once: true });
+  }
+
+  // Robustnost za prihodnost (vec enot): ce uporabnik rocno preklopi enoto,
+  // ponovno nalozi akcije za novo izbrano enoto.
+  if (window.CM_INTEGRATIONS?.dom?.unitSelect) {
+    window.CM_INTEGRATIONS.dom.unitSelect.addEventListener('change', () => {
+      loadAndRender().catch(err => console.error('[Offers] reload on unit change failed', err));
+    });
   }
 
   ctx.Offers = {

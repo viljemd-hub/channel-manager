@@ -403,6 +403,11 @@
     Promo: null,
     Offers: null,
     Autopilot: null,
+    ready: false, // flipped to true right before 'cm-integrations-ready' fires -
+                   // consumer modules must check this (not just "does ctx exist")
+                   // because each <script> loads over its own network fetch, so
+                   // the ready event can fire before a later module's script has
+                   // even finished loading and registered its listener.
   };
 
   window.CM_INTEGRATIONS = ctx;
@@ -414,8 +419,9 @@
 
     dom.unitSelect?.addEventListener('change', onUnitChange);
 
+    ctx.ready = true;
     window.dispatchEvent(new Event('cm-integrations-ready'));
-  })();
+  })().catch(err => console.error('[integrations_core] init failed', err));
 
   document.addEventListener('click', (e) => {
     const copyBtn = e.target.closest('[data-copy-target]');

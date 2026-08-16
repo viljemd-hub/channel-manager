@@ -895,6 +895,6 @@ await helpers.safeFetchJson(ctx.CFG.api.saveUnitMeta, {
     })();
   }
 
-  if (window.CM_INTEGRATIONS) boot();
+  if (window.CM_INTEGRATIONS?.ready) boot();
   else window.addEventListener('cm-integrations-ready', boot, { once: true });
 })();

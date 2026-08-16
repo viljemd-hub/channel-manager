@@ -251,6 +251,6 @@
     render();
   }
 
-  if (window.CM_INTEGRATIONS) init();
+  if (window.CM_INTEGRATIONS?.ready) init();
   else window.addEventListener('cm-integrations-ready', init, { once: true });
 })();

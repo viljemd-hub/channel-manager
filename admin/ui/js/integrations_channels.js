@@ -429,6 +429,6 @@ async function apiRemove(unit, platform, noteEl, statusEl) {
     refresh().catch(console.error);
   }
 
-  if (window.CM_INTEGRATIONS) boot();
+  if (window.CM_INTEGRATIONS?.ready) boot();
   else window.addEventListener('cm-integrations-ready', boot, { once: true });
 })();

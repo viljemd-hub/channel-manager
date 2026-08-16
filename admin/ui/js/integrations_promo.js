@@ -483,7 +483,7 @@
     });
   }
 
-  if (window.CM_INTEGRATIONS) {
+  if (window.CM_INTEGRATIONS?.ready) {
     onReady();
   } else {
     window.addEventListener('cm-integrations-ready', onReady, { once: true });

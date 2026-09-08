@@ -623,6 +623,13 @@
       (src ? escapeHtml(src) : "—") +
       "</span>" +
       "    </div>" +
+      (item && item.meta && item.meta.addon_of
+        ? '  <div class="mr-detail-row">' +
+          '    <span class="mr-detail-label">Addon k:</span>' +
+          '    <span><a href="?id=' + encodeURIComponent(item.meta.addon_of) + '">' +
+          escapeHtml(item.meta.addon_of) + "</a></span>" +
+          "  </div>"
+        : "") +
       '    <div class="mr-detail-row">' +
       '      <span class="mr-detail-label">Status:</span>' +
       "      <span>" +
@@ -663,6 +670,15 @@
           "      Povezava za oceno" +
           "    </button>"
         : "") +
+      // Addon reservations share their parent's occupancy - showing this
+      // button on an addon's own card would let staff nest addons on
+      // addons, which the capacity/date-bounds model here isn't designed
+      // for (see create_addon_reservation.php's docblock).
+      (item && item.meta && item.meta.addon_of
+        ? ""
+        : '    <button type="button" class="mr-btn" id="mr-btn-add-addon">' +
+          "      Dodaj addon gosta" +
+          "    </button>") +
       "  </div>" +
       '  <div class="mr-detail-raw">' +
       '    <button type="button" class="mr-btn mr-btn-raw" id="mr-toggle-raw">Pokaži surovi JSON</button>' +
@@ -703,6 +719,20 @@
     if (editBtn && editUrl) {
       editBtn.addEventListener("click", function () {
         window.open(editUrl, "_blank");
+      });
+    }
+    // Add an addon reservation (extra guests joining this stay, own
+    // dates/registration/AJPES - see openAddAddonDialog's own docblock)
+    const addAddonBtn = panel.querySelector("#mr-btn-add-addon");
+    if (addAddonBtn && id) {
+      addAddonBtn.addEventListener("click", function () {
+        openAddAddonDialog(root, {
+          id: id,
+          unit: unit,
+          guest_name: guest,
+          from: from,
+          to: to,
+        });
       });
     }
     // Send review link e-mail (only if button exists)
@@ -1007,6 +1037,275 @@
 
       alert("❌ Unexpected error sending review link.");
     }
+  }
+
+  // "Addon" reservation: extra guests joining an existing (parent)
+  // reservation's already-booked accommodation, at their own arrival/
+  // departure dates within the parent's stay window. A full, independent
+  // reservation record (own id, own registration in whatever
+  // Guestbook/AJPES connector is installed, own remote check-in link if
+  // public/remote_checkin.php exists - CM Free's public repo doesn't ship
+  // that file, create_addon_reservation.php detects this and the modal
+  // below falls back to the shared pro_only.php placeholder instead) that
+  // deliberately never blocks occupancy itself - the parent reservation
+  // remains the sole thing that does that. Built 2026-09-05, ported into
+  // this repo the same day after proving out on the production install.
+  async function openAddAddonDialog(root, reservation) {
+    root = root || document;
+    ensureMrModalCss();
+
+    const overlay = document.createElement("div");
+    overlay.className = "mr-modal-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "mr-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+
+    const header = document.createElement("div");
+    header.className = "mr-modal-header";
+    const hLeft = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "mr-modal-title";
+    title.textContent = "Dodaj addon gosta";
+    const sub = document.createElement("div");
+    sub.className = "mr-modal-sub";
+    sub.textContent =
+      "K rezervaciji " + (reservation.guest_name || reservation.id) +
+      " · enota " + (reservation.unit || "—") +
+      " · " + (reservation.from || "?") + " → " + (reservation.to || "?");
+    hLeft.appendChild(title);
+    hLeft.appendChild(sub);
+
+    const btnClose = document.createElement("button");
+    btnClose.className = "mr-modal-close";
+    btnClose.type = "button";
+    btnClose.textContent = "✕";
+
+    header.appendChild(hLeft);
+    header.appendChild(btnClose);
+
+    const body = document.createElement("div");
+    body.className = "mr-modal-body";
+
+    const capacityNote = document.createElement("div");
+    capacityNote.style.cssText = "margin-bottom:10px;font-size:13px;color:#9aa1ab;";
+    capacityNote.textContent = "Preverjam prosto kapaciteto…";
+    body.appendChild(capacityNote);
+
+    function makeDateField(labelText, defaultValue, min, max) {
+      const f = document.createElement("div");
+      f.className = "mr-field";
+      const l = document.createElement("label");
+      l.textContent = labelText;
+      const input = document.createElement("input");
+      input.type = "date";
+      if (defaultValue) input.value = defaultValue;
+      if (min) input.min = min;
+      if (max) input.max = max;
+      f.appendChild(l);
+      f.appendChild(input);
+      body.appendChild(f);
+      return input;
+    }
+
+    // Addon must stay within the parent's own stay window - it shares the
+    // parent's already-booked accommodation, it can't extend beyond it
+    // (server re-validates this too, these bounds are just an in-form aid).
+    const fromInput = makeDateField("Prihod addon gostov", reservation.from, reservation.from, reservation.to);
+    const toInput = makeDateField("Odhod addon gostov", reservation.to, reservation.from, reservation.to);
+
+    function makeNumberField(labelText, defaultValue) {
+      const f = document.createElement("div");
+      f.className = "mr-field";
+      const l = document.createElement("label");
+      l.textContent = labelText;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.step = "1";
+      input.value = String(defaultValue);
+      f.appendChild(l);
+      f.appendChild(input);
+      body.appendChild(f);
+      return input;
+    }
+
+    const adultsInput = makeNumberField("Odrasli", 1);
+    const kids712Input = makeNumberField("Otroci 7–18", 0);
+    const kids06Input = makeNumberField("Otroci 0–6", 0);
+
+    function makeTextField(labelText, type) {
+      const f = document.createElement("div");
+      f.className = "mr-field";
+      const l = document.createElement("label");
+      l.textContent = labelText;
+      const input = document.createElement("input");
+      input.type = type || "text";
+      f.appendChild(l);
+      f.appendChild(input);
+      body.appendChild(f);
+      return input;
+    }
+
+    // One name field even when adults+kids712+kids06 > 1 - same convention
+    // as every other reservation in this system (e.g. a 2-adult booking's
+    // guest.name is still just one contact name). Individual guests get
+    // their own real names recorded separately at check-in (Guestbook, if
+    // connected), not here.
+    const nameInput = makeTextField("Ime kontaktne osebe");
+    const nameNote = document.createElement("div");
+    nameNote.style.cssText = "margin:-10px 0 10px;font-size:11px;color:#9aa1ab;";
+    nameNote.textContent = "Za vse addon goste skupaj - posamezni gostje se z lastnimi imeni registrirajo pri prijavi (Guestbook), enako kot pri običajni rezervaciji.";
+    body.insertBefore(nameNote, nameInput.parentElement.nextSibling);
+    const phoneInput = makeTextField("Telefon (za WhatsApp check-in link)");
+    const emailInput = makeTextField("E-pošta (neobvezno)", "email");
+
+    const errBox = document.createElement("div");
+    errBox.className = "mr-modal-error";
+    body.appendChild(errBox);
+
+    const actions = document.createElement("div");
+    actions.className = "mr-modal-actions";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "mr-btn-muted";
+    btnCancel.textContent = "Cancel";
+
+    const btnConfirm = document.createElement("button");
+    btnConfirm.type = "button";
+    btnConfirm.className = "mr-btn-primary";
+    btnConfirm.textContent = "Ustvari addon rezervacijo";
+
+    actions.appendChild(btnCancel);
+    actions.appendChild(btnConfirm);
+
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    let isClosed = false;
+    function close() {
+      if (isClosed) return;
+      isClosed = true;
+      document.removeEventListener("keydown", onKeyDown);
+      overlay.remove();
+    }
+    function onKeyDown(e) {
+      if (e.key === "Escape") close();
+    }
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    document.addEventListener("keydown", onKeyDown);
+    btnClose.addEventListener("click", close);
+    btnCancel.addEventListener("click", close);
+
+    // Show current capacity right away so staff know how many more guests
+    // actually fit before they even fill in the form.
+    try {
+      const capData = await getJSON(
+        API_BASE + "/addon_capacity_check.php?parent_id=" + encodeURIComponent(reservation.id)
+      );
+      if (capData && capData.ok) {
+        const maxTxt = capData.max_guests !== null ? capData.max_guests : "?";
+        const availTxt = capData.available !== null ? capData.available : "?";
+        let txt = "Enota " + capData.unit + ": zasedeno " + capData.used + "/" + maxTxt +
+          " · na voljo še " + availTxt + " mest.";
+        if (capData.existing_addons && capData.existing_addons.length) {
+          txt += " Obstoječi addon-i: " + capData.existing_addons.map((a) =>
+            (a.guest_name || a.id) + " (" + a.from + "→" + a.to + ", " + a.headcount + ")"
+          ).join(", ") + ".";
+        }
+        capacityNote.textContent = txt;
+      } else {
+        capacityNote.textContent = "Kapacitete ni bilo mogoče preveriti.";
+      }
+    } catch (e) {
+      capacityNote.textContent = "Kapacitete ni bilo mogoče preveriti.";
+    }
+
+    btnConfirm.addEventListener("click", async () => {
+      setModalError(errBox, "");
+      const name = nameInput.value.trim();
+      if (!name) {
+        setModalError(errBox, "Ime gosta je obvezno.");
+        return;
+      }
+
+      btnConfirm.disabled = true;
+      btnConfirm.textContent = "Ustvarjam…";
+
+      try {
+        const data = await postJSON(API_BASE + "/create_addon_reservation.php", {
+          parent_id: reservation.id,
+          from: fromInput.value,
+          to: toInput.value,
+          adults: parseInt(adultsInput.value || "0", 10),
+          kids712: parseInt(kids712Input.value || "0", 10),
+          kids06: parseInt(kids06Input.value || "0", 10),
+          guest_name: name,
+          guest_phone: phoneInput.value.trim(),
+          guest_email: emailInput.value.trim(),
+        });
+
+        if (!data.ok) {
+          if (data.error === "over_capacity") {
+            setModalError(
+              errBox,
+              "Presežena kapaciteta enote: zasedeno " + data.used + "/" + data.max_guests +
+              ", na voljo še " + data.available + ", zahtevano " + data.requested + "."
+            );
+          } else {
+            setModalError(errBox, "Napaka: " + (data.error || "unknown") +
+              (data.details ? " (" + JSON.stringify(data.details) + ")" : ""));
+          }
+          btnConfirm.disabled = false;
+          btnConfirm.textContent = "Ustvari addon rezervacijo";
+          return;
+        }
+
+        close();
+
+        if (!data.has_remote_checkin) {
+          // This install doesn't have public/remote_checkin.php at all
+          // (CM Free's public repo) - the addon reservation itself was
+          // still created for real, just point at the shared PRO-only
+          // placeholder instead of a nonexistent link, same pattern this
+          // repo already uses for other Plus/PRO-gated buttons.
+          alert("Addon rezervacija ustvarjena (" + data.id + ").");
+          window.open(
+            CM_BASE_PATH + "/admin/pro_only.php?f=" + encodeURIComponent("Oddaljena prijava za addon goste"),
+            "_blank"
+          );
+        } else {
+          // Reuse the exact same WhatsApp check-in link flow already built
+          // for normal reservations - the addon already has its own real
+          // checkin_token/checkin_link, no new UI needed for this.
+          const phone = phoneInput.value.trim();
+          if (phone) {
+            handleCheckinWhatsApp({
+              id: data.id,
+              guest: { name: name, phone: phone },
+            });
+          } else {
+            window.prompt(
+              "Addon rezervacija ustvarjena (" + data.id + "). Povezava za oddaljeno prijavo:",
+              data.checkin_link
+            );
+          }
+        }
+
+        await loadReservations(root);
+      } catch (e) {
+        setModalError(errBox, String(e && e.message ? e.message : e));
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = "Ustvari addon rezervacijo";
+      }
+    });
   }
 
   // --------------------------

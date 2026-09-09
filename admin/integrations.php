@@ -385,6 +385,22 @@ header('X-Frame-Options: SAMEORIGIN');
         </div>
       </article>
 
+      <!-- CM Companion (mobile app device pairing) -->
+      <article class="card" id="card-cm-companion">
+        <div class="card-hdr">
+          <div class="card-hdr-left">
+            <h2>CM Companion</h2>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="muted small">
+            Pariraj mobilno napravo (CM Companion Android app, github.com/viljemd-hub/cm-companion)
+            ali kateregakoli drugega klienta CM Bridge Protocol v1.
+          </p>
+          <a class="btn small" href="cm_companion_pairing.php">Odpri &rarr;</a>
+        </div>
+      </article>
+
       <!-- AUTOPILOT – GLOBAL SETTINGS -->
       <article class="card" id="card-autopilot">
         <div class="card-hdr">

@@ -54,5 +54,28 @@ if ($installationId === '' || $code === '') {
 $result = cm_bridge_pairing_exchange($installationId, $code, $deviceLabel);
 if (empty($result['ok'])) {
     http_response_code(401);
+} else {
+    // Server-side connection counter, bumped only on an actual successful
+    // exchange (not on every button tap the way companion_pairing_click
+    // is) - lives in the same page_counters.json the public landing page
+    // already reads via api/counter.php, so stats.php on GN7 can show a
+    // real "how many phones have paired" number without a new endpoint.
+    $countersFile = __DIR__ . '/../../../../../data/page_counters.json';
+    $fp = @fopen($countersFile, 'c+');
+    if ($fp !== false) {
+        flock($fp, LOCK_EX);
+        $raw = stream_get_contents($fp);
+        $data = ($raw !== false && $raw !== '') ? json_decode($raw, true) : null;
+        if (!is_array($data)) {
+            $data = [];
+        }
+        $data['companion_connections_total'] = (int)($data['companion_connections_total'] ?? 0) + 1;
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($data, JSON_PRETTY_PRINT));
+        fflush($fp);
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
 }
 echo json_encode($result, JSON_UNESCAPED_UNICODE);

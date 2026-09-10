@@ -36,7 +36,7 @@ function cm_build_epc_qr_svg_data_uri(string $payload): ?string
     @unlink($tmpBase);
 
  $cmd = sprintf(
-    '%s -t SVG -o %s -l M -s 4 --margin 1 %s 2>/dev/null',
+    '%s -t SVG -o %s -l M -s 4 --margin 4 %s 2>/dev/null',
     escapeshellarg($qrencodeBin),
     escapeshellarg($tmpSvg),
     escapeshellarg($payload)
@@ -44,7 +44,7 @@ function cm_build_epc_qr_svg_data_uri(string $payload): ?string
 
 if (is_file('/usr/bin/timeout')) {
     $cmd = sprintf(
-        '%s 2 %s -t SVG -o %s -l M -s 4 --margin 1 %s 2>/dev/null',
+        '%s 2 %s -t SVG -o %s -l M -s 4 --margin 4 %s 2>/dev/null',
         escapeshellarg('/usr/bin/timeout'),
         escapeshellarg($qrencodeBin),
         escapeshellarg($tmpSvg),

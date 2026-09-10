@@ -48,6 +48,30 @@
   let MONTHS_TO_RENDER = 13; // default, overridden by site_settings.json
   let baseMonth = firstDayOfMonth(new Date());
 
+  /**
+   * Deep-link support (2026-09-10): CM Companion's Plus-tier availability
+   * check can now jump straight to the relevant range on this calendar
+   * instead of just reporting free/not-free in the app - reuses the
+   * existing highlightFocusRange() this page already calls when you click
+   * a reservation block, driven by URL params instead of a click.
+   * ?unit=T1&focus_from=2026-10-01&focus_to=2026-10-03
+   */
+  function getUrlFocusParams() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const unit = params.get("unit") || "";
+      const from = params.get("focus_from") || "";
+      const to = params.get("focus_to") || "";
+      if (!from || !to) return { unit, from: "", to: "" };
+      return { unit, from, to };
+    } catch (_) {
+      return { unit: "", from: "", to: "" };
+    }
+  }
+
+  const URL_FOCUS = getUrlFocusParams();
+  let PENDING_FOCUS = URL_FOCUS.from && URL_FOCUS.to ? URL_FOCUS : null;
+
   const CLEAN_BEFORE_CB = document.querySelector("#cal-clean-before");
   const CLEAN_AFTER_CB = document.querySelector("#cal-clean-after");
   const DAY_USE_CB = document.querySelector("#cal-day-use");
@@ -310,7 +334,12 @@
 
     // 4) Če stored ni več med ID-ji, ga ignoriramo
     let chosen = "";
-    if (stored && ids.includes(stored)) {
+    if (URL_FOCUS.unit && ids.includes(URL_FOCUS.unit)) {
+      // A deep link naming a specific unit wins over the locally
+      // remembered last-used unit - the whole point is landing exactly
+      // where the availability check said to look.
+      chosen = URL_FOCUS.unit;
+    } else if (stored && ids.includes(stored)) {
       chosen = stored;
     } else {
       chosen = ids[0]; // prva veljavna enota iz manifesta
@@ -1333,8 +1362,23 @@ async function loadOccupancyMetaMap(unit) {
     await loadMonthRenderForUnit(CURRENT_UNIT);
     await loadCleanFlagsForUnit(CURRENT_UNIT);
     await loadBookingRulesForUnit(CURRENT_UNIT);
-    baseMonth = firstDayOfMonth(new Date());
+    // A pending deep-link focus range (see PENDING_FOCUS/getUrlFocusParams
+    // above) opens on ITS month, not always "today" - only for the very
+    // first render after a deep link; switching units afterwards goes
+    // back to today's month as before.
+    baseMonth = PENDING_FOCUS
+      ? firstDayOfMonth(new Date(PENDING_FOCUS.from + "T00:00:00"))
+      : firstDayOfMonth(new Date());
     renderCalendar();
+
+    if (PENDING_FOCUS) {
+      highlightFocusRange(PENDING_FOCUS.from, PENDING_FOCUS.to);
+      const cell = qs(`.day[data-date="${PENDING_FOCUS.from}"]`);
+      if (cell && typeof cell.scrollIntoView === "function") {
+        cell.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      PENDING_FOCUS = null;
+    }
   }
 
   function wireUnitSelect() {

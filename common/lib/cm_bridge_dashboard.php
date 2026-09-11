@@ -28,6 +28,9 @@ require_once __DIR__ . '/cm_bridge_server.php';
 if (!function_exists('units_root')) {
     require_once cm_bridge_app_root() . '/admin/api/_lib/paths.php';
 }
+if (!function_exists('cm_get_product_tier')) {
+    require_once __DIR__ . '/datetime_fmt.php';
+}
 
 /** Same enumeration admin/mobile_calendar.php and integrations_get.php already use. */
 function cm_bridge_list_units(): array
@@ -124,7 +127,7 @@ function cm_bridge_dashboard_today(): array
         ];
     }
 
-    return ['ok' => true, 'date' => $today, 'totals' => $totals, 'units' => $out];
+    return ['ok' => true, 'date' => $today, 'tier' => cm_get_product_tier(), 'totals' => $totals, 'units' => $out];
 }
 
 /**
@@ -219,15 +222,18 @@ function cm_bridge_dashboard_inquiries(): array
 }
 
 /**
- * Proxies to the existing admin accept/reject endpoints over a loopback
- * HTTP call - never a direct write. This is deliberate, not a shortcut:
- * accept_inquiry.php carries real safety gates (ICS hard-fact conflict
- * check, local occupancy conflict check, soft-hold bookkeeping) that this
- * function has no business re-implementing or bypassing. Bridge callers
- * get exactly the same guarantees the admin UI's own Confirm/Reject
- * buttons get, nothing more. Free's accept_inquiry.php doesn't gate on
- * admin_key at all (unlike PRO) - the key is still forwarded here
- * harmlessly, in case that ever changes.
+ * 2026-09-11: previously proxied to admin/api/accept_inquiry.php /
+ * reject_inquiry.php over an internal curl call to the installation's own
+ * public_base_url (same design PRO had - see pro-dev-repo commit
+ * 62968ab). That made this action depend on web-server config it has no
+ * business depending on. Both target files now expose their core logic as
+ * plain functions with no echo/exit (cm_accept_inquiry_core(),
+ * reject_inquiry_core()), guarded so that requiring them doesn't also run
+ * their HTTP-entrypoint tail - this calls those functions directly,
+ * in-process, so there is no network hop and therefore nothing for any
+ * web server config to interfere with, on any hosting setup. Free's
+ * accept_inquiry.php never gated on admin_key (unlike PRO), so unlike
+ * PRO's equivalent fix there's no key-forwarding concern here at all.
  */
 function cm_bridge_action_inquiry_respond(string $id, string $decision, ?string $reason): array
 {
@@ -235,40 +241,64 @@ function cm_bridge_action_inquiry_respond(string $id, string $decision, ?string 
         return ['ok' => false, 'error' => 'invalid_decision'];
     }
 
-    $baseUrl = rtrim((string)(cm_bridge_public_settings()['public_base_url'] ?? ''), '/');
-    if ($baseUrl === '') {
-        return ['ok' => false, 'error' => 'public_base_url_not_configured'];
+    $appRoot = cm_bridge_app_root();
+    $inqRoot = $appRoot . '/common/data/json/inquiries';
+
+    $pendingGlob = glob("{$inqRoot}/*/*/pending/{$id}.json", GLOB_NOSORT) ?: [];
+    if (!$pendingGlob) {
+        return ['ok' => false, 'error' => 'pending_not_found', 'id' => $id];
+    }
+    $pendingPath = $pendingGlob[0];
+
+    $parts = explode('/', str_replace('\\', '/', $pendingPath));
+    $len   = count($parts);
+    if ($len < 4) {
+        return ['ok' => false, 'error' => 'invalid_pending_path', 'path' => $pendingPath];
+    }
+    $month = $parts[$len - 3];
+    $year  = $parts[$len - 4];
+
+    $inq = read_json($pendingPath);
+    if (!is_array($inq)) {
+        return ['ok' => false, 'error' => 'invalid_pending_json', 'path' => $pendingPath];
     }
 
-    $adminKeyFile = cm_bridge_app_root() . '/common/data/json/admin_key.txt';
-    $adminKey = is_file($adminKeyFile) ? trim((string)file_get_contents($adminKeyFile)) : '';
+    define('CM_INQUIRY_ACTIONS_LIB_ONLY', true);
 
-    $endpoint = $decision === 'accept' ? '/admin/api/accept_inquiry.php' : '/admin/api/reject_inquiry.php';
-    $payload = ['id' => $id, 'key' => $adminKey];
-    if ($decision === 'reject' && $reason !== null && $reason !== '') {
-        $payload['reason'] = $reason;
+    if ($decision === 'accept') {
+        require_once $appRoot . '/admin/api/_lib/paths.php';
+        require_once $appRoot . '/common/lib/datetime_fmt.php';
+        require_once $appRoot . '/admin/api/send_accept_link.php';
+        require_once $appRoot . '/admin/api/accept_inquiry.php';
+
+        $cfg  = cm_datetime_cfg();
+        $tz   = $cfg['timezone'] ?? 'Europe/Ljubljana';
+        $mode = $cfg['output_mode'] ?? 'raw';
+        $pendingIndexPath = $appRoot . '/common/data/json/pending_requests.json';
+
+        // cm_send_accept_link() (called from inside cm_accept_inquiry_core())
+        // reads $INQ_ROOT/$cfg via `global`, not as parameters - see the
+        // matching comment in PRO's cm_bridge_dashboard.php. Only ever
+        // worked because the HTTP entrypoint set these as real top-level
+        // script globals; calling from inside this function needs them
+        // injected into $GLOBALS explicitly.
+        $GLOBALS['INQ_ROOT'] = $inqRoot;
+        $GLOBALS['cfg']      = $cfg;
+        $GLOBALS['mode']     = $mode;
+
+        $result = cm_accept_inquiry_core(
+            $inq, $id, $year, $month, true,
+            $tz, $mode, $appRoot, $inqRoot, $pendingIndexPath, $pendingPath
+        );
+        return $result['body'];
     }
 
-    $ch = curl_init($baseUrl . $endpoint);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => http_build_query($payload),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-    ]);
-    $body = curl_exec($ch);
-    $error = curl_error($ch);
-    curl_close($ch);
+    // reject
+    require_once $appRoot . '/admin/api/_lib/paths.php';
+    require_once $appRoot . '/admin/api/_lib/json_io.php';
+    require_once $appRoot . '/admin/api/send_rejected.php';
+    require_once $appRoot . '/common/lib/datetime_fmt.php';
+    require_once $appRoot . '/admin/api/reject_inquiry.php';
 
-    if ($body === false) {
-        return ['ok' => false, 'error' => 'upstream_unreachable', 'detail' => $error];
-    }
-
-    $decoded = json_decode((string)$body, true);
-    if (!is_array($decoded)) {
-        return ['ok' => false, 'error' => 'upstream_invalid_response'];
-    }
-
-    return $decoded;
+    return reject_inquiry_core($inq, ($reason !== null && $reason !== '') ? $reason : 'manual_reject');
 }

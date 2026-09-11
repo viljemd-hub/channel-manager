@@ -56,16 +56,26 @@
    * a reservation block, driven by URL params instead of a click.
    * ?unit=T1&focus_from=2026-10-01&focus_to=2026-10-03
    */
+  // quick_reserve=1 (Companion "continue to reservation" follow-up,
+  // 2026-09-11): the range is already known FREE (Companion's
+  // availability_multi.php check just confirmed it), so also dispatch
+  // the same "admin-range-selected" event calendar_shell.js already
+  // listens to for a manual drag-select - this is the ONLY hook needed
+  // to make the existing "Admin reserve" button (and its whole hard/
+  // soft prompt sequence, including the soft mode that e-mails the
+  // guest) work as if the host had selected the range by hand. No
+  // reservation logic is duplicated here or in Companion itself.
   function getUrlFocusParams() {
     try {
       const params = new URLSearchParams(window.location.search);
       const unit = params.get("unit") || "";
       const from = params.get("focus_from") || "";
       const to = params.get("focus_to") || "";
-      if (!from || !to) return { unit, from: "", to: "" };
-      return { unit, from, to };
+      const quickReserve = params.get("quick_reserve") === "1";
+      if (!from || !to) return { unit, from: "", to: "", quickReserve: false };
+      return { unit, from, to, quickReserve };
     } catch (_) {
-      return { unit: "", from: "", to: "" };
+      return { unit: "", from: "", to: "", quickReserve: false };
     }
   }
 
@@ -1372,11 +1382,35 @@ async function loadOccupancyMetaMap(unit) {
     renderCalendar();
 
     if (PENDING_FOCUS) {
-      highlightFocusRange(PENDING_FOCUS.from, PENDING_FOCUS.to);
-      const cell = qs(`.day[data-date="${PENDING_FOCUS.from}"]`);
+      const focus = PENDING_FOCUS;
+      highlightFocusRange(focus.from, focus.to);
+      const cell = qs(`.day[data-date="${focus.from}"]`);
       if (cell && typeof cell.scrollIntoView === "function") {
         cell.scrollIntoView({ block: "center", behavior: "smooth" });
       }
+
+      if (focus.quickReserve) {
+        // Same event calendar_shell.js already listens to for a manual
+        // drag-select over free dates - occ:null means "no existing lock",
+        // matching what a real free-range selection produces.
+        document.dispatchEvent(
+          new CustomEvent("admin-range-selected", {
+            detail: {
+              from: focus.from,
+              to: focus.to,
+              nights: nightsBetweenISO(focus.from, focus.to),
+              source: "companion_availability_check",
+              occ: null,
+            },
+          })
+        );
+
+        const reserveBtn = qs("#cal-btn-admin-reserve");
+        if (reserveBtn && !reserveBtn.disabled) {
+          reserveBtn.click();
+        }
+      }
+
       PENDING_FOCUS = null;
     }
   }

@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_lib/paths.php';
 
-require __DIR__ . '/_lib/json_io.php'; // read_json, write_json
+require_once __DIR__ . '/_lib/json_io.php'; // read_json, write_json
 require_once __DIR__ . '/send_rejected.php';
 require_once __DIR__ . '/../../common/lib/datetime_fmt.php'; // za timezone cfg
 
@@ -284,6 +284,15 @@ function reject_inquiry_core(array $inq, string $reasonCode = 'manual_reject'): 
     ];
 }
 
+
+// ============================================================================
+// HTTP ENTRYPOINT - samo za neposredne klice (admin UI). CM Bridge kliče
+// reject_inquiry_core() direktno (glej common/lib/cm_bridge_dashboard.php),
+// ne prek te poti.
+// ============================================================================
+if (defined('CM_INQUIRY_ACTIONS_LIB_ONLY')) {
+    return;
+}
 
 // ---------------------------------------------------------------------
 // VSTOP: preberi ID iz POST ALI JSON + robusten debug, če manjka

@@ -609,7 +609,7 @@ $occupancyArr[] = [
     "status" => "reserved",
     "lock"   => "hard",
     "source" => "admin",
-    "export" => false,
+    "export" => true,
     "id"     => $id
 ];
 

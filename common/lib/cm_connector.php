@@ -275,20 +275,58 @@ function cm_connector_send_command(array $command): array
 
 /**
  * Convenience wrapper for the common case: "something about this unit
- * changed, re-derive and push its current state". Deliberately dumb about
- * WHAT changed (price vs availability vs min_stay) - the eventual Relay-side
- * push logic reads current unit state fresh from disk rather than trusting
- * a delta payload, so the local hook only needs to say which unit and why.
+ * changed, wake up and go check what's new" (user's own framing, 2026-09-17).
+ * The trigger itself stays deliberately dumb about the exact delta - but
+ * Relay can never reach back into a self-hosted, often-NAT'd CM install to
+ * fetch current state on its own, so a FRESH read of the relevant data must
+ * travel with the nudge. Two ways to supply it:
+ *   - caller already has the changed values cheaply in scope (e.g. a price
+ *     write handler that just wrote $from/$to/$price) -> pass $snapshot;
+ *   - caller doesn't (e.g. the shared cm_regen_merged_for_unit() choke
+ *     point) -> omitted, auto-gathered fresh from disk right now via
+ *     cm_connector_prepare_unit_snapshot().
+ * Either way this is a snapshot taken AT NOTIFY TIME, never a trusted delta
+ * from further upstream.
  */
-function cm_connector_notify_unit_changed(string $unit, string $reason): array
+function cm_connector_notify_unit_changed(string $unit, string $reason, array $snapshot = []): array
 {
+    if (empty($snapshot)) {
+        $snapshot = cm_connector_prepare_unit_snapshot($unit, $reason);
+    }
+
     return cm_connector_send_command([
         'type' => 'unitStateChanged',
         'unit' => $unit,
         'reason' => $reason, // e.g. 'price', 'availability', 'min_stay'
         'idempotency_key' => $unit . ':' . $reason . ':' . date('Y-m-d-H-i'),
-        'payload' => [],
+        'payload' => $snapshot,
     ]);
+}
+
+/**
+ * Reads current unit state fresh from disk for the given reason - the
+ * "priprava" step that follows the "dregljaj" (nudge). Only called when a
+ * caller doesn't already have cheaper, more targeted data in scope.
+ */
+function cm_connector_prepare_unit_snapshot(string $unit, string $reason): array
+{
+    $unitDir = cm_connector_app_root() . '/common/data/json/units/' . $unit;
+
+    if ($reason === 'price') {
+        $prices = read_json($unitDir . '/prices.json');
+        return ['prices' => is_array($prices) ? $prices : []];
+    }
+
+    // availability, min_stay, and reservation-driven reasons all funnel
+    // through cm_regen_merged_for_unit(), so the same current-state pair
+    // (merged occupancy + min_nights) covers all of them.
+    $merged = read_json($unitDir . '/occupancy_merged.json');
+    $settings = read_json($unitDir . '/site_settings.json');
+
+    return [
+        'occupancy_merged' => is_array($merged) ? $merged : [],
+        'min_nights' => (int)($settings['booking']['min_nights'] ?? 1),
+    ];
 }
 
 function cm_connector_full_sync(): array

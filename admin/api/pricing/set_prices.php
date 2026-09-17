@@ -94,7 +94,13 @@ file_put_contents($pricesFile, json_encode($prices, JSON_PRETTY_PRINT|JSON_UNESC
 
 if ($changed > 0) {
     require_once __DIR__ . '/../../../common/lib/cm_connector.php';
-    cm_connector_notify_unit_changed((string)$unit, 'price');
+    $changedPrices = [];
+    $iter2 = clone $start;
+    while ($iter2 < $end) {
+        $changedPrices[$iter2->format('Y-m-d')] = $price;
+        $iter2->modify('+1 day');
+    }
+    cm_connector_notify_unit_changed((string)$unit, 'price', ['prices' => $changedPrices]);
 }
 
 // --- Done ---

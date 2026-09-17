@@ -814,6 +814,17 @@ $segments = cm_occ_add_cleaning_state_for_unit($segments, $unitDir, $unit);
     error_log("[cm_regen_merged_for_unit] PUBLISH_FAILED unit={$unit} err=" . json_encode($e));
     return false;
   }
+
+  // Every real caller of this function (reservation create/modify/cancel,
+  // manual block/unblock, unit settings save, ICS pull) represents a state
+  // change Channex/Relay needs to know about. Single choke point for the
+  // availability+min_stay side of OTA sync - see CM_Connectivity_Community
+  // _Contract_v0.2 §5. No-ops silently if Connectivity isn't opted in.
+  if (!function_exists('cm_connector_notify_unit_changed')) {
+    require_once __DIR__ . '/cm_connector.php';
+  }
+  cm_connector_notify_unit_changed($unit, 'availability');
+
   return true;
 
 

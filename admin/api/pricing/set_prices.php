@@ -92,6 +92,11 @@ while ($iter < $end) {
 // --- Write back ---
 file_put_contents($pricesFile, json_encode($prices, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
 
+if ($changed > 0) {
+    require_once __DIR__ . '/../../../common/lib/cm_connector.php';
+    cm_connector_notify_unit_changed((string)$unit, 'price');
+}
+
 // --- Done ---
 echo json_encode([
     'ok' => true,

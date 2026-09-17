@@ -249,9 +249,46 @@ function cm_connector_ack_event(string $relayEventId): array
     return ['ok' => false, 'error' => 'not_implemented_faza_b'];
 }
 
+/**
+ * Queues a command locally (common/lib/cm_connector_outbox.php). Does NOT
+ * perform any network I/O - no live Relay to send it to yet. This is the
+ * one function real save-handlers (price, availability, reservations)
+ * should call; it silently no-ops if Connectivity isn't opted in, so
+ * callers never need their own enabled-check.
+ */
 function cm_connector_send_command(array $command): array
 {
-    return ['ok' => false, 'error' => 'not_implemented_faza_b'];
+    if (!function_exists('cm_connector_outbox_append')) {
+        require_once __DIR__ . '/cm_connector_outbox.php';
+    }
+
+    $settings = cm_connector_get_settings();
+    if (!$settings['enabled'] || empty($settings['services']['ota_connectivity'])) {
+        return ['ok' => true, 'skipped' => 'ota_connectivity_not_enabled'];
+    }
+
+    $command['installation_id'] = $settings['installation_uuid'];
+    $queued = cm_connector_outbox_append($command);
+
+    return $queued ? ['ok' => true] : ['ok' => false, 'error' => 'outbox_write_failed'];
+}
+
+/**
+ * Convenience wrapper for the common case: "something about this unit
+ * changed, re-derive and push its current state". Deliberately dumb about
+ * WHAT changed (price vs availability vs min_stay) - the eventual Relay-side
+ * push logic reads current unit state fresh from disk rather than trusting
+ * a delta payload, so the local hook only needs to say which unit and why.
+ */
+function cm_connector_notify_unit_changed(string $unit, string $reason): array
+{
+    return cm_connector_send_command([
+        'type' => 'unitStateChanged',
+        'unit' => $unit,
+        'reason' => $reason, // e.g. 'price', 'availability', 'min_stay'
+        'idempotency_key' => $unit . ':' . $reason . ':' . date('Y-m-d-H-i'),
+        'payload' => [],
+    ]);
 }
 
 function cm_connector_full_sync(): array

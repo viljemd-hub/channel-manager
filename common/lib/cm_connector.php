@@ -62,6 +62,8 @@ function cm_connector_default_settings(): array
             'ai_discovery' => false,
         ],
         'relay_base_url' => null,
+        'relay_installation_id' => null,
+        'relay_token' => null,
         'last_heartbeat_at' => null,
     ];
 }
@@ -218,6 +220,8 @@ function cm_connector_disconnect(): bool
     $settings['agreement'] = null;
     $settings['services'] = cm_connector_default_settings()['services'];
     $settings['relay_base_url'] = null;
+    $settings['relay_installation_id'] = null;
+    $settings['relay_token'] = null;
     $settings['last_heartbeat_at'] = null;
 
     return cm_connector_save_settings($settings);
@@ -229,9 +233,97 @@ function cm_connector_disconnect(): bool
 // stable function signature ahead of the real implementation.
 // ---------------------------------------------------------------------
 
+/**
+ * Minimal JSON-over-HTTP client. Deliberately lives here, not in a shared
+ * general-purpose helper - this is the ONLY place in local CM that is
+ * allowed to make an outbound call to the Relay, and keeping it self-
+ * contained makes that boundary easy to audit.
+ */
+function cm_connector_relay_http(string $method, string $url, array $body = [], ?string $token = null): array
+{
+    $ch = curl_init($url);
+    $headers = ['Content-Type: application/json'];
+    if ($token !== null) {
+        $headers[] = 'Authorization: Bearer ' . $token;
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+    ]);
+    if ($method === 'POST') {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+    }
+
+    $raw = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($raw === false) {
+        return ['ok' => false, 'error' => "curl: $curlError"];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return ['ok' => false, 'error' => "non_json_response http=$httpCode"];
+    }
+    if ($httpCode >= 400) {
+        return ['ok' => false, 'error' => $decoded['error'] ?? "http_$httpCode"];
+    }
+
+    return $decoded;
+}
+
+/**
+ * Registers this installation with the Relay named in relay_base_url
+ * (must be set first, e.g. via the connector admin page). One-time per
+ * installation - a repeat call is safe (Relay's register endpoint is
+ * idempotent on installation_uuid) but will NOT reissue a token, since
+ * this installation already has one after the first successful call.
+ */
 function cm_connector_activate_with_relay(): array
 {
-    return ['ok' => false, 'error' => 'not_implemented_faza_b'];
+    $settings = cm_connector_get_settings();
+
+    if (empty($settings['relay_base_url'])) {
+        return ['ok' => false, 'error' => 'relay_base_url_not_set'];
+    }
+
+    $uuid = cm_connector_ensure_installation_uuid();
+    $edition = function_exists('cm_get_product_tier') ? cm_get_product_tier() : 'free';
+    $version = function_exists('cm_get_product_version') ? cm_get_product_version() : '1.0.0';
+
+    $result = cm_connector_relay_http('POST', rtrim($settings['relay_base_url'], '/') . '/api/v1/installations/register.php', [
+        'installation_uuid' => $uuid,
+        'edition' => $edition,
+        'cm_version' => $version,
+        'connector_version' => '1.0.0',
+        'unit_count' => null, // not tracked centrally yet
+        'locale' => 'sl',
+    ]);
+
+    if (empty($result['ok'])) {
+        return $result;
+    }
+
+    // Re-read: cm_connector_ensure_installation_uuid() above wrote a fresh
+    // installation_uuid to disk after $settings was first loaded - using the
+    // stale in-memory copy here would silently overwrite that uuid back to
+    // null on the save below.
+    $settings = cm_connector_get_settings();
+    $settings['relay_installation_id'] = $result['installation_id'] ?? null;
+    if (!empty($result['token'])) {
+        // Only present on first-ever registration - a repeat call omits it,
+        // so don't overwrite an already-stored token with null.
+        $settings['relay_token'] = $result['token'];
+    }
+    $settings['activation_status'] = 'connected';
+    cm_connector_save_settings($settings);
+
+    return ['ok' => true, 'installation_id' => $settings['relay_installation_id']];
 }
 
 function cm_connector_heartbeat(): array
@@ -327,6 +419,61 @@ function cm_connector_prepare_unit_snapshot(string $unit, string $reason): array
         'occupancy_merged' => is_array($merged) ? $merged : [],
         'min_nights' => (int)($settings['booking']['min_nights'] ?? 1),
     ];
+}
+
+/**
+ * Drains the local outbox (common/lib/cm_connector_outbox.php) by POSTing
+ * each pending command to the Relay's /api/v1/commands endpoint. Meant to
+ * be called periodically (cron - see admin/api/cron_drain_connector_outbox.php),
+ * not from the save-handler request path itself, so a slow/unreachable
+ * Relay never adds latency to an admin saving a price.
+ *
+ * Every request carries this installation's own token (installation-level
+ * traceability - Relay's auth layer resolves WHICH installation a command
+ * came from purely from the token, never from a client-supplied id) and
+ * every command already carries its own unit + idempotency_key (unit-level
+ * traceability), so a command is fully attributable end to end without
+ * needing anything extra bolted on here.
+ */
+function cm_connector_outbox_drain(int $limit = 50): array
+{
+    $settings = cm_connector_get_settings();
+
+    if ($settings['activation_status'] !== 'connected' || empty($settings['relay_token']) || empty($settings['relay_base_url'])) {
+        return ['ok' => false, 'error' => 'not_connected_to_relay'];
+    }
+
+    if (!function_exists('cm_connector_outbox_pending')) {
+        require_once __DIR__ . '/cm_connector_outbox.php';
+    }
+
+    $pending = array_slice(cm_connector_outbox_pending(), 0, $limit);
+    $sent = 0;
+    $failed = 0;
+
+    foreach ($pending as $command) {
+        $result = cm_connector_relay_http(
+            'POST',
+            rtrim($settings['relay_base_url'], '/') . '/api/v1/commands.php',
+            [
+                'type' => $command['type'],
+                'unit' => $command['unit'],
+                'reason' => $command['reason'] ?? '',
+                'idempotency_key' => $command['idempotency_key'] ?? '',
+                'payload' => $command['payload'] ?? [],
+            ],
+            $settings['relay_token']
+        );
+
+        if (!empty($result['ok'])) {
+            cm_connector_outbox_mark_sent($command['id']);
+            $sent++;
+        } else {
+            $failed++;
+        }
+    }
+
+    return ['ok' => true, 'sent' => $sent, 'failed' => $failed, 'remaining' => count(cm_connector_outbox_pending())];
 }
 
 function cm_connector_full_sync(): array

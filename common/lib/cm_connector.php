@@ -331,14 +331,127 @@ function cm_connector_heartbeat(): array
     return ['ok' => false, 'error' => 'not_implemented_faza_b'];
 }
 
+/**
+ * Pulls queued inbound events from Relay (GET /api/v1/events) and appends
+ * each one locally via cm_connector_events_append() (Faza A skeleton,
+ * common/lib/cm_connector_events.php - idempotent on idempotency_key, so a
+ * repeat pull before acknowledging never double-records the same event).
+ * Deliberately does NOT act on the events (e.g. create a reservation) -
+ * see cm_connector_process_inbound_events() for that, kept as a separate
+ * step on purpose so "receive" and "act" can be reasoned about/tested
+ * independently.
+ */
 function cm_connector_pull_events(): array
 {
-    return ['ok' => false, 'error' => 'not_implemented_faza_b'];
+    $settings = cm_connector_get_settings();
+    if ($settings['activation_status'] !== 'connected' || empty($settings['relay_token']) || empty($settings['relay_base_url'])) {
+        return ['ok' => false, 'error' => 'not_connected_to_relay'];
+    }
+
+    $result = cm_connector_relay_http(
+        'GET',
+        rtrim($settings['relay_base_url'], '/') . '/api/v1/events.php',
+        [],
+        $settings['relay_token']
+    );
+
+    if (empty($result['ok'])) {
+        return $result;
+    }
+
+    if (!function_exists('cm_connector_events_append')) {
+        require_once __DIR__ . '/cm_connector_events.php';
+    }
+
+    $pulled = 0;
+    foreach (($result['events'] ?? []) as $event) {
+        $eventId = (string)($event['id'] ?? '');
+        if ($eventId === '') {
+            continue;
+        }
+        $appended = cm_connector_events_append([
+            'relay_event_id' => $eventId,
+            'idempotency_key' => $eventId,
+            'type' => (string)($event['type'] ?? ''),
+            'channel' => (string)($event['channel'] ?? ''),
+            'occurred_at' => (string)($event['occurred_at'] ?? ''),
+            'payload' => is_array($event['payload'] ?? null) ? $event['payload'] : [],
+        ]);
+        if ($appended) {
+            $pulled++;
+        }
+    }
+
+    return ['ok' => true, 'pulled' => $pulled];
 }
 
 function cm_connector_ack_event(string $relayEventId): array
 {
-    return ['ok' => false, 'error' => 'not_implemented_faza_b'];
+    $settings = cm_connector_get_settings();
+    if ($settings['activation_status'] !== 'connected' || empty($settings['relay_token']) || empty($settings['relay_base_url'])) {
+        return ['ok' => false, 'error' => 'not_connected_to_relay'];
+    }
+
+    return cm_connector_relay_http(
+        'POST',
+        rtrim($settings['relay_base_url'], '/') . '/api/v1/events_ack.php',
+        ['event_id' => $relayEventId],
+        $settings['relay_token']
+    );
+}
+
+/**
+ * Processes locally-pulled events that haven't been applied yet
+ * (status === 'received' in cm_connector_events.php's own local queue -
+ * NOT the same 'received' as Relay's own event status, this is a second,
+ * separate local queue for "pulled but not yet acted on locally").
+ *
+ * Deliberately conservative scope: every event gets logged/recorded
+ * (visible, auditable), but only 'ari' events (price/availability info
+ * from Channex) are safe to no-op on, since CM already owns that data
+ * locally per the "CM stays master" rule. Real reservation-creation from
+ * booking_new/booking_modification/booking_cancellation events is NOT
+ * implemented yet - deliberately left as a flagged follow-up rather than
+ * auto-writing real guest reservations without a human decision on the
+ * exact mapping (which existing reservation-creation path to reuse,
+ * whether to require review before a booking becomes "real", etc).
+ */
+function cm_connector_process_inbound_events(): array
+{
+    if (!function_exists('cm_connector_events_list')) {
+        require_once __DIR__ . '/cm_connector_events.php';
+    }
+
+    $processed = 0;
+    $needsAttention = 0;
+
+    foreach (cm_connector_events_list() as $event) {
+        if (($event['status'] ?? '') !== 'received') {
+            continue;
+        }
+
+        $type = (string)($event['type'] ?? '');
+        $relayEventId = (string)($event['relay_event_id'] ?? '');
+
+        if (in_array($type, ['booking_new', 'booking_modification', 'booking_cancellation'], true)) {
+            // Not auto-applied - flagged for manual review. Do NOT
+            // acknowledge on Relay yet either, so it isn't lost if this
+            // gap gets closed later and needs re-processing.
+            $needsAttention++;
+            continue;
+        }
+
+        // ari / sync_error / sync_warning / booking_unmapped_* etc: safe
+        // to acknowledge without a local write - CM already owns pricing/
+        // availability locally, these are informational.
+        cm_connector_events_ack($relayEventId);
+        if ($relayEventId !== '') {
+            cm_connector_ack_event($relayEventId);
+        }
+        $processed++;
+    }
+
+    return ['ok' => true, 'processed' => $processed, 'needs_attention' => $needsAttention];
 }
 
 /**

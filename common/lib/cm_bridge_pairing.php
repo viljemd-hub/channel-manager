@@ -43,6 +43,36 @@ function cm_bridge_default_device_scopes(): array
     return ['dashboard.today', 'dashboard.alerts', 'dashboard.inquiries', 'action.inquiry_respond'];
 }
 
+/**
+ * Real active-connection count, not the cumulative "every successful
+ * pairing ever" counter (companion_connections_total in page_counters.json,
+ * cmfree-demo-specific, added 2026-09-09). That counter only ever
+ * increments - a real user question ("11 successful connections?" against
+ * only ever pairing ~9 real devices at once) surfaced the gap: it can't
+ * tell "currently paired" from "paired, then forgotten, then re-paired
+ * during testing". This reads bridge_devices.json directly instead -
+ * `enabled` flips false on self-service unpair (pairing/unpair.php) or
+ * admin revoke, so counting enabled===true rows is the actual live state.
+ *
+ * Deliberately just two numbers, no per-device detail (labels, tokens,
+ * last_seen) - this is meant to be safe to expose without auth (same
+ * shape a future cross-installation Community monitor would aggregate
+ * from many installations, see CM_Connectivity_Community_Contract_v0.2
+ * §7), and per-device detail belongs in the admin-only "Connected
+ * devices" list, not a public count endpoint.
+ */
+function cm_bridge_device_stats(): array
+{
+    $devices = cm_bridge_pairing_read(cm_bridge_devices_path());
+    $active = 0;
+    foreach ($devices as $d) {
+        if (!empty($d['enabled'])) {
+            $active++;
+        }
+    }
+    return ['total_ever' => count($devices), 'active' => $active];
+}
+
 function cm_bridge_pairing_read(string $path): array
 {
     if (!is_file($path)) return [];
@@ -104,12 +134,14 @@ function cm_bridge_pairing_generate(string $deviceLabelHint = ''): array
         'expires_at' => $entry['expires_at'],
         'bridge_base_url' => $bridgeBaseUrl,
         'deep_link' => $deepLink,
-        // Reuses the existing generic qrencode wrapper built for SEPA QR
-        // (common/lib/sepa_qr.php) - it's payload-agnostic, so no new QR
-        // dependency for this second, unrelated use. Null (not an error)
-        // if qrencode isn't installed on this host; the code/URL/ID above
-        // still work for manual entry either way.
-        'qr_svg_data_uri' => cm_build_epc_qr_svg_data_uri($deepLink),
+        // PNG, not SVG (2026-09-10 real bug) - the SVG variant's
+        // per-module <rect> seams broke up the finder patterns into an
+        // unscannable dot pattern once displayed at a non-integer
+        // pixel-per-module ratio (the normal case). See sepa_qr.php's
+        // cm_build_epc_qr_png_data_uri() doc comment. Field name kept
+        // as qr_svg_data_uri for backward compatibility - it's a
+        // generic data URI either way, callers shouldn't assume MIME.
+        'qr_svg_data_uri' => cm_build_epc_qr_png_data_uri($deepLink),
     ];
 }
 

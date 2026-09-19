@@ -73,6 +73,72 @@ if (is_file('/usr/bin/timeout')) {
 }
 
 /**
+ * PNG variant for on-screen camera scanning (2026-09-10 real bug): the
+ * SVG output above draws one <rect> per module with no shared edges.
+ * At a non-integer CSS pixel-per-module ratio (any browser display size
+ * that isn't an exact multiple of the module count - the normal case),
+ * per-shape anti-aliasing puts a faint seam between adjacent same-color
+ * modules, breaking up what should be solid finder-pattern squares into
+ * a scattered dot pattern a phone camera's QR detector cannot lock onto.
+ * A rasterized PNG has no such seams regardless of display scaling.
+ * Used by CM Companion's pairing QR; SEPA/EPC payment QR keeps the SVG
+ * path above unchanged (its own established, working use case).
+ */
+function cm_build_epc_qr_png_data_uri(string $payload): ?string
+{
+    $payload = trim($payload);
+    if ($payload === '') {
+        return null;
+    }
+
+    $qrencodeBin = cm_find_qrencode_binary();
+    if ($qrencodeBin === null) {
+        return null;
+    }
+
+    $tmpBase = tempnam(sys_get_temp_dir(), 'cm_epc_qr_');
+    if ($tmpBase === false) {
+        return null;
+    }
+
+    $tmpPng = $tmpBase . '.png';
+    @unlink($tmpBase);
+
+    $cmd = sprintf(
+        '%s -t PNG -o %s -l M -s 8 --margin 4 %s 2>/dev/null',
+        escapeshellarg($qrencodeBin),
+        escapeshellarg($tmpPng),
+        escapeshellarg($payload)
+    );
+
+    if (is_file('/usr/bin/timeout')) {
+        $cmd = sprintf(
+            '%s 2 %s -t PNG -o %s -l M -s 8 --margin 4 %s 2>/dev/null',
+            escapeshellarg('/usr/bin/timeout'),
+            escapeshellarg($qrencodeBin),
+            escapeshellarg($tmpPng),
+            escapeshellarg($payload)
+        );
+    }
+
+    @exec($cmd, $out, $exitCode);
+
+    if ($exitCode !== 0 || !is_file($tmpPng)) {
+        @unlink($tmpPng);
+        return null;
+    }
+
+    $png = @file_get_contents($tmpPng);
+    @unlink($tmpPng);
+
+    if (!is_string($png) || $png === '') {
+        return null;
+    }
+
+    return 'data:image/png;base64,' . base64_encode($png);
+}
+
+/**
  * CM PRO - EPC QR Generator Bridge
  * Converts reservation data into a standard EPC QR payload and returns a SVG Data URI.
  *

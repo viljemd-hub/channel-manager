@@ -51,6 +51,19 @@ function cm_is_plus_enabled(): bool
 }
 
 /**
+ * Orthogonal to tier (a Free, Plus, or PRO install can each be "in beta")
+ * - not a 4th tier, a separate on/off flag. Owner-set manually in
+ * site_settings.json (product.beta), same convention as product.tier
+ * itself; no automatic detection, since beta status is a business
+ * decision (who was actually invited), not something CM can infer.
+ */
+function cm_is_beta_tester(): bool
+{
+    $settings = cm_load_settings();
+    return (bool)($settings['product']['beta'] ?? false);
+}
+
+/**
  * Returns product version string from global site_settings.json.
  * Source of truth: site_settings.json["product"]["version"].
  * Falls back to "1.0.0" if not set.

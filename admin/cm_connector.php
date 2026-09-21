@@ -119,6 +119,12 @@ $T = [
     'disconnect_hint' => ['en' => 'Clears consent, business agreement and status; the installation ID is kept in case you reconnect later.', 'sl' => 'Počisti soglasja, poslovni dogovor in status; installation ID ostane, če se boš kdaj vrnil.'],
     'disconnect_confirm' => ['en' => 'Disconnect from the CM ecosystem?', 'sl' => 'Prekini povezavo s CM ekosistemom?'],
     'btn_disconnect' => ['en' => 'Disconnect', 'sl' => 'Prekini povezavo'],
+    'feedback_legend' => ['en' => 'Beta feedback', 'sl' => 'Beta povratne informacije'],
+    'feedback_hint' => ['en' => 'Send a short message directly to the CM team - bugs, ideas, anything worth knowing.', 'sl' => 'Pošlji kratko sporočilo neposredno ekipi CM - napake, ideje, karkoli se ti zdi vredno vedeti.'],
+    'feedback_placeholder' => ['en' => 'What happened, or what would you like to see?', 'sl' => 'Kaj se je zgodilo, ali kaj bi rad/a videl/a?'],
+    'btn_send_feedback' => ['en' => 'Send feedback', 'sl' => 'Pošlji povratno informacijo'],
+    'feedback_sent_msg' => ['en' => 'Feedback sent, thank you!', 'sl' => 'Povratna informacija poslana, hvala!'],
+    'err_feedback' => ['en' => 'Could not send feedback.', 'sl' => 'Povratne informacije ni bilo mogoče poslati.'],
 ];
 
 function t(string $key): string
@@ -129,6 +135,7 @@ function t(string $key): string
 
 $errors = [];
 $saved = false;
+$feedbackSent = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string)($_POST['action'] ?? '');
@@ -174,6 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $saved = true;
         } else {
             $errors[] = t('err_disconnect');
+        }
+    } elseif ($action === 'send_feedback') {
+        $feedbackResult = cm_connector_send_feedback((string)($_POST['feedback_message'] ?? ''));
+        if (!empty($feedbackResult['ok'])) {
+            $feedbackSent = true;
+        } else {
+            $errors[] = t('err_feedback') . ' (' . (string)($feedbackResult['error'] ?? '?') . ')';
         }
     }
 }
@@ -355,6 +369,21 @@ $services = $status['services'];
       <button class="btn" type="submit" style="margin-top:10px;"><?= h(t('btn_save_agreement')) ?></button>
     </form>
   </fieldset>
+
+  <?php if ($status['activation_status'] === 'connected'): ?>
+    <fieldset>
+      <legend><?= h(t('feedback_legend')) ?></legend>
+      <p class="hint"><?= h(t('feedback_hint')) ?></p>
+      <?php if ($feedbackSent): ?>
+        <p class="hint" style="color:#8ff2be;"><?= h(t('feedback_sent_msg')) ?></p>
+      <?php endif; ?>
+      <form method="post">
+        <input type="hidden" name="action" value="send_feedback">
+        <textarea name="feedback_message" required placeholder="<?= h(t('feedback_placeholder')) ?>"></textarea>
+        <button class="btn" type="submit" style="margin-top:10px;"><?= h(t('btn_send_feedback')) ?></button>
+      </form>
+    </fieldset>
+  <?php endif; ?>
 
   <?php if ($status['activation_status'] !== 'not_connected'): ?>
     <fieldset>

@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_common.php';
 require_key();
+require_once __DIR__ . '/../common/lib/datetime_fmt.php';
+$cmIsBeta = cm_is_beta_tester();
 ?>
 <!doctype html>
 <html lang="sl">
@@ -34,6 +36,10 @@ require_key();
     <div class="hdr-left">
 <h1 class="hdr-title">
   Admin Calendar / Upravljanje koledarja
+  <?php if ($cmIsBeta): ?>
+  <span class="hdr-sep">·</span>
+  <span title="CM Beta tester" style="display:inline-block;padding:2px 8px;border-radius:999px;background:#ffd36b;color:#1a1a1a;font-size:12px;font-weight:800;vertical-align:middle;">🧪 BETA</span>
+  <?php endif; ?>
   <span class="hdr-sep">→</span>
   <a href="/app/public/pubcal.php"
      class="hdr-link"

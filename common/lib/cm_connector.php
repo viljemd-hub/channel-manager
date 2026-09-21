@@ -593,3 +593,28 @@ function cm_connector_full_sync(): array
 {
     return ['ok' => false, 'error' => 'not_implemented_faza_b'];
 }
+
+/**
+ * Sends free-text feedback to CM Relay's minimal beta-feedback channel
+ * (added 2026-09-21). Reuses the existing installation_id/token pair -
+ * requires Connectivity to be activated, same as pull/ack_event.
+ */
+function cm_connector_send_feedback(string $message): array
+{
+    $settings = cm_connector_get_settings();
+    if ($settings['activation_status'] !== 'connected' || empty($settings['relay_token']) || empty($settings['relay_base_url'])) {
+        return ['ok' => false, 'error' => 'not_connected_to_relay'];
+    }
+
+    $message = trim($message);
+    if ($message === '') {
+        return ['ok' => false, 'error' => 'message_required'];
+    }
+
+    return cm_connector_relay_http(
+        'POST',
+        rtrim($settings['relay_base_url'], '/') . '/api/v1/feedback.php',
+        ['message' => $message],
+        $settings['relay_token']
+    );
+}

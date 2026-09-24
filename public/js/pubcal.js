@@ -1677,6 +1677,16 @@ async function loadDataCurrent(){
   }
 
   async function init(){
+    // Wait for real translations before any UI text renders - i18n.js sets
+    // window.t synchronously, but window.I18N (the actual string data)
+    // loads via its own async fetch. Without this, a fast unit/manifest
+    // fetch can render the calendar (e.g. updateMinNightsBadge()) before
+    // i18n.js's fetch resolves, leaking raw keys like "cal_min_nights"
+    // into the UI instead of "Min. noči"/"Min. nights".
+    if (window.i18nReady) {
+      await window.i18nReady;
+    }
+
     window.addEventListener("resize", updateHeaderOffset);
     updateHeaderOffset();
 

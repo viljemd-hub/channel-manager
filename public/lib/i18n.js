@@ -36,6 +36,13 @@
   function t(key){
     const en = window.I18N && window.I18N[key];
     if(en) return en;
+    if (!window.I18N) {
+      // Translations haven't loaded yet (caller ran before window.i18nReady
+      // resolved) - return '' instead of leaking the raw key into the UI
+      // (e.g. "cal_min_nights: 3" showing to a real visitor). Callers that
+      // can, should await window.i18nReady before rendering text.
+      return '';
+    }
     console.warn("i18n missing key:", key);
     return key;
   }

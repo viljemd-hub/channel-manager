@@ -725,6 +725,15 @@ body.cm-app {
 }
 
 @media (max-width: 768px) {
+  /* Special-offer green frame is proportionally much more dominant on
+     small mobile day cells than on desktop (same 2px border, much
+     smaller box) - softened here rather than changed globally, since
+     desktop rendering was confirmed fine as-is. */
+  .day.has-special-offer {
+    border-width: 1.5px;
+    border-color: #3a8a5c;
+  }
+
   /* infobox kot "bottom sheet" – vedno spodaj, čez skoraj cel ekran */
   #cm-info {
     top: auto !important;

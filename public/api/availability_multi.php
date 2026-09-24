@@ -4,6 +4,9 @@ declare(strict_types=1);
 /**
  * CM PRO / CM Plus / CM Free
  * File: public/api/availability_multi.php
+ * Author: Viljem Dvojmoč
+ * Assistant: Claude
+ * Copyright (c) 2026 Viljem Dvojmoč. All rights reserved.
  *
  * Public read-only multi-unit availability endpoint.
  *

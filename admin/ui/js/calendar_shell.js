@@ -73,7 +73,7 @@
 
     // Prompt za ceno (per-night)
     const raw = prompt(
-      `Vnesi ceno na noč za razpon ${from} → ${to} (EUR):`,
+      `Vnesi ceno na noč za razpon ${isoToEu(from)} → ${isoToEu(to)} (EUR):`,
       ""
     );
     if (raw == null) {
@@ -211,6 +211,18 @@
     return `${y}-${m}-${day}`;
   }
 
+  // Real bug (2026-09-24): several admin-facing labels/confirm dialogs
+  // showed raw ISO dates (YYYY-MM-DD) verbatim - reads as US-ish/technical
+  // rather than the DD.MM.YYYY format used everywhere else in the admin
+  // UI. Only ever used for DISPLAY - all internal comparisons/API calls
+  // keep using the raw ISO strings untouched.
+  function isoToEu(iso) {
+    if (typeof iso !== "string") return iso;
+    const parts = iso.split("-");
+    if (parts.length !== 3) return iso;
+    return parts.reverse().join(".");
+  }
+
   // selection: {from,to(inclusive),nights} → [from,toEx) za API
   function toExclusiveRange(sel) {
     if (!sel || !sel.from || !sel.to) return null;
@@ -328,7 +340,7 @@ async function fetchReservationInfoForSelection() {
     // isn't mistaken for the checkout date itself.
     const n = typeof nights === "number" ? nights : nightsBetween(from, to);
     const departureDate = addDaysISO(to, 1);
-    labelEl.textContent = from + " → " + departureDate + " | " + n + " Noči";
+    labelEl.textContent = isoToEu(from) + " → " + isoToEu(departureDate) + " | " + n + " Noči";
     metaEl.textContent = "";
   }
 
@@ -702,9 +714,9 @@ function rangeAllHardLock(fromIso, toIso) {
       "Blokiram enoto " +
       currentUnit +
       ":\n" +
-      currentSelection.from +
+      isoToEu(currentSelection.from) +
       " → " +
-      currentSelection.to +
+      isoToEu(currentSelection.to) +
       " (" +
       rangeEx.nights +
       " noči)?";
@@ -845,7 +857,7 @@ async function handleUnblockRange() {
         "Odstranim admin blocke za enoto " +
         currentUnit +
         " v razponu:\n" +
-        sel.from + " → " + sel.to + "?";
+        isoToEu(sel.from) + " → " + isoToEu(sel.to) + "?";
 
     if (!window.confirm(txt)) {
         logAction("unblock_cancelled");
@@ -2009,7 +2021,7 @@ async function updateSelectionMeta() {
             const displayTo = info.to || to;
             const displayNights = info.nights || nights;
             setSelectionMeta(
-                `Reservation (hard-lock) | ${displayFrom} → ${displayTo} | ${displayNights} dni | ID: ${info.id}${info.guestName ? ' | Gost: ' + info.guestName : ''}`
+                `Reservation (hard-lock) | ${isoToEu(displayFrom)} → ${isoToEu(displayTo)} | ${displayNights} dni | ID: ${info.id}${info.guestName ? ' | Gost: ' + info.guestName : ''}`
             );
             setOpenReservationLink(info.id);
             return;

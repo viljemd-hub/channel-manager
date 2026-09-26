@@ -75,6 +75,17 @@
       .replace(/'/g, "&#039;");
   }
 
+  // Same bug/fix as calendar_shell.js's isoToEu() (2026-09-24): reservation
+  // cards and the detail panel displayed raw ISO dates (YYYY-MM-DD) instead
+  // of the DD.MM.YYYY format used elsewhere in the admin UI. Display-only -
+  // <input type="date"> values and API payloads keep using ISO untouched.
+  function isoToEu(iso) {
+    if (typeof iso !== "string") return iso;
+    const parts = iso.split("-");
+    if (parts.length !== 3) return iso;
+    return parts.reverse().join(".");
+  }
+
   /**
    * Extract SMS code (HHMMSS) from reservation ID.
    *
@@ -393,11 +404,11 @@
       '  <div class="mr-body">' +
       '    <div class="mr-dates">' +
       '      <span class="mr-from">' +
-      escapeHtml(from) +
+      escapeHtml(isoToEu(from)) +
       "</span>" +
       "      &rarr; " +
       '      <span class="mr-to">' +
-      escapeHtml(to) +
+      escapeHtml(isoToEu(to)) +
       "</span>" +
       (nights !== ""
         ? '      <span class="mr-nights">(' +
@@ -579,9 +590,9 @@
       '    <div class="mr-detail-row">' +
       '      <span class="mr-detail-label">Termin:</span>' +
       "      <span>" +
-      escapeHtml(from) +
+      escapeHtml(isoToEu(from)) +
       " → " +
-      escapeHtml(to) +
+      escapeHtml(isoToEu(to)) +
       (nights !== ""
         ? " (" + escapeHtml(String(nights)) + " nights)"
         : "") +
@@ -1073,7 +1084,7 @@
     sub.textContent =
       "K rezervaciji " + (reservation.guest_name || reservation.id) +
       " · enota " + (reservation.unit || "—") +
-      " · " + (reservation.from || "?") + " → " + (reservation.to || "?");
+      " · " + isoToEu(reservation.from || "?") + " → " + isoToEu(reservation.to || "?");
     hLeft.appendChild(title);
     hLeft.appendChild(sub);
 

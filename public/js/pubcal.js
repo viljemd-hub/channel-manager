@@ -664,11 +664,15 @@ function isDayUseEligible(isoDate) {
 
     if(!priceRaw) return out;
 
-    // detect flat daily map
+    // detect flat daily map: scan ALL keys for date-shaped ones, not just
+    // keys[0] - some prices.json files (e.g. freshly created units) mix
+    // metadata keys ("currency", "periods") in with the per-date prices at
+    // the top level, and checking only keys[0] silently dropped every
+    // price when that first key happened to be metadata instead of a date.
     const keys = Object.keys(priceRaw);
-    if(keys.length && /^\d{4}-\d{2}-\d{2}$/.test(keys[0])){
-      // direct copy
-      for(const k of keys){
+    const dateKeys = keys.filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+    if(dateKeys.length){
+      for(const k of dateKeys){
         out[k] = priceRaw[k];
       }
       return out;

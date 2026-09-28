@@ -73,7 +73,7 @@
 
     // Prompt za ceno (per-night)
     const raw = prompt(
-      `Vnesi ceno na noč za razpon ${isoToEu(from)} → ${isoToEu(to)} (EUR):`,
+      `Vnesi ceno na noč za razpon ${isoToEu(from)} → ${isoToEu(to)} (EUR). Vnesi 0, da izbrišeš obstoječo ceno:`,
       ""
     );
     if (raw == null) {
@@ -83,7 +83,7 @@
 
     const normalized = String(raw).trim().replace(",", ".");
     const price = Number(normalized);
-    if (!Number.isFinite(price) || price <= 0) {
+    if (!Number.isFinite(price) || price < 0) {
       alert("Vnešena cena ni veljavno število.");
       return;
     }
@@ -97,6 +97,12 @@
     const rangeEx = toExclusiveRange(currentSelection);
     if (!rangeEx) {
       alert("Razpon datumov ni veljaven.");
+      return;
+    }
+
+    // 0 = izbriši ceno za razpon, namesto da se 0 shrani kot dobesedna cena.
+    if (price === 0) {
+      await handleClearPrice(unit, rangeEx);
       return;
     }
 
@@ -174,6 +180,43 @@
     } catch (err) {
       console.error("[calendar_shell] set_prices error", err);
       alert("Napaka pri shranjevanju cen: " + err.message);
+    }
+  }
+
+  // Cena 0 v "Set price": izbriše obstoječo ceno za razpon namesto da se
+  // 0 shrani kot dobesedna cena. Dnevi ostanejo na voljo, samo brez cene.
+  async function handleClearPrice(unit, rangeEx) {
+    const ok = confirm(
+      "Izbrišem obstoječo ceno za razpon " +
+      isoToEu(rangeEx.from) + " → " + isoToEu(rangeEx.toEx) +
+      " za enoto " + unit + " (" + rangeEx.nights + " noči)?"
+    );
+    if (!ok) {
+      logAction("clear_price_cancelled");
+      return;
+    }
+
+    logAction("clear_price_request", { unit, from: rangeEx.from, toEx: rangeEx.toEx });
+
+    try {
+      const delRes = await postJson("/app/admin/api/pricing/delete_prices.php", {
+        unit,
+        from: rangeEx.from,
+        to: rangeEx.toEx
+      });
+      console.log("[calendar_shell] delete_prices OK", delRes);
+
+      window.dispatchEvent(
+        new CustomEvent("prices:changed", {
+          detail: { unit, from: rangeEx.from, to: rangeEx.toEx, price: 0 }
+        })
+      );
+
+      alert("Cena izbrisana.");
+      window.location.reload();
+    } catch (err) {
+      console.error("[calendar_shell] clear_price error", err);
+      alert("Napaka pri brisanju cene: " + err.message);
     }
   }
 

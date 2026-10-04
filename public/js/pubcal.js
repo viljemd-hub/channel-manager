@@ -164,6 +164,18 @@
   function findPublicUnit(id){
     return PUBLIC_UNITS.find(u => u.id === id) || null;
   }
+
+  /**
+   * 2026-10-04: `active:false` (but `public:true`) means the calendar still
+   * loads/shows real availability - only date SELECTION is blocked, e.g. a
+   * unit temporarily taken off booking without hiding it entirely. Defaults
+   * to "active" if the unit isn't found yet (PUBLIC_UNITS loads async) so
+   * this never false-blocks before the manifest fetch resolves.
+   */
+  function isCurrentUnitActive(){
+    const u = findPublicUnit(currentUnit);
+    return !u || u.active !== false;
+  }
   function firstPublicUnitId(){
     return PUBLIC_UNITS.length ? PUBLIC_UNITS[0].id : "A1";
   }
@@ -183,7 +195,13 @@
         active:  (u.active !== false),
         isPublic:(u.public !== false)
       }))
-      .filter(u => u.id && u.active && u.isPublic)
+      // 2026-10-04: only `public` gates whether a unit appears/loads at
+      // all - `active` is a separate, softer state (calendar still loads,
+      // selection just gets blocked, see isCurrentUnitActive()). Keeping
+      // both filters collapsed here meant an inactive-but-public unit
+      // silently vanished from the selector instead of showing a
+      // disabled-but-visible calendar.
+      .filter(u => u.id && u.isPublic)
       .sort((a,b) => (a.order - b.order) || a.id.localeCompare(b.id));
   }
 
@@ -778,6 +796,80 @@ function isDayUseEligible(isoDate) {
   // RENDER CALENDAR
   // ------------------
 
+  /**
+   * 2026-10-04: the only/every unit has public:false - shown WITHIN the
+   * normal page frame (header/branding/nav stay intact), never as a
+   * separate bare page - a guest landing here should still see whose site
+   * this is and have normal navigation, not something that looks
+   * broken/unsafe. Kept deliberately distinct from isCurrentUnitActive()'s
+   * tooltip: this is a final "nothing to show" state, not "this one unit
+   * is temporarily unbookable".
+   */
+  function renderNoPublicUnits(){
+    if(!calendarRoot) return;
+    calendarRoot.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "no-public-units-box";
+    box.setAttribute("role", "status");
+    box.innerHTML = "<h2>Koledar trenutno ni na voljo</h2><p>Ta nastanitev je začasno zaprta zaradi vzdrževanja. Poskusite znova kasneje.</p>";
+    calendarRoot.appendChild(box);
+  }
+
+  /**
+   * 2026-10-04: cursor-following warning shown while the mouse is anywhere
+   * over the calendar grid AND the current unit is active:false. Bilingual
+   * via window.t()/I18N (see public/lib/i18n.js), text only read at
+   * show-time so it always reflects the current language. One tooltip
+   * element, created lazily, reused for the page lifetime.
+   */
+  let inactiveTooltipEl = null;
+
+  function ensureInactiveTooltip(){
+    if (inactiveTooltipEl) return inactiveTooltipEl;
+    inactiveTooltipEl = document.createElement("div");
+    inactiveTooltipEl.className = "unit-inactive-tooltip";
+    inactiveTooltipEl.setAttribute("role", "status");
+    document.body.appendChild(inactiveTooltipEl);
+    return inactiveTooltipEl;
+  }
+
+  function positionInactiveTooltip(evt){
+    const tip = ensureInactiveTooltip();
+    const offset = 14;
+    let left = evt.clientX + offset;
+    let top  = evt.clientY + offset;
+    const maxLeft = window.innerWidth  - tip.offsetWidth  - 8;
+    const maxTop  = window.innerHeight - tip.offsetHeight - 8;
+    if (left > maxLeft) left = evt.clientX - tip.offsetWidth - offset;
+    if (top  > maxTop)  top  = evt.clientY - tip.offsetHeight - offset;
+    tip.style.left = left + "px";
+    tip.style.top  = top + "px";
+  }
+
+  function showInactiveTooltip(evt){
+    const tip = ensureInactiveTooltip();
+    const tFn = (window.t || (k => k));
+    tip.textContent = tFn("cal_unit_inactive_tooltip");
+    tip.style.display = "block";
+    positionInactiveTooltip(evt);
+  }
+
+  function hideInactiveTooltip(){
+    if (inactiveTooltipEl) inactiveTooltipEl.style.display = "none";
+  }
+
+  function wireInactiveTooltip(){
+    if (!calendarRoot) return;
+    calendarRoot.addEventListener("mousemove", (evt) => {
+      if (!isCurrentUnitActive()) {
+        showInactiveTooltip(evt);
+      } else {
+        hideInactiveTooltip();
+      }
+    });
+    calendarRoot.addEventListener("mouseleave", hideInactiveTooltip);
+  }
+
   function render(){
     if(!calendarRoot) return;
     calendarRoot.innerHTML = "";
@@ -1022,6 +1114,11 @@ if (isDayUseEligible(iso)) {
   }
 
   function handleDayClick(d){
+  // Defense in depth behind the tooltip - blocks selection even if a click
+  // reaches here before/without the tooltip being seen (e.g. a stale
+  // render, keyboard activation).
+  if (!isCurrentUnitActive()) return;
+
   const clickDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0,0,0,0);
 
 // DAY USE MODE: single-day select
@@ -1693,9 +1790,20 @@ async function loadDataCurrent(){
 
     window.addEventListener("resize", updateHeaderOffset);
     updateHeaderOffset();
+    wireInactiveTooltip();
 
     // 1) preberi public units iz manifest.json
     await loadPublicUnitsFromManifest();
+
+    // 2026-10-04: brez javnih enot sploh ni kaj naložiti/izbrati - pokaži
+    // "ni na voljo" znotraj okvira strani in ustavi tukaj (ne poskušaj
+    // nalagati podatkov za enoto, ki je ni v OCC_URLS/PRICE_URLS).
+    if (!PUBLIC_UNITS.length) {
+      if (unitSelect) unitSelect.innerHTML = "";
+      renderNoPublicUnits();
+      return;
+    }
+
     // 2) napolni <select> in porihtaj currentUnit, če je treba
     syncUnitSelectAndLabel();
 

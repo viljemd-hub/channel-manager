@@ -849,7 +849,13 @@ function isDayUseEligible(isoDate) {
   function showInactiveTooltip(evt){
     const tip = ensureInactiveTooltip();
     const tFn = (window.t || (k => k));
-    tip.textContent = tFn("cal_unit_inactive_tooltip");
+    const key = "cal_unit_inactive_tooltip";
+    // strings_*.json is per-installation runtime data (not in this repo -
+    // see .gitignore), so an install that hasn't picked up this key yet
+    // would otherwise leak the raw key to guests. Fall back to English
+    // rather than show that.
+    const txt = tFn(key);
+    tip.textContent = (txt && txt !== key) ? txt : "This unit cannot be booked right now";
     tip.style.display = "block";
     positionInactiveTooltip(evt);
   }

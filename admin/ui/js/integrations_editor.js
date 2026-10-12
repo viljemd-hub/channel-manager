@@ -34,10 +34,28 @@
   const editActive = $('editActive');
   const editMinNights = $('editMinNights');
   const fldMinNights  = $('fldMinNights');
+  const editMaxNights = $('editMaxNights');
+  const fldMaxNights  = $('fldMaxNights');
 
   const ta = $('jsonEditTextarea');
   const btnDelete = $('jsonEditDelete');
   const btnCancel = $('jsonEditCancel');
+
+  // Picking "Od datuma" positions the "Do datuma" native calendar picker at
+  // the same date instead of always opening on today/whatever month it last
+  // showed - same UX already used elsewhere (e.g. addon reservation date
+  // fields in manage_reservations.js). Also prevents picking a "Do" date
+  // before "Od" via min=.
+  if (editFrom && editTo) {
+    editFrom.addEventListener('change', () => {
+      const v = editFrom.value;
+      if (!v) return;
+      editTo.min = v;
+      if (!editTo.value || editTo.value < v) {
+        editTo.value = v;
+      }
+    });
+  }
 
   let current = null; // { type, onSave, onDelete }
 
@@ -102,6 +120,22 @@
 
         obj.conditions.min_nights = minN;
       }
+
+      // 🔹 MAX NIGHTS – neobvezno, brez privzete vrednosti; prazno polje = brez omejitve (ne piši 0/null na silo)
+      if (editMaxNights) {
+        obj.conditions = (obj.conditions && typeof obj.conditions === 'object')
+          ? obj.conditions
+          : {};
+
+        if (editMaxNights.value !== '') {
+          const maxN = parseInt(editMaxNights.value, 10);
+          if (Number.isFinite(maxN) && maxN >= 1) {
+            obj.conditions.max_nights = maxN;
+          }
+        } else {
+          delete obj.conditions.max_nights;
+        }
+      }
     }
 
     return obj;
@@ -132,9 +166,16 @@
             ? String(fn)
             : '1';
       }
+      // 🔹 Max. noči – neobvezno, brez privzete vrednosti (prazno = brez omejitve)
+      if (fldMaxNights) fldMaxNights.style.display = '';
+      if (editMaxNights) {
+        const fx = fields?.max_nights;
+        editMaxNights.value = (fx != null && fx !== '') ? String(fx) : '';
+      }
     } else {
       // za promo / druge tipe skrij polje
       if (fldMinNights) fldMinNights.style.display = 'none';
+      if (fldMaxNights) fldMaxNights.style.display = 'none';
     }
 
 

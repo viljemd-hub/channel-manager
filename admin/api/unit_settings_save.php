@@ -22,6 +22,7 @@ require_once __DIR__ . '/_lib/paths.php';
  *  - month_render (int, 1–36)
  *
  *  - booking_min_nights (int, 1–365)
+ *  - booking_max_nights (int, 1–365, optional - no default, stays unset until entered)
  *  - booking_allow_same_day_departure (bool-ish)
  *
  *  - day_use_enabled (bool-ish)
@@ -130,6 +131,20 @@ if ($hasBookingMin) {
         $bookingMin = 1;
     } elseif ($bookingMin > 365) {
         $bookingMin = 365;
+    }
+}
+
+// No default - stays unset unless the operator explicitly enters a value.
+$bookingMaxRaw = $data['booking_max_nights'] ?? null;
+$hasBookingMax = ($bookingMaxRaw !== null && $bookingMaxRaw !== '');
+
+$bookingMax = null;
+if ($hasBookingMax) {
+    $bookingMax = (int)$bookingMaxRaw;
+    if ($bookingMax < 1) {
+        $bookingMax = 1;
+    } elseif ($bookingMax > 365) {
+        $bookingMax = 365;
     }
 }
 
@@ -349,12 +364,15 @@ if ($doSetMonth) {
 }
 
 // booking.*
-if ($hasBookingMin || $hasAllowSame || $hasBookingCleaning) {
+if ($hasBookingMin || $hasBookingMax || $hasAllowSame || $hasBookingCleaning) {
     if (!isset($settings['booking']) || !is_array($settings['booking'])) {
         $settings['booking'] = [];
     }
     if ($hasBookingMin) {
         $settings['booking']['min_nights'] = $bookingMin;
+    }
+    if ($hasBookingMax) {
+        $settings['booking']['max_nights'] = $bookingMax;
     }
     if ($hasAllowSame) {
         $settings['booking']['allow_same_day_departure'] = $allowSame;

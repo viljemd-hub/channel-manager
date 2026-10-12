@@ -157,6 +157,19 @@ if ($bookingMin < 1) {
     $bookingMin = 365;
 }
 
+// No default - unlike min_nights, an unset max_nights means "no cap",
+// so this stays null rather than being coerced to a fallback number.
+$bookingMaxRaw = $current['booking']['max_nights'] ?? null;
+$bookingMax = null;
+if ($bookingMaxRaw !== null && $bookingMaxRaw !== '') {
+    $bookingMax = (int)$bookingMaxRaw;
+    if ($bookingMax < 1) {
+        $bookingMax = 1;
+    } elseif ($bookingMax > 365) {
+        $bookingMax = 365;
+    }
+}
+
 $allowSame = $boolVal($current['booking']['allow_same_day_departure'] ?? null, false);
 
 // booking.cleaning_fee_eur (optional)
@@ -248,6 +261,7 @@ $out = [
     ],
     'booking' => [
         'min_nights'               => $bookingMin,
+        'max_nights'               => $bookingMax,
         'allow_same_day_departure' => $allowSame,
         'cleaning_fee_eur'         => $bookingCleaning,
     ],

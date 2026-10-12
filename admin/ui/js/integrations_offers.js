@@ -228,6 +228,7 @@
 
     const id         = o.id || '';
     const minNights  = o.conditions?.min_nights;
+    const maxNights  = o.conditions?.max_nights;
     const promoCode  = o.conditions?.promo_code;
     const stackable  = o.conditions?.stackable;
     const periods    = Array.isArray(o.periods) ? o.periods : [];
@@ -260,6 +261,10 @@
     }
   </td>
 </tr>
+<tr>
+  <th>Max. noči</th>
+  <td>${maxNights != null ? escapeHtml(String(maxNights)) : '<span class="muted small">brez omejitve</span>'}</td>
+</tr>
           <tr><th>Promo koda</th><td>${promoCode ? escapeHtml(String(promoCode)) : '<span class="muted small">ni nastavljeno</span>'}</td></tr>
           <tr><th>Stackable</th><td>${stackable === true ? 'DA' : 'NE'}</td></tr>
           <tr><th>Aktivno</th><td>${active ? 'DA' : 'NE'}</td></tr>
@@ -281,6 +286,7 @@
     const initialDiscount = getDiscount(o);
     const { from, to } = summarizeDates(o);
     const minNights = o.conditions?.min_nights;
+    const maxNights = o.conditions?.max_nights;
     const active = isActive(o);
 
     const editor = ctx.Editor || ctx.JsonEditor;
@@ -296,6 +302,8 @@
         to: to || '',
           // NEW – core business rule
         min_nights: (minNights != null ? String(minNights) : '1'),
+        // neobvezno, brez privzete vrednosti - prazno = brez omejitve
+        max_nights: (maxNights != null ? String(maxNights) : ''),
 
         active,
         
@@ -332,6 +340,22 @@
         minN = parseInt(minN, 10);
         if (!Number.isFinite(minN) || minN <= 0) minN = 1;
 
+        // MAX NIGHTS - enak vzorec, a BREZ privzete vrednosti (prazno = brez omejitve)
+        let maxN = rawCond.max_nights;
+        const maxEl = document.getElementById('editMaxNights');
+        if (maxEl) {
+          if (maxEl.value !== '') {
+            const fromUi = parseInt(maxEl.value, 10);
+            maxN = (Number.isFinite(fromUi) && fromUi > 0) ? fromUi : maxN;
+          } else {
+            maxN = null; // uporabnik je polje izpraznil - odstrani omejitev
+          }
+        }
+        if (maxN !== null && maxN !== undefined) {
+          maxN = parseInt(maxN, 10);
+          if (!Number.isFinite(maxN) || maxN <= 0) maxN = null;
+        }
+
         let periods = Array.isArray(src.periods) ? src.periods.slice() : [];
         if (!periods.length && from2 && to2) {
           periods = [{ start: from2, end: to2 }];
@@ -355,11 +379,16 @@
           },
           enabled: src.enabled !== false && src.active !== false,
           active:  src.active !== false && src.enabled !== false,
-          conditions: {
-            ...rawCond,
-            min_nights: minN,
+          conditions: (() => {
+            const cond = { ...rawCond, min_nights: minN };
             // promo_code in stackable pustimo takšna, kot sta v JSON (če jih kdaj ročno uporabljaš)
-          },
+            if (maxN !== null && maxN !== undefined) {
+              cond.max_nights = maxN;
+            } else {
+              delete cond.max_nights;
+            }
+            return cond;
+          })(),
           periods,
         };
 
@@ -386,14 +415,17 @@
       },
     });
 
-    // Offers ne uporabljajo kupon kode -> skrij polje "Koda (za kupon)" v skupnem modalu
+    // Offers ne uporabljajo kupon kode -> skrij polje "Promo koda" v skupnem modalu.
+    // Real bug found 2026-09-24: this never actually hid anything - the
+    // selectors (.field / label[for=editCode]) don't match goodies.php's
+    // real markup (#editCode sits directly inside a wrapping <label>, no
+    // .field class exists anywhere, and the label has no for= attribute).
+    // Fixed to target the actual wrapping <label> that contains #editCode.
     setTimeout(() => {
       const codeInput = document.getElementById('editCode');
       if (!codeInput) return;
-      const field = codeInput.closest('.field');
-      if (field) field.style.display = 'none';
-      const label = document.querySelector('label[for="editCode"]');
-      if (label) label.style.display = 'none';
+      const wrappingLabel = codeInput.closest('label');
+      if (wrappingLabel) wrappingLabel.style.display = 'none';
     }, 0);
   }
 

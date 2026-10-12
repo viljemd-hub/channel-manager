@@ -789,6 +789,23 @@ header('X-Frame-Options: SAMEORIGIN');
             </small>
           </div>
 
+          <!-- Max. noči (neobvezno) -->
+          <div class="col-sm-3 mb-2">
+            <label for="add-booking-max-nights" class="form-label">
+              Maksimalno št. nočitev
+            </label>
+            <input
+              type="number"
+              id="add-booking-max-nights"
+              class="form-control form-control-sm"
+              min="1" max="60" step="1"
+              placeholder="neobvezno"
+            >
+            <small class="form-text text-muted">
+              Neobvezno - brez privzete vrednosti, prazno pomeni brez omejitve.
+            </small>
+          </div>
+
           <!-- Cleaning fee -->
           <div class="col-sm-3 mb-2">
             <label for="add-booking-cleaning-fee" class="form-label">
@@ -1142,6 +1159,20 @@ header('X-Frame-Options: SAMEORIGIN');
  	   Če pustiš prazno, velja tudi za 1 noč.
  	 </p>
        </div>
+        <div class="field" id="fldMaxNights">
+	  <label for="editMaxNights">Max. noči (neobvezno)</label>
+	  <input
+	    type="number"
+	    id="editMaxNights"
+	    min="1"
+	    max="60"
+	    step="1"
+	    placeholder="neobvezno"
+	  >
+	  <p class="muted small">
+	    Neobvezno - brez privzete vrednosti. Prazno pomeni brez omejitve.
+	  </p>
+        </div>
 
         <div class="field checkbox">
           <label>

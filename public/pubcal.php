@@ -124,6 +124,28 @@ if (is_file($UNIT_SETTINGS_FILE)) {
     }
 }
 
+// MAX NIGHTS – ni privzete vrednosti (null = brez omejitve), za razliko od min_nights
+$unitMax = null;
+if (is_file($UNIT_SETTINGS_FILE)) {
+    $raw = @file_get_contents($UNIT_SETTINGS_FILE);
+    if ($raw !== false) {
+        $u = json_decode($raw, true);
+        if (is_array($u) && isset($u['booking']['max_nights'])) {
+            $unitMax = (int)$u['booking']['max_nights'];
+        }
+    }
+}
+$globalMax = null;
+if (is_file($GLOBAL_SETTINGS_FILE)) {
+    $raw = @file_get_contents($GLOBAL_SETTINGS_FILE);
+    if ($raw !== false) {
+        $g = json_decode($raw, true);
+        if (is_array($g) && isset($g['booking']['max_nights'])) {
+            $globalMax = (int)$g['booking']['max_nights'];
+        }
+    }
+}
+
 // --------- BRAND NAME (iz manifest.json units[*].label) ---------
 $brandName = 'Apartma Matevž'; // varna privzeta vrednost
 
@@ -174,6 +196,14 @@ if ($unitMin !== null && $unitMin > 0) {
     $MIN_NIGHTS = $unitMin;
 } elseif ($globalMin !== null && $globalMin > 0) {
     $MIN_NIGHTS = $globalMin;
+}
+
+// prioriteta: per-unit > global > null (brez omejitve)
+$MAX_NIGHTS = null;
+if ($unitMax !== null && $unitMax > 0) {
+    $MAX_NIGHTS = $unitMax;
+} elseif ($globalMax !== null && $globalMax > 0) {
+    $MAX_NIGHTS = $globalMax;
 }
 
 
@@ -550,6 +580,7 @@ if (!$priceUrls) {
     // min nights politika (za prihodnost)
     ENFORCE_MIN_NIGHTS: <?= $ENFORCE_MIN_NIGHTS ? 'true' : 'false' ?>,
     MIN_NIGHTS: <?= (int)$MIN_NIGHTS ?>,
+    MAX_NIGHTS: <?= $MAX_NIGHTS !== null ? (int)$MAX_NIGHTS : 'null' ?>,
 
     // dynamic absolute URLs for occupancy/prices per unit (built in PHP from manifest.json)
     OCC_URLS: <?= json_encode($occUrls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,

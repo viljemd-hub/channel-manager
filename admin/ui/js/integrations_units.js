@@ -326,6 +326,7 @@
 
 
     const inMinNights = $('#add-booking-min-nights');
+    const inMaxNights = $('#add-booking-max-nights');
     const inCleaning  = $('#add-booking-cleaning-fee');
     const inWeeklyTh  = $('#add-booking-weekly-threshold');
     const inWeeklyPct = $('#add-booking-weekly-discount');
@@ -357,6 +358,7 @@ async function loadAndFillSiteSettings(unitId) {
 
   // booking
   if (inMinNights) inMinNights.value = ss.booking?.min_nights ?? '';
+  if (inMaxNights) inMaxNights.value = ss.booking?.max_nights ?? '';
   if (inCleaning)  inCleaning.value  = ss.booking?.cleaning_fee_eur ?? '';
   // weekly / long stay popusti (top-level ključi)
   if (inWeeklyTh)  inWeeklyTh.value  = ss.weekly_threshold ?? '';
@@ -400,6 +402,12 @@ async function saveSiteSettingsFromModal(unitId) {
   if (inMinNights && inMinNights.value !== '') {
     const v = Number(inMinNights.value);
     if (!Number.isNaN(v)) payload.booking_min_nights = v;
+  }
+
+  // booking.max_nights (optional, no default - left blank unless the user sets it)
+  if (inMaxNights && inMaxNights.value !== '') {
+    const v = Number(inMaxNights.value);
+    if (!Number.isNaN(v)) payload.booking_max_nights = v;
   }
 
   // day_use
@@ -547,8 +555,9 @@ function syncOnHoldToPublicUI() {
       if (inOnHold) inOnHold.checked = false;
       syncOnHoldToPublicUI();
 
-      // booking pravila (min nights + cleaning fee)
+      // booking pravila (min/max nights + cleaning fee)
       if (inMinNights) inMinNights.value = '';
+      if (inMaxNights) inMaxNights.value = '';
       if (inCleaning)  inCleaning.value  = '';
       if (inWeeklyTh)  inWeeklyTh.value  = '';
       if (inWeeklyPct) inWeeklyPct.value = '';
@@ -747,6 +756,7 @@ await helpers.safeFetchJson(ctx.CFG.api.saveUnitMeta, {
           public: pub,
           on_hold: onHold,
           booking_min_nights:      inMinNights?.value !== '' ? Number(inMinNights.value) : null,
+          booking_max_nights:      inMaxNights?.value !== '' ? Number(inMaxNights.value) : null,
           booking_cleaning_fee_eur:inCleaning?.value  !== '' ? Number(inCleaning.value)  : null,
           weekly_threshold:        inWeeklyTh?.value  !== '' ? Number(inWeeklyTh.value)  : null,
           weekly_discount_pct:     inWeeklyPct?.value !== '' ? Number(inWeeklyPct.value) : null,
@@ -770,6 +780,7 @@ await helpers.safeFetchJson(ctx.CFG.api.saveUnitMeta, {
         clean_after:  (inCleanA?.checked ? 1 : 0),
         on_hold: onHold,
           booking_min_nights:      inMinNights?.value !== '' ? Number(inMinNights.value) : null,
+          booking_max_nights:      inMaxNights?.value !== '' ? Number(inMaxNights.value) : null,
           booking_cleaning_fee_eur:inCleaning?.value  !== '' ? Number(inCleaning.value)  : null,
           weekly_threshold:        inWeeklyTh?.value  !== '' ? Number(inWeeklyTh.value)  : null,
           weekly_discount_pct:     inWeeklyPct?.value !== '' ? Number(inWeeklyPct.value) : null,

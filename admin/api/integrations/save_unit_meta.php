@@ -64,6 +64,9 @@ $on_hold      = array_key_exists('on_hold', $data) ? (bool)$data['on_hold'] : (b
 $booking_min_nights        = array_key_exists('booking_min_nights', $data)
     ? (string)$data['booking_min_nights']
     : null;
+$booking_max_nights        = array_key_exists('booking_max_nights', $data)
+    ? (string)$data['booking_max_nights']
+    : null;
 $booking_cleaning_fee_eur  = array_key_exists('booking_cleaning_fee_eur', $data)
     ? (string)$data['booking_cleaning_fee_eur']
     : null;
@@ -223,6 +226,9 @@ if (!array_key_exists('long_discount_pct', $settings)) {
 // override z vrednostmi iz requesta (če so bile poslane)
 if ($booking_min_nights !== null && $booking_min_nights !== '') {
     $settings['booking']['min_nights'] = (int)$booking_min_nights;
+}
+if ($booking_max_nights !== null && $booking_max_nights !== '') {
+    $settings['booking']['max_nights'] = (int)$booking_max_nights;
 }
 if ($booking_cleaning_fee_eur !== null && $booking_cleaning_fee_eur !== '') {
     $settings['booking']['cleaning_fee_eur'] = (float)$booking_cleaning_fee_eur;

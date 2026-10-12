@@ -105,6 +105,10 @@ function offer_matches(array $offer, string $from, string $to, int $nights, Date
   if ($now < $af || $now > $at) return false;
   $minN = (int)($offer['conditions']['min_nights'] ?? 0);
   if ($nights < $minN) return false;
+  // No default - omitted/null means "no cap", same convention as
+  // booking.max_nights elsewhere.
+  $maxNRaw = $offer['conditions']['max_nights'] ?? null;
+  if ($maxNRaw !== null && $maxNRaw !== '' && $nights > (int)$maxNRaw) return false;
   $periods = $offer['periods'] ?? [];
   if (!$periods) return true;
   $f = new DateTimeImmutable($from.' 00:00:00', new DateTimeZone('UTC'));

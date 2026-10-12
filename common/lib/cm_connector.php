@@ -531,6 +531,9 @@ function cm_connector_prepare_unit_snapshot(string $unit, string $reason): array
     return [
         'occupancy_merged' => is_array($merged) ? $merged : [],
         'min_nights' => (int)($settings['booking']['min_nights'] ?? 1),
+        // No fallback - null means "no cap", matches booking.max_nights
+        // having no default anywhere else in the system either.
+        'max_nights' => isset($settings['booking']['max_nights']) ? (int)$settings['booking']['max_nights'] : null,
     ];
 }
 

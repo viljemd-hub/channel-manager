@@ -49,6 +49,9 @@ $T = [
     'short.title' => 'Termin je prekratek',
     'short.h1'    => 'Termin je prekratek za to enoto',
     'short.p_min' => 'Za izbrano enoto je minimalno število nočitev {minNights}.',
+    'long.title'  => 'Termin je predolg',
+    'long.h1'     => 'Termin je predolg za to enoto',
+    'short.p_max' => 'Za izbrano enoto je največje dovoljeno število nočitev {maxNights}.',
     'short.p_sel' => 'Izbrali ste termin z {nights} nočitvami.',
     'short.p_hint'=> 'Prosimo, izberite daljši termin ali nas kontaktirajte za posebne želje.',
 
@@ -126,6 +129,9 @@ $T = [
     'short.title' => 'Stay is too short',
     'short.h1'    => 'Stay is too short for this unit',
     'short.p_min' => 'For this unit, the minimum stay is {minNights} nights.',
+    'long.title'  => 'Stay is too long',
+    'long.h1'     => 'Stay is too long for this unit',
+    'short.p_max' => 'For this unit, the maximum stay is {maxNights} nights.',
     'short.p_sel' => 'You selected a stay of {nights} nights.',
     'short.p_hint'=> 'Please choose a longer stay or contact us if you have special requests.',
 
@@ -238,6 +244,33 @@ function cm_get_min_nights_for_unit(string $unit, int $fallback = 1): int {
     return $fallback;
 }
 
+// --- MAX NIGHTS po enoti (null = ni omejitve, za razliko od min_nights brez privzete vrednosti) ---
+function cm_get_max_nights_for_unit(string $unit): ?int {
+    if (!preg_match('/^[A-Za-z0-9_-]+$/', $unit)) {
+        return null;
+    }
+    $base = realpath(__DIR__ . '/../common/data/json/units');
+    if ($base === false) {
+        return null;
+    }
+    $path = $base . DIRECTORY_SEPARATOR . $unit . DIRECTORY_SEPARATOR . 'site_settings.json';
+    if (!is_readable($path)) {
+        return null;
+    }
+
+    $json = json_decode((string)file_get_contents($path), true);
+    if (!is_array($json)) {
+        return null;
+    }
+
+    $mx = $json['booking']['max_nights'] ?? null;
+    if (is_int($mx) && $mx >= 1 && $mx <= 365) {
+        return $mx;
+    }
+
+    return null;
+}
+
 // --- CLEANING FEE po enoti (override globalnega) ---
 function cm_get_cleaning_fee_for_unit(string $unit, ?float $fallback = null): ?float {
     if (!preg_match('/^[A-Za-z0-9_-]+$/', $unit)) {
@@ -274,6 +307,7 @@ function cm_get_cleaning_fee_for_unit(string $unit, ?float $fallback = null): ?f
 
 
 $minNights = cm_get_min_nights_for_unit($unit, 1);
+$maxNights = cm_get_max_nights_for_unit($unit);
 
 $nights = 0;
 if ($from !== '' && $to !== '') {
@@ -288,16 +322,19 @@ if ($from !== '' && $to !== '') {
     }
 }
 
-// Če je to prvi GET iz koledarja in je termin prekratek, vrnemo 400-stran.
+$nightsTooShort = $nights < $minNights;
+$nightsTooLong  = ($maxNights !== null && $nights > $maxNights);
+
+// Če je to prvi GET iz koledarja in je termin prekratek/predolg, vrnemo 400-stran.
 // Pri POST (recalc/submit) ne blokiramo – uporabnik lahko popravi v formi.
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && $from !== '' && $to !== '' && $nights < $minNights) {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $from !== '' && $to !== '' && ($nightsTooShort || $nightsTooLong)) {
     http_response_code(400);
     ?>
     <!doctype html>
     <html lang="<?= htmlspecialchars($lang, ENT_QUOTES) ?>">
     <head>
       <meta charset="utf-8">
-      <title><?= h($t('short.title')) ?></title>
+      <title><?= h($nightsTooShort ? $t('short.title') : $t('long.title')) ?></title>
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <style>
         body{
@@ -318,9 +355,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $from !== '' && $to !== '' && $night
     </head>
     <body>
       <div class="card">
-        <h1><?= h($t('short.h1')) ?></h1>
+        <h1><?= h($nightsTooShort ? $t('short.h1') : $t('long.h1')) ?></h1>
         <p>Za izbrano enoto <strong><?= htmlspecialchars($unit, ENT_QUOTES, 'UTF-8') ?></strong>
-           <?= h($t('short.p_min', ['minNights'=>(int)$minNights])) ?></p>
+           <?php if ($nightsTooShort): ?>
+             <?= h($t('short.p_min', ['minNights'=>(int)$minNights])) ?>
+           <?php else: ?>
+             <?= h($t('short.p_max', ['maxNights'=>(int)$maxNights])) ?>
+           <?php endif; ?></p>
         <p><?= h($t('short.p_sel', ['nights'=>(int)$nights])) ?></p>
         <p><?= h($t('short.p_hint')) ?></p>
         <p>

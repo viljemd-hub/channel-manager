@@ -95,7 +95,7 @@ Use the clean DEB package for Ubuntu/Debian based systems.
 Example:
 
     sudo apt update
-    sudo apt install ./cmfree_clean_amd64_1.2.1.deb
+    sudo apt install ./cmfree_clean_amd64_1.3.1.deb
 
 The DEB package installs the application under:
 
@@ -183,6 +183,14 @@ The project is designed around a practical separation:
 
 This keeps the system safer when working with external calendars and booking platforms.
 
+### Double-booking safety on CM Free
+
+CM Free never auto-confirms an external inquiry — every request (direct or from a connected ICS channel) requires your manual review before it becomes a confirmed reservation. Because of this, CM Free reflects your true local calendar at the moment you confirm, even though external channel calendars sync every 15 minutes rather than instantly.
+
+To keep this guarantee airtight, we recommend turning off "Instant Book" on Booking.com/Airbnb when using CM Free. This way, a request there also waits for your confirmation — giving you the same safety window on both sides, instead of racing an automatic OTA confirmation against a 15-minute-old local calendar.
+
+Want bookings to confirm automatically on all channels, without manual review? CM Plus's Autopilot does exactly that — before every automatic confirmation, it forces a fresh pull from all connected channels and will refuse to auto-confirm rather than risk a conflict.
+
 ## Help center
 
 The package includes an internal help center for users and installers.
@@ -205,7 +213,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Project status
 
-CM Free / Plus v1.2.1 is a practical release candidate for testing and real-world feedback.
+CM Free / Plus v1.3.1 is a practical release candidate for testing and real-world feedback.
 
 It is currently suitable for:
 
@@ -242,4 +250,4 @@ The goal is not to replace large commercial channel managers, but to provide a s
 
 Current release:
 
-    CM Free / Plus v1.2.1
+    CM Free / Plus v1.3.1

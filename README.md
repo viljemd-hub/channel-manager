@@ -77,8 +77,26 @@ Basic idea:
 1. Download the clean ZIP.
 2. Extract the app/ folder to your web root.
 3. Make sure app/common/data/ is writable by the web server.
-4. Open /app/admin/.
-5. Complete the first-use setup.
+4. **Block direct web access to app/common/data/** - it holds the admin key,
+   guest/reservation records, and (if you run the VRP node) your signing key.
+   A `.htaccess` is included in that folder as a first line of defense, but
+   it only works if your host has `AllowOverride` enabled for that path - do
+   not rely on it alone. On your own server (Apache, not shared hosting),
+   add a vhost-level rule instead, which `.htaccess` cannot be bypassed by a
+   misconfigured override:
+
+       <DirectoryMatch "^/var/www/html/app/common/data/(?!json/units/)">
+           Require all denied
+       </DirectoryMatch>
+
+   (adjust the path to your install; `json/units/` is exempted because a
+   small number of public, non-sensitive per-unit files are served from
+   there - check your own unit config before assuming anything else under
+   `common/data/` is safe to expose.) After adding it, confirm it works:
+   `curl -I https://your-domain.example/app/common/data/admin_key.txt`
+   should return 403, not 200.
+5. Open /app/admin/.
+6. Complete the first-use setup.
 
 Example target path:
 
@@ -117,6 +135,10 @@ After installation, open:
 or from another device on the same network:
 
     http://SERVER-IP/app/admin/
+
+The DEB package does not add its own Apache vhost rule for
+`app/common/data/` - add the deny rule shown under Option 1, step 4, before
+exposing the server beyond your local network.
 
 ## First-use setup
 

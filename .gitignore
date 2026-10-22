@@ -1,5 +1,6 @@
 # Runtime data and caches
-common/data/
+common/data/*
+!common/data/.htaccess
 common/data.json.example/
 common/data.query.example/
 logs/

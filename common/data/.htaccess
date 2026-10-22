@@ -1,0 +1,18 @@
+# Block direct web access to this directory and everything under it.
+#
+# common/data/ holds the admin key (admin_key.txt), guest/reservation
+# records, and (if you run a VRP node) its Ed25519 signing key - none of it
+# is meant to be fetched directly over HTTP.
+#
+# This file is a first line of defense only: it works solely on hosts where
+# AllowOverride permits .htaccess for this path (common on shared hosting).
+# On a server you control, add a vhost-level deny rule too - see the
+# Installation section of README.md. A vhost rule cannot be bypassed by a
+# misconfigured or disabled AllowOverride the way this file can.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

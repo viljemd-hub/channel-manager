@@ -1,0 +1,59 @@
+{
+  "protocol": "CM-AI-Docking-Port",
+  "version": "0.1",
+  "service": {
+    "name": "CM Ecosystem Reception",
+    "type": "ai-entry-point",
+    "node_id": "CM-AI-DEMO-058",
+    "location": {
+      "label": "Lancovo / Radovljica area (Demo 58)",
+      "lat": 46.34,
+      "lon": 14.17
+    }
+  },
+  "capabilities": {
+    "local": [
+      {
+        "id": "availability",
+        "side_effect": false,
+        "requires_consent": false,
+        "description": "Check unit availability for a date range"
+      }
+    ],
+    "ecosystem": [
+      {
+        "id": "accommodation-discovery",
+        "side_effect": false,
+        "requires_consent": false,
+        "description": "Geographic discovery across participating CM nodes via Reception"
+      }
+    ]
+  },
+  "reception": {
+    "method": "POST",
+    "endpoint": "/app/public/ai/reception.php",
+    "content_type": "application/json",
+    "get_returns_sample_envelope": true
+  },
+  "documentation": {
+    "human": "/app/public/ai/index.html",
+    "machine": "/app/public/ai/manifest.json",
+    "spec": {
+      "html": "/app/public/ai/spec.html",
+      "markdown": "/app/public/ai/spec.md",
+      "note": "Full working design specification (Reception Protocol Spec v1.0). Sections marked SKLENJENO are settled; sections marked OSNUTEK are open drafts under multi-agent review.",
+      "spec_synced_at": "2026-10-04T21:24:21Z"
+    }
+  },
+  "limits_default": {
+    "max_depth": 2,
+    "max_distance_km": 50,
+    "max_results": 20
+  },
+  "notes": [
+    "AI agents must always communicate with Reception.",
+    "Do not call internal business APIs directly.",
+    "Entry point and search target are separate concepts.",
+    "For a usable Request Envelope example, send GET to the reception endpoint (returns 405 + sample_request). Actual search requires POST."
+  ]
+}

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CM AI Docking Port</title>
+<link rel="alternate" type="application/json" href="/app/public/ai/manifest.json">
+<style>
+body { font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; max-width: 780px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1a1a1a; }
+h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+h2 { font-size: 1.15rem; margin-top: 2.2rem; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; }
+.tagline { color: #555; margin-top: 0; }
+code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88rem; }
+pre { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1rem; overflow-x: auto; }
+code.inline { background: #f0f0f0; padding: 0.1em 0.35em; border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+th, td { text-align: left; padding: 0.4rem 0.6rem; border: 1px solid #ddd; font-size: 0.92rem; }
+th { background: #f5f5f5; }
+ul { padding-left: 1.3rem; }
+.status { display: inline-block; background: #fff3cd; border: 1px solid #ffe69c; color: #664d03; padding: 0.15rem 0.6rem; border-radius: 4px; font-size: 0.85rem; }
+.rule { background: #eef6ff; border-left: 3px solid #3b82f6; padding: 0.6rem 1rem; margin: 1rem 0; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #777; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>CM AI Docking Port</h1>
+<p class="tagline">A standardized entry point for AI agents into the CM Ecosystem — protocol version 0.1</p>
+
+<p>
+This page documents an interface, not a product. CM (Channel Manager) instances run their own
+business logic for availability, pricing and reservations. The Docking Port does not duplicate
+that logic — it is a thin discovery and routing layer that lets any AI agent, speaking plain
+HTTP and JSON, find out what a CM instance can answer and how to ask.
+</p>
+
+<div class="rule">
+<strong>The one rule that matters most:</strong> an AI agent talks only to <strong>Reception</strong>.
+It never calls internal business endpoints directly, and it never contacts other CM nodes on its
+own. Reception is the single point of contact; everything behind it — local lookups, forwarding
+to nearby nodes, aggregating results — is invisible to the agent.
+</div>
+
+<h2>What is the CM Ecosystem</h2>
+<p>
+Each CM installation is an independent node. A node may optionally participate in a
+decentralized network of other CM nodes ("the Ecosystem"). There is no central server that
+holds the whole network — each node knows only a small set of geographically relevant
+neighbours. A request entering through any one node's Docking Port can, within limits, be
+forwarded through that local network and aggregated back into a single answer.
+</p>
+
+<h2>What is Reception</h2>
+<p>
+Reception is the only endpoint an agent ever calls. It:
+</p>
+<ul>
+<li>accepts a structured request (the <em>Request Envelope</em>, below),</li>
+<li>answers from its own local data when it can,</li>
+<li>if useful and allowed by the request's limits, forwards the same request to nearby nodes,</li>
+<li>collects whatever comes back,</li>
+<li>and returns one aggregated, structured response (the <em>Response Envelope</em>).</li>
+</ul>
+<p>
+This node's Reception:
+</p>
+<pre><code>POST /app/public/ai/reception.php
+Content-Type: application/json</code></pre>
+<p><span class="status" style="background:#d1f4dd;border-color:#a6e6bd;color:#0a5c2b;">status: live</span> — local availability, plus fallback-only forwarding through trusted neighbours (geography-gated, depth-limited, loop-safe). Occupied nodes that were actually contacted appear in <code class="inline">checked[]</code>; they are not silent gaps. See <a href="/app/public/ai/spec.html">the full spec</a> for the test record.</p>
+
+<h2>How to discover this node</h2>
+<p>Start with the machine-readable manifest:</p>
+<pre><code>GET /.well-known/cm-ai-docking-port.json
+GET /app/public/ai/manifest.json</code></pre>
+<p>It describes this node's identity, location, capabilities, and the Reception endpoint. Example (this node):</p>
+<pre><code>{
+  "protocol": "CM-AI-Docking-Port",
+  "version": "0.1",
+  "service": {
+    "name": "CM Ecosystem Reception",
+    "type": "ai-entry-point",
+    "node_id": "CM-AI-DEMO-058",
+    "location": {
+      "label": "Lancovo / Radovljica area (Demo 58)",
+      "lat": 46.34,
+      "lon": 14.17
+    }
+  },
+  "reception": {
+    "method": "POST",
+    "endpoint": "/app/public/ai/reception.php",
+    "content_type": "application/json"
+  }
+}</code></pre>
+
+<h2>Request Envelope</h2>
+<p>Every request sent to Reception uses this shape:</p>
+<pre><code>{
+  "protocol": "CM-AI-Docking-Port",
+  "version": "0.1",
+  "request_id": "req-2026-08-10-abc123",
+  "request_expiry": "2026-08-10T12:00:00Z",
+  "origin": "ai-agent",
+  "target": {
+    "location": { "lat": 46.05, "lon": 14.50, "label": "Ljubljana" },
+    "radius_km": 30
+  },
+  "query": {
+    "type": "availability",
+    "from": "2026-08-10",
+    "to": "2026-08-16",
+    "guests": 2,
+    "units": null
+  },
+  "limits": {
+    "max_depth": 2,
+    "max_distance_km": 40,
+    "max_results": 10
+  },
+  "visited": []
+}</code></pre>
+<ul>
+  <li><code class="inline">request_id</code> — unique per request; lets a node detect duplicates.</li>
+  <li><code class="inline">request_expiry</code> — required on every request. Absolute UTC timestamp (RFC3339). Checked at the door of every hop: a request that has already expired on arrival is rejected immediately (<code class="inline">request_expired</code>), with no local lookup and no forward. A hop that is already running is never interrupted mid-flight - the check only happens on entry. Each node also clamps the value it forwards down to its own ceiling (same pattern as <code class="inline">limits.max_depth</code>/<code class="inline">entry_ceiling</code> below) - it never extends what the agent asked for.</li>
+  <li><code class="inline">target.location</code> — the place the agent is actually asking about. This is <strong>not</strong> necessarily where the agent knocked. An agent may enter through this node and ask about a different city; Reception routes toward the target, not toward itself. An optional <code class="inline">label</code> (e.g. <code class="inline">"Kranjska Gora"</code>) may be included alongside <code class="inline">lat</code>/<code class="inline">lon</code> for a human-readable trail - Reception never invents one.</li>
+  <li><code class="inline">visited</code> — filled in by Reception as the request travels, never by the agent. Prevents routing loops. Send it as <code class="inline">[]</code>.</li>
+  <li><code class="inline">limits</code> — the agent's own bounds on how far and how wide the search may go. The node always clamps these to its own ceilings.</li>
+</ul>
+
+<h2>Response Envelope</h2>
+<p>Reception always answers with one aggregated response, never raw internal API output. A two-hop example (entry at this node, unit found two hops away; an occupied neighbour recorded separately):</p>
+<pre><code>{
+  "protocol": "CM-AI-Docking-Port",
+  "version": "0.1",
+  "request_id": "req-2026-12-01-example",
+  "ok": true,
+  "partial": false,
+  "search_meta": {
+    "entry_node": "CM-AI-DEMO-058",
+    "target_location": { "lat": 46.4858, "lon": 13.7905, "label": "Kranjska Gora" },
+    "nodes_queried": 2,
+    "nodes_reached": 2,
+    "max_depth_used": 2,
+    "entry_ceiling": 2
+  },
+  "results": [
+    {
+      "node_id": "CM-AI-STUB-KRGORA",
+      "node_location": { "lat": 46.4858, "lon": 13.7905 },
+      "depth": 2,
+      "source": "stub_test_node",
+      "freshness": { "generated_at": "2026-10-02T12:00:00+00:00" },
+      "data": { "...": "raw output of that node's own availability API, unmodified" }
+    }
+  ],
+  "checked": [
+    {
+      "node_id": "CM-AI-STUB-BLED",
+      "depth": 1,
+      "location": { "lat": 46.3683, "lon": 14.1146 }
+    }
+  ],
+  "errors": []
+}</code></pre>
+
+<table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td><code class="inline">search_meta.entry_node</code></td><td>who delivered <strong>this HTTP response</strong> to the agent</td></tr>
+<tr><td><code class="inline">results[].node_id</code></td><td>who is the <strong>source</strong> of that available unit</td></tr>
+<tr><td><code class="inline">results[].depth</code></td><td>how many hops that entry travelled</td></tr>
+<tr><td><code class="inline">results[].node_location</code></td><td>where that source node is (travels with the entry; do not look it up yourself)</td></tr>
+<tr><td><code class="inline">checked[]</code></td><td>nodes successfully contacted that confirmed <strong>zero</strong> availability — not a failure, not a skip</td></tr>
+<tr><td><code class="inline">checked[].location</code></td><td>same idea as <code class="inline">node_location</code>, different key (see spec §27)</td></tr>
+<tr><td><code class="inline">partial</code></td><td><code class="inline">true</code> only if a contacted node failed or timed out — never implied by an empty <code class="inline">results[]</code></td></tr>
+<tr><td><code class="inline">search_meta.entry_ceiling</code></td><td>the <strong>entry node's own</strong> depth ceiling (clamped agent limit vs its own hard max) — not the depth actually reached by the chain as a whole. A response can legitimately show <code class="inline">max_depth_used: 3</code> alongside <code class="inline">entry_ceiling: 2</code>: the entry node's own ceiling only bounds how far <strong>it</strong> is willing to look before giving up, deeper nodes have their own, separate ceilings.</td></tr>
+</table>
+<p>
+<code class="inline">data</code> inside each result is the untouched output of that node's own business
+API — Reception wraps it with provenance but never reinterprets it.
+<code class="inline">results[]</code> contains only genuine matches (<code class="inline">available_count &gt; 0</code>).
+<code class="inline">checked[]</code> never competes for <code class="inline">max_results</code>.
+An empty <code class="inline">checked[]</code> does not mean nobody was asked — a node skipped for geography, or a local match that short-circuited forwarding, is not a confirmed zero.
+If part of the network was unreachable, <code class="inline">partial</code> is <code class="inline">true</code>; a partial search is never presented as a complete one.
+</p>
+
+<h2>Capabilities of this node</h2>
+<table>
+<tr><th>id</th><th>scope</th><th>side effect</th><th>consent required</th><th>description</th></tr>
+<tr><td><code class="inline">availability</code></td><td>local</td><td>no</td><td>no</td><td>Check unit availability for a date range</td></tr>
+<tr><td><code class="inline">accommodation-discovery</code></td><td>ecosystem</td><td>no</td><td>no</td><td>Geographic discovery across participating CM nodes via Reception</td></tr>
+</table>
+<p>
+Every capability declares whether it changes anything (<code class="inline">side_effect</code>) and
+whether it requires explicit consent. This first version is read/discovery only — nothing an
+agent does through Reception creates a booking, a block, or any other write.
+</p>
+
+<h2>Limits</h2>
+<table>
+<tr><th>limit</th><th>default</th><th>purpose</th></tr>
+<tr><td><code class="inline">max_depth</code></td><td>2</td><td>how many hops a request may be forwarded through the network (<code class="inline">2</code> means two hops: A→B→D)</td></tr>
+<tr><td><code class="inline">max_distance_km</code></td><td>50</td><td>how far from the target location a node is still considered relevant</td></tr>
+<tr><td><code class="inline">max_results</code></td><td>20</td><td>caps <code class="inline">results[]</code> only — never <code class="inline">checked[]</code></td></tr>
+</table>
+
+<h2>Rules for agents</h2>
+<ul>
+  <li>Always talk to Reception. Never call this node's internal APIs directly, even if you can guess the URL.</li>
+  <li>Never contact other CM nodes yourself — Reception does that on your behalf.</li>
+  <li>The entry point and the search target are separate concepts. Ask for what you actually want, wherever you knocked.</li>
+  <li>Do not treat <code class="inline">search_meta.entry_node</code> as the source of a result. Provenance is <code class="inline">results[].node_id</code> / <code class="inline">depth</code>.</li>
+  <li>The existence of a node does not imply access to everything it holds — discovery, availability, and private data are different tiers.</li>
+  <li>This is a read/discovery protocol. Do not assume any request can change data.</li>
+</ul>
+
+<h2>How this grows</h2>
+<p>
+New capabilities are added to the manifest and the protocol — not by building a new AI system
+on top of CM. CM stays the source of truth; the Docking Port stays a thin, generic HTTP/JSON
+door that any AI provider can use without a CM-specific plugin.
+</p>
+
+<footer>
+CM-AI-Docking-Port protocol v0.1 · node <code class="inline">CM-AI-DEMO-058</code> ·
+manifest: <a href="/app/public/ai/manifest.json">/app/public/ai/manifest.json</a><br>
+License: <a href="https://github.com/viljemd-hub/channel-manager/blob/main/LICENSE">AGPL-3.0</a> ·
+Source: <a href="https://github.com/viljemd-hub/channel-manager/tree/main/public/ai">github.com/viljemd-hub/channel-manager</a><br>
+Internal development log (not the specification - a running build diary,
+kept public so collaborating AI agents without server access could read
+shared project state; may still reference this deployment's own internal
+paths): <a href="/app/public/ai/spec.html">spec.html</a> ·
+<a href="/app/public/ai/spec.md">spec.md</a>
+</footer>
+
+</body>
+</html>

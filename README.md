@@ -183,6 +183,12 @@ The project is designed around a practical separation:
 
 This keeps the system safer when working with external calendars and booking platforms.
 
+## VRP (Vacation Rental Protocol)
+
+VRP node: CM PRO publishes /.well-known/vacation-rental.json, a JWKS and Ed25519-signed stay offers under the Vacation Rental Protocol (https://vacationrentalprotocol.com).
+
+This is implemented on the CM PRO reference installation (apartmamatevz.si), not shipped as a generic, configurable feature of the CM Free package in this repository.
+
 ## Help center
 
 The package includes an internal help center for users and installers.

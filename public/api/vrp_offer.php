@@ -26,13 +26,31 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/../../admin/api/_lib/paths.php';
-require_once __DIR__ . '/../../common/lib/urls.php';
+require_once __DIR__ . '/../_common_public.php';
 
 /** This installation's own public domain - never another node's. */
 function vrp_node_host(): string
 {
-    $host = (string)(parse_url(cm_public_base_url(), PHP_URL_HOST) ?? '');
-    return $host !== '' ? $host : (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return preg_replace('/:\d+$/', '', $host);
+}
+
+function vrp_node_scheme(): string
+{
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        return (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
+    }
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+}
+
+/** Absolute URL on this installation's own public domain (cm_public_url()
+ * here is the filesystem-derived one from _common_public.php - it already
+ * includes the real /public path, unlike the config-driven helper of the
+ * same name in common/lib/urls.php, which this file deliberately avoids
+ * requiring to dodge an unguarded-redeclaration fatal between the two). */
+function vrp_absolute_public_url(string $pathAndQuery): string
+{
+    return vrp_node_scheme() . '://' . vrp_node_host() . cm_public_url($pathAndQuery);
 }
 
 /**
@@ -285,7 +303,7 @@ $offer = [
     'property' => [
         'property_id' => $unit,
         'name' => $propertyName,
-        'url' => cm_public_url('/offer.php?unit=' . $unit),
+        'url' => vrp_absolute_public_url('/offer.php?unit=' . $unit),
     ],
     'availability' => $available
         ? ['available' => true, 'source' => 'official_host_domain']
@@ -298,7 +316,7 @@ $offer = [
         'exact' => $exact,
     ],
     'booking' => [
-        'direct_booking_url' => cm_public_url('/offer.php?unit=' . $unit
+        'direct_booking_url' => vrp_absolute_public_url('/offer.php?unit=' . $unit
             . '&from=' . $checkIn . '&to=' . $checkOut),
     ],
     'agent_permission' => [

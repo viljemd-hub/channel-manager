@@ -77,8 +77,26 @@ Basic idea:
 1. Download the clean ZIP.
 2. Extract the app/ folder to your web root.
 3. Make sure app/common/data/ is writable by the web server.
-4. Open /app/admin/.
-5. Complete the first-use setup.
+4. **Block direct web access to app/common/data/** - it holds the admin key,
+   guest/reservation records, and (if you run the VRP node) your signing key.
+   A `.htaccess` is included in that folder as a first line of defense, but
+   it only works if your host has `AllowOverride` enabled for that path - do
+   not rely on it alone. On your own server (Apache, not shared hosting),
+   add a vhost-level rule instead, which `.htaccess` cannot be bypassed by a
+   misconfigured override:
+
+       <DirectoryMatch "^/var/www/html/app/common/data/(?!json/units/)">
+           Require all denied
+       </DirectoryMatch>
+
+   (adjust the path to your install; `json/units/` is exempted because a
+   small number of public, non-sensitive per-unit files are served from
+   there - check your own unit config before assuming anything else under
+   `common/data/` is safe to expose.) After adding it, confirm it works:
+   `curl -I https://your-domain.example/app/common/data/admin_key.txt`
+   should return 403, not 200.
+5. Open /app/admin/.
+6. Complete the first-use setup.
 
 Example target path:
 
@@ -95,7 +113,7 @@ Use the clean DEB package for Ubuntu/Debian based systems.
 Example:
 
     sudo apt update
-    sudo apt install ./cmfree_clean_amd64_1.2.1.deb
+    sudo apt install ./cmfree_clean_amd64_1.3.1.deb
 
 The DEB package installs the application under:
 
@@ -117,6 +135,10 @@ After installation, open:
 or from another device on the same network:
 
     http://SERVER-IP/app/admin/
+
+The DEB package does not add its own Apache vhost rule for
+`app/common/data/` - add the deny rule shown under Option 1, step 4, before
+exposing the server beyond your local network.
 
 ## First-use setup
 
@@ -183,11 +205,19 @@ The project is designed around a practical separation:
 
 This keeps the system safer when working with external calendars and booking platforms.
 
+### Double-booking safety on CM Free
+
+CM Free never auto-confirms an external inquiry — every request (direct or from a connected ICS channel) requires your manual review before it becomes a confirmed reservation. Because of this, CM Free reflects your true local calendar at the moment you confirm, even though external channel calendars sync every 15 minutes rather than instantly.
+
+To keep this guarantee airtight, we recommend turning off "Instant Book" on Booking.com/Airbnb when using CM Free. This way, a request there also waits for your confirmation — giving you the same safety window on both sides, instead of racing an automatic OTA confirmation against a 15-minute-old local calendar.
+
+Want bookings to confirm automatically on all channels, without manual review? CM Plus's Autopilot does exactly that — before every automatic confirmation, it forces a fresh pull from all connected channels and will refuse to auto-confirm rather than risk a conflict.
+
 ## VRP (Vacation Rental Protocol)
 
 VRP node: CM PRO publishes /.well-known/vacation-rental.json, a JWKS and Ed25519-signed stay offers under the Vacation Rental Protocol (https://vacationrentalprotocol.com).
 
-This is implemented on the CM PRO reference installation (apartmamatevz.si), not shipped as a generic, configurable feature of the CM Free package in this repository.
+This is implemented on the CM PRO reference installation (apartmamatevz.si), not shipped as a generic, configurable feature of the CM Free package in this repository. `public/api/vrp_offer.php` derives its node identity (domain, key id, property name) from the running installation's own configuration rather than hardcoding one property.
 
 ## Help center
 
@@ -211,7 +241,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Project status
 
-CM Free / Plus v1.2.1 is a practical release candidate for testing and real-world feedback.
+CM Free / Plus v1.3.1 is a practical release candidate for testing and real-world feedback.
 
 It is currently suitable for:
 
@@ -248,4 +278,4 @@ The goal is not to replace large commercial channel managers, but to provide a s
 
 Current release:
 
-    CM Free / Plus v1.2.1
+    CM Free / Plus v1.3.1

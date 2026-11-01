@@ -31,6 +31,11 @@ $unit = isset($_POST['unit'])
 $from = $_POST['from'] ?? ($_GET['from'] ?? '');
 $to   = $_POST['to']   ?? ($_GET['to']   ?? '');
 
+// Native date-picker min bound - today at the property, so a guest cannot
+// pick an already-passed check-in date (does not replace server-side
+// validation in submit_inquiry.php, which is the real gate).
+$todayYmd = (new DateTimeImmutable('now', new DateTimeZone('Europe/Ljubljana')))->format('Y-m-d');
+
 // raw (pred normalizacijo ymd) – za fallbacke kasneje
 $from_raw = $from;
 $to_raw   = $to;
@@ -1085,10 +1090,10 @@ $final_total = max(0, $final_before_offers - $special_offers_discount);
 
       <div class="grid-2">
         <label><?= h($t('label.from')) ?>
-          <input type="date" id="from" name="from" value="<?=h($from)?>">
+          <input type="date" id="from" name="from" value="<?=h($from)?>" min="<?=h($todayYmd)?>">
         </label>
         <label><?= h($t('label.to')) ?>
-          <input type="date" id="to" name="to" value="<?=h($to)?>">
+          <input type="date" id="to" name="to" value="<?=h($to)?>" min="<?=h($todayYmd)?>">
         </label>
       </div>
 

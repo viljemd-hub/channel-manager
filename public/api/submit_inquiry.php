@@ -21,6 +21,21 @@ $from       = as_date($_POST['from'] ?? '');
 $to         = as_date($_POST['to'] ?? '');
 $nights     = (int)($_POST['nights'] ?? 0);
 
+// Real gate (the offer.php date-picker's min= is only a UX hint and does
+// not stop a direct/crafted POST): reject a check-in date that has already
+// passed, by the property's own date, before an inquiry is ever stored.
+date_default_timezone_set('Europe/Ljubljana');
+if ($from === '' || $to === '') {
+    http_response_code(400);
+    echo "error: missing_dates";
+    exit;
+}
+if ($from < date('Y-m-d')) {
+    http_response_code(400);
+    echo "error: checkin_in_past";
+    exit;
+}
+
 // lang (public UI)
 $allowedLangs = ['sl','en'];
 $lang = clean_str($_POST['lang'] ?? '');

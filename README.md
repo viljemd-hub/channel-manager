@@ -213,6 +213,12 @@ To keep this guarantee airtight, we recommend turning off "Instant Book" on Book
 
 Want bookings to confirm automatically on all channels, without manual review? CM Plus's Autopilot does exactly that — before every automatic confirmation, it forces a fresh pull from all connected channels and will refuse to auto-confirm rather than risk a conflict.
 
+## VRP (Vacation Rental Protocol)
+
+VRP node: CM PRO publishes /.well-known/vacation-rental.json, a JWKS and Ed25519-signed stay offers under the Vacation Rental Protocol (https://vacationrentalprotocol.com).
+
+This is implemented on the CM PRO reference installation (apartmamatevz.si), not shipped as a generic, configurable feature of the CM Free package in this repository. `public/api/vrp_offer.php` derives its node identity (domain, key id, property name) from the running installation's own configuration rather than hardcoding one property.
+
 ## Help center
 
 The package includes an internal help center for users and installers.

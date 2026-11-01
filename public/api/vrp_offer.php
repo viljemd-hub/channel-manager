@@ -26,6 +26,65 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/../../admin/api/_lib/paths.php';
+require_once __DIR__ . '/../_common_public.php';
+
+/** This installation's own public domain - never another node's. */
+function vrp_node_host(): string
+{
+    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return preg_replace('/:\d+$/', '', $host);
+}
+
+function vrp_node_scheme(): string
+{
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        return (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
+    }
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+}
+
+/** Absolute URL on this installation's own public domain (cm_public_url()
+ * here is the filesystem-derived one from _common_public.php - it already
+ * includes the real /public path, unlike the config-driven helper of the
+ * same name in common/lib/urls.php, which this file deliberately avoids
+ * requiring to dodge an unguarded-redeclaration fatal between the two). */
+function vrp_absolute_public_url(string $pathAndQuery): string
+{
+    return vrp_node_scheme() . '://' . vrp_node_host() . cm_public_url($pathAndQuery);
+}
+
+/**
+ * Key id for the JWKS entry this installation actually signs with. Read
+ * from an operator-set file next to the signing key (same directory,
+ * written once when the key is generated/rotated) so it always matches
+ * the published JWKS; a fresh install with no such file gets a sane
+ * domain-derived default instead of a hardcoded one.
+ */
+function vrp_node_kid(string $host): string
+{
+    $kidPath = app_root() . '/common/data/vrp_kid.txt';
+    if (is_file($kidPath)) {
+        $kid = trim((string)file_get_contents($kidPath));
+        if ($kid !== '') {
+            return $kid;
+        }
+    }
+    return $host . '-vrp-key';
+}
+
+/** This unit's own display name, same field admin/api/add_unit.php writes. */
+function vrp_unit_display_name(string $unit): string
+{
+    $path = units_root() . '/' . $unit . '/site_settings.json';
+    if (is_file($path)) {
+        $json = json_decode((string)file_get_contents($path), true);
+        $name = $json['display']['name'] ?? null;
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+    }
+    return $unit;
+}
 
 function vrp_out(array $payload, int $status = 200): void
 {
@@ -131,6 +190,13 @@ if ($checkIn >= $checkOut) {
     vrp_out(['ok' => false, 'error' => 'invalid_range', 'hint' => 'check_in must be earlier than check_out'], 400);
 }
 
+/* VRP Core S5 / ADR 0012 D2: a node MUST NOT sign an offer whose check_in has
+ * already passed, by the property's own date (not the caller's clock). */
+$propertyToday = (new DateTimeImmutable('now', new DateTimeZone('Europe/Ljubljana')))->format('Y-m-d');
+if ($checkIn < $propertyToday) {
+    vrp_out(['ok' => false, 'error' => 'checkin_in_past', 'hint' => 'check_in must not be earlier than the current date at the property'], 400);
+}
+
 $nights = (new DateTimeImmutable($checkIn))->diff(new DateTimeImmutable($checkOut))->days;
 
 /* --------------------------------------------------------------------------
@@ -147,7 +213,8 @@ if ($secretKey === false || strlen($secretKey) !== SODIUM_CRYPTO_SIGN_SECRETKEYB
     vrp_out(['ok' => false, 'error' => 'node_key_invalid'], 503);
 }
 
-$kid = 'apartmamatevz.si-vrp-2026-10-19';
+$nodeHost = vrp_node_host();
+$kid = vrp_node_kid($nodeHost);
 
 /* --------------------------------------------------------------------------
  * Availability
@@ -219,14 +286,13 @@ if ($available) {
 $now = vrp_now();
 $validUntil = $now->modify('+10 minutes');
 
-$propertyNames = ['A1' => 'Apartma A1 – terasa'];
-$propertyName = $propertyNames[$unit] ?? $unit;
+$propertyName = vrp_unit_display_name($unit);
 
 $offer = [
     'kind' => 'verified_stay_offer',
     'protocol_version' => '0.1',
-    'canonical_domain' => 'apartmamatevz.si',
-    'node_id' => 'apartmamatevz.si',
+    'canonical_domain' => $nodeHost,
+    'node_id' => $nodeHost,
     'generated_at' => vrp_iso($now),
     'valid_until' => vrp_iso($validUntil),
     'request' => array_filter([
@@ -237,7 +303,7 @@ $offer = [
     'property' => [
         'property_id' => $unit,
         'name' => $propertyName,
-        'url' => 'https://apartmamatevz.si/app/public/offer.php?unit=' . $unit,
+        'url' => vrp_absolute_public_url('/offer.php?unit=' . $unit),
     ],
     'availability' => $available
         ? ['available' => true, 'source' => 'official_host_domain']
@@ -250,8 +316,8 @@ $offer = [
         'exact' => $exact,
     ],
     'booking' => [
-        'direct_booking_url' => 'https://apartmamatevz.si/app/public/offer.php?unit=' . $unit
-            . '&from=' . $checkIn . '&to=' . $checkOut,
+        'direct_booking_url' => vrp_absolute_public_url('/offer.php?unit=' . $unit
+            . '&from=' . $checkIn . '&to=' . $checkOut),
     ],
     'agent_permission' => [
         'may_quote_as_official_direct_offer' => $available && $exact,

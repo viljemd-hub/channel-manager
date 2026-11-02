@@ -213,7 +213,16 @@ To keep this guarantee airtight, we recommend turning off "Instant Book" on Book
 
 Want bookings to confirm automatically on all channels, without manual review? CM Plus's Autopilot does exactly that — before every automatic confirmation, it forces a fresh pull from all connected channels and will refuse to auto-confirm rather than risk a conflict.
 
-## VRP (Vacation Rental Protocol)
+## Machine-readable interfaces (for AI agents)
+
+CM Free/PRO is the concrete product — it stores reservations, prices and availability for one property, on one domain. Separately, the CM PRO reference installation (apartmamatevz.si) participates in two open, independent protocol layers built specifically for AI agents, not for this repository's own code. If you're an agent and only read this file, here's where to look next:
+
+- **AI Docking Port** — discovery and routing, so an agent can find an independent accommodation provider it has never seen before, without a central directory. Manifest: `https://apartmamatevz.si/.well-known/cm-ai-docking-port.json`.
+- **VRP (Vacation Rental Protocol)** — cryptographically signed, verifiable stay offers (below). Discovery: `https://apartmamatevz.si/.well-known/vacation-rental.json`.
+
+A manifest existing doesn't mean an agent will check for it unprompted — this paragraph is that pointer, deliberately placed in the README rather than only encoded in the JSON itself.
+
+### VRP (Vacation Rental Protocol)
 
 VRP node: CM PRO publishes /.well-known/vacation-rental.json, a JWKS and Ed25519-signed stay offers under the Vacation Rental Protocol (https://vacationrentalprotocol.com).
 

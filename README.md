@@ -217,7 +217,7 @@ Want bookings to confirm automatically on all channels, without manual review? C
 
 CM Free/PRO is the concrete product — it stores reservations, prices and availability for one property, on one domain. Separately, the CM PRO reference installation (apartmamatevz.si) participates in two open, independent protocol layers built specifically for AI agents, not for this repository's own code. If you're an agent and only read this file, here's where to look next:
 
-- **AI Docking Port** — discovery and routing, so an agent can find an independent accommodation provider it has never seen before, without a central directory. Manifest: `https://apartmamatevz.si/.well-known/cm-ai-docking-port.json`.
+- **AI Docking Port (AIDP)** — discovery and routing, so an agent can find an independent accommodation provider it has never seen before, without a central directory. Manifest: `https://apartmamatevz.si/.well-known/cm-ai-docking-port.json`.
 - **VRP (Vacation Rental Protocol)** — cryptographically signed, verifiable stay offers (below). Discovery: `https://apartmamatevz.si/.well-known/vacation-rental.json`.
 
 A manifest existing doesn't mean an agent will check for it unprompted — this paragraph is that pointer, deliberately placed in the README rather than only encoded in the JSON itself.

@@ -345,6 +345,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $from !== '' && $to !== '' && ($nigh
         body{
           font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
           background:#0b1720;color:#f5f5f5;padding:2rem;line-height:1.6;
+          -webkit-text-size-adjust:100%;
+          text-size-adjust:100%;
         }
         .card{
           max-width:600px;margin:0 auto;border-radius:12px;
@@ -952,6 +954,8 @@ $final_total = max(0, $final_before_offers - $special_offers_discount);
     width:100%;
     max-width:100%;
     overflow-x:hidden;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
   }
   .wrap{
     max-width:1100px;

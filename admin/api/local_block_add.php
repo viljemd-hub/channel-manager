@@ -84,12 +84,18 @@ if (!is_array($data)) {
 $entry = [
   'id'         => 'admin_block:' . $unit . ':' . gmdate('YmdHis') . ':' . $from . ':' . $to,
   'type'       => 'admin_block',
-  'lock'       => 'soft',
+  // 2026-11-22: was 'soft'+export:false - silently had NO effect on real
+  // availability (cm_regen_merged_for_unit() only honors lock:'hard' AND
+  // export:true). Soft locks are now reserved for pending inquiries only,
+  // not admin-created blocks - CM is the source of truth, so every block a
+  // host creates here must actually reflect in availability and propagate
+  // to channels.
+  'lock'       => 'hard',
   'source'     => 'admin',
   'start'      => $from,
   'end'        => $to,
   'created_at' => date('c'),
-  'export'     => false,
+  'export'     => true,
   'meta'       => [ 'reason' => 'admin-block' ],
 ];
 
